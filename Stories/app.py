@@ -1,24 +1,23 @@
 import logging
-import os
-import re
-
+logging.basicConfig(level=logging.DEBUG)
 from dotenv import load_dotenv
 from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_bolt.adapter.flask import SlackRequestHandler
 
+# load environment variables
 load_dotenv()
 
-SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
-SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
+app = App()
 
-app = App(token=SLACK_BOT_TOKEN, name="Stories Bot")
-logger = logging.getLogger(__name__)
+@app.middleware  # or app.use(log_request)
+def log_request(logger, body, next):
+    logger.debug(body)
+    return next()
 
 
 @app.command("/create_story")
 def open_modal(ack, body, logger):
-    logger.info(body)
-    # Acknowledge the shortcut request
+    # Acknowledge the request
     ack()
     # Call the views_open method using the built-in WebClient
     app.client.views_open(
@@ -85,10 +84,17 @@ def open_modal(ack, body, logger):
     )
 
 
-def main():
-    handler = SocketModeHandler(app, SLACK_APP_TOKEN)
-    handler.start()
 
+# Add functionality here
+from flask import Flask, request
+
+flask_app = Flask(__name__)
+handler = SlackRequestHandler(app)
+
+
+@flask_app.route("/slack/events", methods=["POST"])
+def slack_events():
+    return handler.handle(request)
 
 if __name__ == "__main__":
-    main()
+    flask_app.run(debug=True)
