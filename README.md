@@ -39,3 +39,11 @@ This would load all the environment variables
 
 ### Stories
 About: 
+
+
+#### Notes/Todos
+- [ ] Channels can only be archived right now
+- [ ] Error handling in the case the channel name has already been taken
+
+
+

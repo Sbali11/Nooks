@@ -1,0 +1,41 @@
+name: slackbot
+channels:
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - asgiref=3.3.0=py_0
+  - ca-certificates=2020.10.14=0
+  - click=8.0.3=py39h6e9494a_0
+  - django=3.0.3=py_0
+  - flask=1.1.2=py_0
+  - itsdangerous=1.1.0=py_0
+  - jinja2=2.11.2=py_0
+  - libcxx=12.0.1=habf9029_0
+  - libffi=3.4.2=he49afe7_4
+  - libzlib=1.2.11=h9173be1_1013
+  - markupsafe=2.0.1=py39h89e85a6_0
+  - ncurses=6.2=h2e338ed_4
+  - openssl=3.0.0=h0d85af4_1
+  - pip=21.3=pyhd8ed1ab_0
+  - pyngrok=5.1.0=pyhd8ed1ab_0
+  - python=3.9.7=h38b4d05_3_cpython
+  - python-dotenv=0.19.1=pyhd8ed1ab_0
+  - python_abi=3.9=2_cp39
+  - pytz=2020.1=py_0
+  - pyyaml=5.4.1=py39h89e85a6_1
+  - readline=8.1=h05e3726_0
+  - setuptools=58.2.0=py39h6e9494a_0
+  - sqlite=3.36.0=h23a322b_2
+  - sqlparse=0.4.1=py_0
+  - tk=8.6.11=h5dbffcc_1
+  - tzdata=2021c=he74cb21_0
+  - werkzeug=1.0.1=py_0
+  - wheel=0.37.0=pyhd8ed1ab_1
+  - xz=5.2.5=haf1e3a3_1
+  - yaml=0.2.5=haf1e3a3_0
+  - zlib=1.2.11=h9173be1_1013
+  - pip:
+    - slack-bolt==1.9.3
+    - slack-sdk==3.11.2
+prefix: /Users/shreya/anaconda3/envs/slackbot
