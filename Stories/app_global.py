@@ -17,6 +17,7 @@ logging.basicConfig(level=logging.DEBUG)
 # load environment variables
 load_dotenv()
 
+
 MAX_STORIES_GLOBAL = 4
 MAX_STORIES_CHANNEL = 1
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
@@ -24,7 +25,7 @@ MONGODB_LINK = os.environ["MONGODB_LINK"]
 
 app = App()
 db_client = MongoClient(MONGODB_LINK)
-db = db_client.stories
+db = db_client.trial
 
 def random_priority(user, title, desc, to):
     p = random.randint(0, 2)
@@ -45,10 +46,11 @@ def handle_submission(ack, body, client, view, logger):
         "creator": user,
         "description": desc,
         "to": to,
+        "status": "suggested",
         "priority": random_priority(user, title, desc, to), 
         "created_on": datetime.utcnow()
     }    
-    db.suggested_stories.insert_one(new_story_info)
+    db.stories.insert_one(new_story_info)
    
     
 @app.command("/create_story")
@@ -192,12 +194,13 @@ handler.connect()
 cron = BackgroundScheduler(daemon=True)
 cron.start()
 
-def del_past_stories_and_notifs():
-    active_stories = list(db.active_stories.find())
+def update_past_stories_and_notifs():
+    active_stories = list(db.stories.find({'status': 'active'}))
     for active_story in active_stories:
         try: 
             app.client.conversations_archive(channel=active_story["channel_id"])
-            db.active_stories.remove({"_id": active_story["_id"]})
+            db.stories.update({"_id": active_story["_id"]},  {"$set" : {"status": "archived"}})
+
         except Exception as e:
             logging.error(traceback.format_exc())
     past_notifications = list(db.active_notifications.find())
@@ -210,7 +213,7 @@ def del_past_stories_and_notifs():
             logging.error(traceback.format_exc())
 
 def get_top_stories():
-    story_suggestions = list(db.suggested_stories.find().sort("priority",-1).limit(MAX_STORIES_GLOBAL))
+    story_suggestions = list(db.stories.find({'status': 'suggested'}).sort("priority",-1).limit(MAX_STORIES_GLOBAL))
     channel_stories = collections.defaultdict(list)
     for suggested_story in story_suggestions:
         title = 'ss_' + suggested_story["title"]
@@ -224,13 +227,15 @@ def get_top_stories():
             #app.client.conversations_invite(channel=ep_channel, users=creator)
             initial_thoughts_thread = app.client.chat_postMessage(channel=ep_channel, text="Hmm I'm not advanced enough to have thoughts of my own. But this is what everyone thought while joining")
             
-            db.active_stories.insert_one({'channel_id': ep_channel})
-            db.suggested_stories.remove({"_id": suggested_story["_id"]})
+            db.stories.update({"_id": suggested_story["_id"]},  {"$set" : {"status": "active", "channel_id": ep_channel}})
+
             for channel in channels:
                 channel_stories[channel].append((suggested_story, ep_channel, initial_thoughts_thread['ts']))
             
 
         except Exception as e:
+            logging.info("EZZZZ")
+            logging.info(title)
             logging.error(traceback.format_exc())
     return channel_stories
 
@@ -238,9 +243,9 @@ def get_top_stories():
 @cron.scheduled_job("cron", second="30")
 def post_stories():
 
-    del_past_stories_and_notifs()
+    update_past_stories_and_notifs()
     channel_stories = get_top_stories()
-
+    
     for channel in channel_stories:
         story_notifs_response = app.client.chat_postMessage(channel=channel,
                                 text="Psss it's that :clock1: of the day again! I have new stories for you!",

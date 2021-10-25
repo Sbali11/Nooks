@@ -29,9 +29,7 @@ This would load all the environment variables
 
 ```
     cd <name-of-bot>
-    FLASK_APP=app.py FLASK_ENV=development flask run -p 3000
-    (in a new terminal:)
-    ngrok http 3000
+    python app.py
 ```
 
 
@@ -46,7 +44,6 @@ About:
 - [ ] Error handling in the case the channel name has already been taken
 - [ ] Integrate with OAuth2 for 
 - [ ] Only list the channels the bot has been added to
-- [ ] Weird double creation error
 
 
 
