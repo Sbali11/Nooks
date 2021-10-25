@@ -44,6 +44,10 @@ About:
 #### Notes/Todos
 - [ ] Channels can only be archived right now
 - [ ] Error handling in the case the channel name has already been taken
+- [ ] Integrate with OAuth2 for 
+- [ ] Only list the channels the bot has been added to
+- [ ] Weird double creation error
+
 
 
 
