@@ -12,7 +12,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from pymongo import MongoClient
 from apscheduler.schedulers.background import BackgroundScheduler
 
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 
 # load environment variables
 load_dotenv()
@@ -21,12 +21,13 @@ MAX_STORIES_GLOBAL = 4
 MAX_STORIES_CHANNEL = 1
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
+db_client = MongoClient(MONGODB_LINK)
+db = db_client.trial_channels_3
 
 cron = BackgroundScheduler(daemon=True)
 cron.start()
 app = App()
-db_client = MongoClient(MONGODB_LINK)
-db = db_client.trial_channels_3
+
 
 
 def random_priority(user, title, desc, to):
@@ -214,13 +215,12 @@ def update_past_stories_and_notifs():
 def get_top_stories():
     channel_stories = collections.defaultdict(list)
     stories_to_add = set([])
-    all_channels = app.client.conversations_list()["channels"]
+    all_channels = app.client.conversations_list(exclude_archived=True, types="public_channel,private_channel")["channels"]
 
     for channel in all_channels:
         channel_id = channel["id"]
         story_suggestions = list(db.stories.find({"status": "suggested", "to": channel_id}).sort("priority",-1).limit(MAX_STORIES_CHANNEL))
         stories_to_add = stories_to_add.union({suggested_story["_id"] for suggested_story in story_suggestions})
-    logging.info("TZZZZ")
     logging.info(stories_to_add)
 
     for story_id in stories_to_add:
@@ -229,7 +229,6 @@ def get_top_stories():
         creator = suggested_story["creator"]
         desc = suggested_story["description"]
         channels = suggested_story["to"]
-        logging.info("TITLE_Z")
         logging.info(title)
         try:
             response = app.client.conversations_create(name=title, is_private=True)
@@ -242,8 +241,6 @@ def get_top_stories():
             
 
         except Exception as e:
-            logging.info("TEEZZ")
-            logging.info(title)
             logging.error(traceback.format_exc())
     logging.info(channel_stories)
     return channel_stories
