@@ -31,6 +31,61 @@ def random_priority(user, title, desc, to):
     p = random.randint(0, 2)
     return p
 
+@app.event("app_home_opened")
+def update_home_tab(client, event, logger):
+    try:
+        logging.info("ENTZZZ")
+        # Call views.publish with the built-in client
+        client.views_publish(
+            # Use the user ID associated with the event
+            user_id=event["user"],
+            # Home tabs must be enabled in your app configuration
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Welcome home, <@" + event["user"] + "> :house:*"
+                        }
+                    },
+		{
+			"type": "actions",
+            
+			"elements": [
+				{
+					"type": "button",
+                    "action_id": "create_story",
+					"text": {
+						"type": "plain_text",
+						"text": "Create a new story!",
+						"emoji": True
+					},
+					"style": "primary",
+					"value": "join"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "plain_text",
+				"text": "P.S People want to hear your thoughts in these spaces. Join in soon (they only last a day!)  ",
+				"emoji": True
+			}
+		}
+                
+            ]
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error publishing home tab: {e}")
+
+
 @app.view("new_story")
 def handle_submission(ack, body, client, view, logger):
     ack()
@@ -55,7 +110,8 @@ def handle_submission(ack, body, client, view, logger):
                                 text="Nice! I've added your story titled " + title + " to the queue. ")
    
     
-@app.command("/create_story")
+#@app.command("/create_story")
+@app.action("create_story")
 def create_story_modal(ack, body, logger):
     ack()
     app.client.views_open(
@@ -272,6 +328,8 @@ def post_stories():
                                             } for suggested_story, ep_channel, ts in channel_stories[channel]
                                 ] )
         db.active_notifications.insert_one({'channel_id': channel, 'ts': story_notifs_response['ts']})
+
+
 
 atexit.register(lambda: cron.shutdown(wait=False))
 
