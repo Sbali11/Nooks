@@ -51,6 +51,8 @@ def handle_submission(ack, body, client, view, logger):
         "created_on": datetime.utcnow()
     }    
     db.stories.insert_one(new_story_info)
+    app.client.chat_postMessage(link_names =True,channel=user,
+                                text="Nice! I've added your story titled " + title + " to the queue. ")
    
     
 @app.command("/create_story")
@@ -106,7 +108,7 @@ def create_story_modal(ack, body, logger):
                     "text": 
                     {
                         "type": "mrkdwn",
-                        "text": "Pick conversations to send the story to"
+                        "text": "Give hints about who I should send the story to"
                     },
                     "accessory": 
                     {
@@ -135,7 +137,7 @@ def initial_thoughts_modal(ack, body, logger):
             "type": "modal",
             "callback_id": "enter_channel", 
             "private_metadata": body["actions"][0]["value"],
-            "title": {"type": "plain_text", "text": "Noice"},
+            "title": {"type": "plain_text", "text": "Join In"},
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
             "blocks": [
@@ -216,7 +218,7 @@ def get_top_stories():
     story_suggestions = list(db.stories.find({'status': 'suggested'}).sort("priority",-1).limit(MAX_STORIES_GLOBAL))
     channel_stories = collections.defaultdict(list)
     for suggested_story in story_suggestions:
-        title = 'ss_' + suggested_story["title"]
+        title = "st_" + suggested_story["title"]
         creator = suggested_story["creator"]
         desc = suggested_story["description"]
         channels = suggested_story["to"]
@@ -224,6 +226,7 @@ def get_top_stories():
         try:
             response = app.client.conversations_create(name=title, is_private=True)
             ep_channel = response["channel"]["id"]
+            app.client.conversations_setTopic(channel=ep_channel, topic=desc)
             #app.client.conversations_invite(channel=ep_channel, users=creator)
             initial_thoughts_thread = app.client.chat_postMessage(channel=ep_channel, text="Hmm I'm not advanced enough to have thoughts of my own. But this is what everyone thought while joining")
             
@@ -251,7 +254,7 @@ def post_stories():
                                 text="Psss it's that :clock1: of the day again! I have new stories for you!",
                                 attachments = [
                                                 {
-                                                    "text" : suggested_story["title"] + " by @" + app.client.users_profile_get(user=suggested_story["creator"])["profile"]["real_name"] + "\n Description: " + suggested_story["description"],
+                                                    "text" : suggested_story["title"] + "\n Description: " + suggested_story["description"],
                                                     "fallback": "You are unable to join in",
                                                     "callback_id": "enter_story",
                                                     "color": "#3AA3E3",

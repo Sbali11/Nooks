@@ -130,43 +130,30 @@ def create_story_modal(ack, body, logger):
 @app.action("enter_story")
 def initial_thoughts_modal(ack, body, logger):
     ack()
+    private_data = body["actions"][0]["value"].split("`")
     
     if body["actions"][0]["name"] == "next":
         metadata = body["actions"][0]["value"].split("`")
         
         ep_channel, chat_ts, user_id, cur_id_str = metadata[0], metadata[1], metadata[2], metadata[3]
-        past_notifications = list(db.active_notifications.find({'channel': user_id}))
-        for past_notification in past_notifications:
-            try: 
-                app.client.chat_delete(channel=past_notification['channel_id'], ts=past_notification['ts'])
-                db.active_notifications.remove({"_id": past_notification["_id"]})
-
-            except Exception as e:
-                logging.error(traceback.format_exc())
         user_row = list(db.user_stories.find({"user_id": user_id}))[0]
-        logging.info(user_row)
-        #suggested_channels_info = [info.split('¢') for info in suggested_channels_info_str.split(',')]
         suggested_stories = list(db.stories.find({"status": "active", "_id": {"$in" : user_row["story_ids"]}}))
-        logging.info(suggested_stories)
-        #body["actions"][0]["suggested_channels_info"]
         cur_id = int(cur_id_str)
         cur_id += 1
         if cur_id >= len(suggested_stories):
-            logging.info("EEWEDRE")
             story_notifs_response = app.client.chat_postMessage(link_names =True,channel=user_id,
                                 text="You've exhausted all our recommendations for the day. I'll be back tomorrow with more :)")
-            db.active_notifications.insert_one({'channel_id': user_id, 'ts': story_notifs_response['ts']})
+            db.insert_one({'channel_id': user_id, 'ts': story_notifs_response['ts']})
 
         else:
             cur_display_card = suggested_stories[cur_id]
-            logging.info("WEEWFREF")
             msg_attachments = []
             logging.info(app.client.conversations_members(channel=cur_display_card["channel_id"])["members"])
             if user_id not in app.client.conversations_members(channel=cur_display_card["channel_id"])["members"]:
                 msg_attachments.append({"name": "join_in",
                                         "text": "Join In",
                                         "type": "button",
-                                        "value": cur_display_card["channel_id"] + "`" + cur_display_card["ts"]
+                                        "value": cur_display_card["channel_id"] + "`" + cur_display_card["ts"] + "`" + user_id
                                         })
             story_notifs_response = app.client.chat_postMessage(link_names =True,channel=body["original_message"]["user"],
                                 text="I have more options!",
@@ -191,16 +178,21 @@ def initial_thoughts_modal(ack, body, logger):
                                                     ]
                                             } 
                                 ] )
-            db.active_notifications.insert_one({'channel_id': user_id, 'ts': story_notifs_response['ts']})
+            db.insert_one({'channel_id': user_id, 'ts': story_notifs_response['ts']})
 
-    else: 
+    else:
+        ep_channel, thread_ts, user_id = private_data[0], private_data[1], private_data[2]
+        if user_id in app.client.conversations_members(channel=ep_channel)["members"]:
+            app.client.conversations_open(channel=ep_channel)
+            return
+
         app.client.views_open(
             trigger_id=body["trigger_id"],
             view={
                 "type": "modal",
                 "callback_id": "enter_channel", 
-                "private_metadata": body["actions"][0]["value"],
-                "title": {"type": "plain_text", "text": "Story"},
+                "private_metadata": private_data[0] + "`" + private_data[1],
+                "title": {"type": "plain_text", "text": "Noice"},
                 "close": {"type": "plain_text", "text": "Close"},
                 "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
                 "blocks": [
@@ -354,7 +346,7 @@ def post_stories():
             msg_attachments.append({"name": "join_in",
                                     "text": "Join In",
                                     "type": "button",
-                                    "value": cur_display_card["channel_id"] + "`" + cur_display_card["ts"]
+                                    "value": cur_display_card["channel_id"] + "`" + cur_display_card["ts"] + "`" + user_row["user_id"]
                                 })
         
         #suggested_story["title"] + " by @" + app.client.users_profile_get(user=suggested_story["creator"])["profile"]["real_name"] + "\n Description: " + suggested_story["description"]

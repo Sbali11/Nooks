@@ -19,10 +19,12 @@ load_dotenv()
 
 MAX_STORIES_GLOBAL = 4
 MAX_STORIES_CHANNEL = 1
+MAX_DATA_CHANNEL = 1
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
+#TODO REMOVE; tmp
 db_client = MongoClient(MONGODB_LINK)
-db = db_client.trial_channels_3
+db = db_client.suggestions
 
 cron = BackgroundScheduler(daemon=True)
 cron.start()
@@ -55,6 +57,13 @@ def handle_submission(ack, body, client, view, logger):
     }    
     db.stories.insert_one(new_story_info)
    
+@app.command("/subscribe")
+def create_story_modal(ack, body, logger):
+    ack()
+    logging.info("SUBZ")
+    logging.info(body)
+    dcollection = getattr(db, body['text'])
+    db.all_db.update({body['text']}, {"$push":{"subscribers": body['user_name']}})
     
 @app.command("/create_story")
 def create_story_modal(ack, body, logger):
@@ -126,6 +135,27 @@ def create_story_modal(ack, body, logger):
         }
     )
 
+@app.view("topic_story")
+def handle_submission(ack, body, client, view, logger):
+    ack()
+    #TODO create a new name if taken?
+    input_data = view["state"]["values"]
+    user = body["user"]["id"]
+    title = input_data["title"]["plain_text_input-action"]["value"]
+    desc = input_data["desc"]["plain_text_input-action"]["value"]
+    to = input_data["to"]["text1234"]["selected_conversations"]
+
+    new_story_info = {
+        "title": title,
+        "creator": user,
+        "description": desc,
+        "to": to,
+        "status": "suggested",
+        "priority": random_priority(user, title, desc, to), 
+        "created_on": datetime.utcnow()
+    }    
+    db.stories.insert_one(new_story_info)
+   
 @app.action("enter_story")
 def initial_thoughts_modal(ack, body, logger):
     ack()
@@ -136,7 +166,7 @@ def initial_thoughts_modal(ack, body, logger):
             "type": "modal",
             "callback_id": "enter_channel", 
             "private_metadata": body["actions"][0]["value"],
-            "title": {"type": "plain_text", "text": "Story"},
+            "title": {"type": "plain_text", "text": "Noice"},
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
             "blocks": [
@@ -194,6 +224,7 @@ handler = SocketModeHandler(app, SLACK_APP_TOKEN)
 handler.connect()
 
 
+
 def update_past_stories_and_notifs():
     active_stories = list(db.stories.find({'status': 'active'}))
     for active_story in active_stories:
@@ -244,6 +275,46 @@ def get_top_stories():
             logging.error(traceback.format_exc())
     logging.info(channel_stories)
     return channel_stories
+
+@cron.scheduled_job("cron", second="5")
+def insert_data():
+    for collection in db.all_db.find():
+        dcollection = getattr(db, collection["name"])
+        dcollection.insert({"title": str(random.randint(0, 555)), 
+                "link":"http://" + str(random.randint(0, 50)),
+                "priority": str(random.randint(0, 2))})
+    
+
+
+
+
+# TODO change this to hour for final
+@cron.scheduled_job("cron", second="20")
+def get_data():
+
+    all_users = app.client.users_list()["members"]
+    user_data = collections.defaultdict(list)
+    data_counts = collections.defaultdict(int)
+    for user in all_users:  
+        for collection in db.all_db.find({'subscribers': {"$in": [user]}}) :
+            dcollection = getattr(db, collection)
+            data = list(dcollection.find({"to_send": {"in": [user]}}).sort("priority",-1).limit(MAX_STORIES_CHANNEL))
+            user_data[user].append(data)
+            data_counts[data["_id"]] += 1
+    for user in user_data:
+        app.client.chat_postMessage(channel=user,
+                                text="Knowledge train aboard! Here are your new articles",
+                                attachments = [
+                                                {
+                                                    "text" : collection + ": " + d["title"] + "\n" + d["link"] + "\n" + data_counts[d["_id"]] + " are also reading this.",
+                                                    "fallback": "Can't See",
+                                                    "color": "#3AA3E3",
+                                                    "attachment_type": "default",
+                                                } 
+                                                for d in user_data[data]
+                                            ] )
+        
+
 
 # TODO change this to hour for final
 @cron.scheduled_job("cron", second="10")
@@ -312,4 +383,5 @@ def post_stories():
 atexit.register(lambda: cron.shutdown(wait=False))
 
 if __name__ == "__main__":
+
     flask_app.run(debug=True, use_reloader=False)
