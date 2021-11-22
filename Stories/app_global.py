@@ -33,6 +33,9 @@ def random_priority(user, title, desc, to):
     return p
 
 
+def update_home_list():
+
+
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
@@ -79,6 +82,7 @@ def update_home_tab(client, event, logger):
                 ],
             },
         )
+
     except Exception as e:
         logger.error(f"Error publishing home tab: {e}")
 
@@ -110,7 +114,6 @@ def handle_submission(ack, body, client, view, logger):
     )
 
 
-# @app.command("/create_story")
 @app.action("create_story")
 def create_story_modal(ack, body, logger):
     ack()
