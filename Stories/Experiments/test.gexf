@@ -1,0 +1,222 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gexf xmlns="http://www.gexf.net/1.2draft" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd" version="1.2">
+  <meta lastmodifieddate="2021-11-21">
+    <creator>NetworkX 2.5</creator>
+  </meta>
+  <graph defaultedgetype="undirected" mode="static" name="">
+    <nodes>
+      <node id="0" label="0" />
+      <node id="1" label="1" />
+      <node id="2" label="2" />
+      <node id="3" label="3" />
+      <node id="4" label="4" />
+      <node id="5" label="5" />
+      <node id="6" label="6" />
+      <node id="7" label="7" />
+      <node id="8" label="8" />
+      <node id="9" label="9" />
+      <node id="10" label="10" />
+      <node id="11" label="11" />
+      <node id="12" label="12" />
+      <node id="13" label="13" />
+      <node id="14" label="14" />
+      <node id="15" label="15" />
+      <node id="16" label="16" />
+      <node id="17" label="17" />
+      <node id="18" label="18" />
+      <node id="19" label="19" />
+    </nodes>
+    <edges>
+      <edge source="0" target="1" id="0" weight="1.0" />
+      <edge source="0" target="2" id="1" weight="2.0" />
+      <edge source="0" target="3" id="2" weight="8.0" />
+      <edge source="0" target="4" id="3" weight="6.0" />
+      <edge source="0" target="5" id="4" weight="8.0" />
+      <edge source="0" target="6" id="5" weight="7.0" />
+      <edge source="0" target="7" id="6" weight="2.0" />
+      <edge source="0" target="8" id="7" weight="4.0" />
+      <edge source="0" target="9" id="8" weight="5.0" />
+      <edge source="0" target="10" id="9" weight="5.0" />
+      <edge source="0" target="11" id="10" weight="7.0" />
+      <edge source="0" target="12" id="11" weight="7.0" />
+      <edge source="0" target="13" id="12" weight="4.0" />
+      <edge source="0" target="14" id="13" weight="6.0" />
+      <edge source="0" target="15" id="14" weight="10.0" />
+      <edge source="0" target="16" id="15" weight="8.0" />
+      <edge source="0" target="17" id="16" weight="9.0" />
+      <edge source="0" target="18" id="17" weight="4.0" />
+      <edge source="0" target="19" id="18" weight="8.0" />
+      <edge source="1" target="2" id="19" weight="4.0" />
+      <edge source="1" target="3" id="20" weight="2.0" />
+      <edge source="1" target="4" id="21" weight="7.0" />
+      <edge source="1" target="5" id="22" weight="9.0" />
+      <edge source="1" target="6" id="23" weight="7.0" />
+      <edge source="1" target="7" id="24" weight="4.0" />
+      <edge source="1" target="8" id="25" weight="5.0" />
+      <edge source="1" target="9" id="26" weight="7.0" />
+      <edge source="1" target="10" id="27" weight="9.0" />
+      <edge source="1" target="11" id="28" weight="8.0" />
+      <edge source="1" target="12" id="29" weight="3.0" />
+      <edge source="1" target="13" id="30" weight="7.0" />
+      <edge source="1" target="14" id="31" weight="8.0" />
+      <edge source="1" target="15" id="32" weight="5.0" />
+      <edge source="1" target="16" id="33" weight="5.0" />
+      <edge source="1" target="17" id="34" weight="6.0" />
+      <edge source="1" target="18" id="35" weight="7.0" />
+      <edge source="1" target="19" id="36" weight="5.0" />
+      <edge source="2" target="3" id="37" weight="6.0" />
+      <edge source="2" target="4" id="38" weight="4.0" />
+      <edge source="2" target="5" id="39" weight="7.0" />
+      <edge source="2" target="6" id="40" weight="5.0" />
+      <edge source="2" target="7" id="41" weight="7.0" />
+      <edge source="2" target="8" id="42" weight="10.0" />
+      <edge source="2" target="9" id="43" weight="6.0" />
+      <edge source="2" target="10" id="44" weight="7.0" />
+      <edge source="2" target="11" id="45" weight="6.0" />
+      <edge source="2" target="12" id="46" weight="11.0" />
+      <edge source="2" target="13" id="47" weight="5.0" />
+      <edge source="2" target="14" id="48" weight="6.0" />
+      <edge source="2" target="15" id="49" weight="7.0" />
+      <edge source="2" target="16" id="50" weight="2.0" />
+      <edge source="2" target="17" id="51" weight="6.0" />
+      <edge source="2" target="18" id="52" weight="11.0" />
+      <edge source="2" target="19" id="53" weight="7.0" />
+      <edge source="3" target="4" id="54" weight="7.0" />
+      <edge source="3" target="5" id="55" weight="5.0" />
+      <edge source="3" target="6" id="56" weight="7.0" />
+      <edge source="3" target="7" id="57" weight="8.0" />
+      <edge source="3" target="8" id="58" weight="8.0" />
+      <edge source="3" target="9" id="59" weight="3.0" />
+      <edge source="3" target="10" id="60" weight="7.0" />
+      <edge source="3" target="11" id="61" weight="11.0" />
+      <edge source="3" target="12" id="62" weight="7.0" />
+      <edge source="3" target="13" id="63" weight="7.0" />
+      <edge source="3" target="14" id="64" weight="7.0" />
+      <edge source="3" target="15" id="65" weight="8.0" />
+      <edge source="3" target="16" id="66" weight="6.0" />
+      <edge source="3" target="17" id="67" weight="7.0" />
+      <edge source="3" target="18" id="68" weight="7.0" />
+      <edge source="3" target="19" id="69" weight="1.0" />
+      <edge source="4" target="5" id="70" weight="3.0" />
+      <edge source="4" target="6" id="71" weight="8.0" />
+      <edge source="4" target="7" id="72" weight="7.0" />
+      <edge source="4" target="8" id="73" weight="5.0" />
+      <edge source="4" target="9" id="74" weight="5.0" />
+      <edge source="4" target="10" id="75" weight="3.0" />
+      <edge source="4" target="11" id="76" weight="4.0" />
+      <edge source="4" target="12" id="77" weight="5.0" />
+      <edge source="4" target="13" id="78" weight="5.0" />
+      <edge source="4" target="14" id="79" weight="6.0" />
+      <edge source="4" target="15" id="80" weight="4.0" />
+      <edge source="4" target="16" id="81" weight="9.0" />
+      <edge source="4" target="17" id="82" weight="5.0" />
+      <edge source="4" target="18" id="83" weight="5.0" />
+      <edge source="4" target="19" id="84" weight="5.0" />
+      <edge source="5" target="6" id="85" weight="6.0" />
+      <edge source="5" target="7" id="86" weight="2.0" />
+      <edge source="5" target="8" id="87" weight="4.0" />
+      <edge source="5" target="9" id="88" weight="4.0" />
+      <edge source="5" target="10" id="89" weight="5.0" />
+      <edge source="5" target="11" id="90" weight="9.0" />
+      <edge source="5" target="12" id="91" weight="5.0" />
+      <edge source="5" target="13" id="92" weight="8.0" />
+      <edge source="5" target="14" id="93" weight="3.0" />
+      <edge source="5" target="15" id="94" weight="4.0" />
+      <edge source="5" target="16" id="95" weight="5.0" />
+      <edge source="5" target="17" id="96" weight="5.0" />
+      <edge source="5" target="18" id="97" weight="9.0" />
+      <edge source="5" target="19" id="98" weight="10.0" />
+      <edge source="6" target="7" id="99" weight="5.0" />
+      <edge source="6" target="8" id="100" weight="9.0" />
+      <edge source="6" target="9" id="101" weight="7.0" />
+      <edge source="6" target="10" id="102" weight="10.0" />
+      <edge source="6" target="11" id="103" weight="4.0" />
+      <edge source="6" target="12" id="104" weight="7.0" />
+      <edge source="6" target="13" id="105" weight="4.0" />
+      <edge source="6" target="14" id="106" weight="3.0" />
+      <edge source="6" target="15" id="107" weight="8.0" />
+      <edge source="6" target="16" id="108" weight="6.0" />
+      <edge source="6" target="17" id="109" weight="9.0" />
+      <edge source="6" target="18" id="110" weight="7.0" />
+      <edge source="6" target="19" id="111" weight="2.0" />
+      <edge source="7" target="8" id="112" weight="7.0" />
+      <edge source="7" target="9" id="113" weight="6.0" />
+      <edge source="7" target="10" id="114" weight="4.0" />
+      <edge source="7" target="11" id="115" weight="1.0" />
+      <edge source="7" target="12" id="116" weight="7.0" />
+      <edge source="7" target="13" id="117" weight="11.0" />
+      <edge source="7" target="14" id="118" weight="7.0" />
+      <edge source="7" target="15" id="119" weight="5.0" />
+      <edge source="7" target="16" id="120" weight="7.0" />
+      <edge source="7" target="17" id="121" weight="5.0" />
+      <edge source="7" target="18" id="122" weight="7.0" />
+      <edge source="7" target="19" id="123" weight="5.0" />
+      <edge source="8" target="9" id="124" weight="7.0" />
+      <edge source="8" target="10" id="125" weight="7.0" />
+      <edge source="8" target="11" id="126" weight="3.0" />
+      <edge source="8" target="12" id="127" weight="4.0" />
+      <edge source="8" target="13" id="128" weight="4.0" />
+      <edge source="8" target="14" id="129" weight="7.0" />
+      <edge source="8" target="15" id="130" weight="6.0" />
+      <edge source="8" target="16" id="131" weight="9.0" />
+      <edge source="8" target="17" id="132" weight="6.0" />
+      <edge source="8" target="18" id="133" weight="4.0" />
+      <edge source="8" target="19" id="134" weight="6.0" />
+      <edge source="9" target="10" id="135" weight="8.0" />
+      <edge source="9" target="11" id="136" weight="6.0" />
+      <edge source="9" target="12" id="137" weight="3.0" />
+      <edge source="9" target="13" id="138" weight="7.0" />
+      <edge source="9" target="14" id="139" weight="12.0" />
+      <edge source="9" target="15" id="140" weight="6.0" />
+      <edge source="9" target="16" id="141" weight="9.0" />
+      <edge source="9" target="17" id="142" weight="7.0" />
+      <edge source="9" target="18" id="143" weight="3.0" />
+      <edge source="9" target="19" id="144" weight="7.0" />
+      <edge source="10" target="11" id="145" weight="5.0" />
+      <edge source="10" target="12" id="146" weight="7.0" />
+      <edge source="10" target="13" id="147" weight="5.0" />
+      <edge source="10" target="14" id="148" weight="6.0" />
+      <edge source="10" target="15" id="149" weight="7.0" />
+      <edge source="10" target="16" id="150" weight="5.0" />
+      <edge source="10" target="17" id="151" weight="8.0" />
+      <edge source="10" target="18" id="152" weight="8.0" />
+      <edge source="10" target="19" id="153" weight="11.0" />
+      <edge source="11" target="12" id="154" weight="10.0" />
+      <edge source="11" target="13" id="155" weight="7.0" />
+      <edge source="11" target="14" id="156" weight="5.0" />
+      <edge source="11" target="15" id="157" weight="8.0" />
+      <edge source="11" target="16" id="158" weight="5.0" />
+      <edge source="11" target="17" id="159" weight="9.0" />
+      <edge source="11" target="18" id="160" weight="5.0" />
+      <edge source="11" target="19" id="161" weight="6.0" />
+      <edge source="12" target="13" id="162" weight="3.0" />
+      <edge source="12" target="14" id="163" weight="5.0" />
+      <edge source="12" target="15" id="164" weight="5.0" />
+      <edge source="12" target="16" id="165" weight="5.0" />
+      <edge source="12" target="17" id="166" weight="6.0" />
+      <edge source="12" target="18" id="167" weight="5.0" />
+      <edge source="12" target="19" id="168" weight="4.0" />
+      <edge source="13" target="14" id="169" weight="5.0" />
+      <edge source="13" target="15" id="170" weight="4.0" />
+      <edge source="13" target="16" id="171" weight="5.0" />
+      <edge source="13" target="17" id="172" weight="8.0" />
+      <edge source="13" target="18" id="173" weight="6.0" />
+      <edge source="13" target="19" id="174" weight="7.0" />
+      <edge source="14" target="15" id="175" weight="7.0" />
+      <edge source="14" target="16" id="176" weight="4.0" />
+      <edge source="14" target="17" id="177" weight="5.0" />
+      <edge source="14" target="18" id="178" weight="4.0" />
+      <edge source="14" target="19" id="179" weight="10.0" />
+      <edge source="15" target="16" id="180" weight="7.0" />
+      <edge source="15" target="17" id="181" weight="5.0" />
+      <edge source="15" target="18" id="182" weight="5.0" />
+      <edge source="15" target="19" id="183" weight="6.0" />
+      <edge source="16" target="17" id="184" weight="9.0" />
+      <edge source="16" target="18" id="185" weight="6.0" />
+      <edge source="16" target="19" id="186" weight="5.0" />
+      <edge source="17" target="18" id="187" weight="3.0" />
+      <edge source="17" target="19" id="188" weight="5.0" />
+      <edge source="18" target="19" id="189" weight="4.0" />
+    </edges>
+  </graph>
+</gexf>
