@@ -108,7 +108,7 @@ celerybeat.pid
 **/.env
 **/data/*
 **/*.png
-Experiments/Images/*
+Stories/Experiments/Results/*
 .venv
 env/
 venv/
