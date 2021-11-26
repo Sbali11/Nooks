@@ -4,6 +4,7 @@
 # TODO convert to bulk ops?
 # TODO error correcting on NooksHome in case server breaks?
 # TODO save channel history
+# TODO ask about cases where the person has created a story--> no longer able to swipe that day?
 import os
 import logging
 import atexit
@@ -32,7 +33,7 @@ SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
 
 db = MongoClient(MONGODB_LINK).nooks
-app = App()     
+app = App()
 
 cron = BackgroundScheduler(daemon=True)
 cron.start()
@@ -41,6 +42,7 @@ cron.start()
 def random_priority(creator, user, title, desc, to):
     p = random.randint(0, 2)
     return p
+
 
 @app.view("new_story")
 def handle_submission(ack, body, client, view, logger):
@@ -58,7 +60,7 @@ def handle_submission(ack, body, client, view, logger):
         "banned": banned,
         "status": "suggested",
         "created_on": datetime.utcnow(),
-        "swiped_right": []
+        "swiped_right": [],
     }
     db.stories.insert_one(new_story_info)
     app.client.chat_postMessage(
@@ -66,6 +68,7 @@ def handle_submission(ack, body, client, view, logger):
         channel=user,
         text="Hey! I've added your story titled " + title + " to the queue. ",
     )
+
 
 @app.action("create_story")
 def create_story_modal(ack, body, logger):
@@ -135,41 +138,24 @@ def create_story_modal(ack, body, logger):
 
 
 @app.action("story_interested")
-def initial_thoughts_modal(ack, body, logger):
+def nook_int(ack, body, logger):
     ack()
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
     user_story = nooks_home.suggested_stories[cur_pos]
-    db.user_swipes.update_one(
-                {"user_id": user_id},
-                {"$set":{"cur_pos": cur_pos+1}}
-    )
-    db.stories.update(
-        {"_id": user_story["_id"]}, 
-        {
-        "$push": {
-            "swiped_right": user_id
-        }}
-    )
+    db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
+    db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
+
 @app.action("story_not_interested")
-def initial_thoughts_modal(ack, body, logger):
+def nook_not_int(ack, body, logger):
     ack()
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
     user_story = nooks_home.suggested_stories[cur_pos]
-    db.user_swipes.update_one(
-                {"user_id": user_id},
-                {"$set":{"cur_pos": cur_pos+1}}
-    )
-    db.stories.update(
-        {"_id": user_story["_id"]}, 
-        {
-        "$push": {
-            "swiped_left": user_id
-        }}
-    )
+    db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
+    db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_left": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
 
@@ -204,6 +190,171 @@ def update_message(ack, body, client, view, logger):
 def update_home_tab(client, event, logger):
     nooks_home.update_home_tab(client, event, logger)
 
+
+@app.action("signup")
+def signup_modal(ack, body, logger):
+    ack()
+    logging.info("HUZZAH")
+    # TODO check if member is already in database?
+    app.client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "new_story",
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "To help me optimize, tell me about yourself!",
+                    },
+                },
+                {
+                    "block_id": "gender",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Gender",
+                        "emoji": True,
+                    },
+                },
+                {
+                    "block_id": "age",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Age",
+                        "emoji": True,
+                    },
+                },
+                {
+                    "block_id": "yrs_org",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Number of years in this organization",
+                        "emoji": True,
+                    },
+                },
+
+            ],
+        },
+    )
+
+@app.action("onboard_info")
+def show_nooks_info(ack, body, logger):
+    ack()
+    user_id = body["user"]["id"]
+    app.client.chat_postMessage(
+            link_names=True,
+            channel=user_id, 
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Can I create nooks?*\nYes! After we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, we also have some sample topics here for :sparkles:inspiration:sparkles:",
+                    },
+                },
+                
+                {
+                    "type": "image",
+                    "title": {"type": "plain_text", "text": "image1", "emoji": True},
+                    "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
+                    "alt_text": "image1",
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*How can I join these nooks?*\nEveryday you will be able to show your interest for suggested nooks topics and using some secret optimizations(that aim to increase socialization) we'll allocate one nook to you the next day.",
+                    },
+                },
+                {
+                    "type": "image",
+                    "title": {"type": "plain_text", "text": "image1", "emoji": True},
+                    "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
+                    "alt_text": "image1",
+                },
+                {
+                        "type": "actions",
+                        "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "signup",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Sign me up!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                }
+                            ],
+                },
+            ],
+        )
+
+
+@app.command("/onboard")
+def onboarding_modal(ack, body, logger):
+    ack()
+    for member in app.client.users_list()["members"]:
+        app.client.chat_postMessage(
+            link_names=True,
+            channel=member["id"],
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ I allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                    },
+                },
+
+
+                {
+                        "type": "actions",
+                        "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "onboard_info",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Tell me more!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                    "value": "join",
+                                }
+                            ],
+                },
+            ],
+        )
+
+
+
 # Add functionality here
 from flask import Flask, request
 
@@ -211,27 +362,24 @@ flask_app = Flask(__name__)
 handler = SocketModeHandler(app, SLACK_APP_TOKEN)
 handler.connect()
 
+
 def remove_past_stories():
     active_stories = list(db.stories.find({"status": "active"}))
     # archive all channels of the past day
     for active_story in active_stories:
         try:
             db.stories.update(
-                {"_id": active_story["_id"]}, 
-                {
-                    "$set": {
-                        "status": "archived"
-                    }
-                }
+                {"_id": active_story["_id"]}, {"$set": {"status": "archived"}}
             )
             app.client.conversations_archive(channel=active_story["channel_id"])
 
         except Exception as e:
             logging.error(traceback.format_exc())
 
+
 def create_new_channels(new_stories, allocations):
     # create new channels for the day
-    
+
     for new_story in new_stories:
         title = "sok_" + new_story["title"]
         creator = new_story["creator"]
@@ -244,7 +392,9 @@ def create_new_channels(new_stories, allocations):
                 channel=ep_channel,
                 text="Hmm I'm not advanced enough to have thoughts of my own. But this is what everyone thought while joining",
             )
-            app.client.conversations_invite(channel=ep_channel, users=allocations[new_story["_id"]])
+            app.client.conversations_invite(
+                channel=ep_channel, users=allocations[new_story["_id"]]
+            )
             db.stories.update(
                 {"_id": new_story["_id"]},
                 {
@@ -259,10 +409,11 @@ def create_new_channels(new_stories, allocations):
             logging.error(traceback.format_exc())
         return new_stories
 
+
 def update_story_suggestions():
     # all stories
     suggested_stories = list(db.stories.find({"status": "suggested"}))
-    #db.user_swipes.remove()
+    # db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
     for suggested_story in suggested_stories:
@@ -272,7 +423,7 @@ def update_story_suggestions():
                 {"_id": suggested_story["_id"]},
                 {
                     "$set": {
-                        "status": "show",                
+                        "status": "show",
                     }
                 },
             )
@@ -280,46 +431,60 @@ def update_story_suggestions():
             logging.error(traceback.format_exc())
     return suggested_stories
 
+
 # TODO change this to hour for final
 @cron.scheduled_job("cron", second="10")
 def post_stories():
-    
     remove_past_stories()
     current_stories = list(db.stories.find({"status": "show"}))
     allocations = nooks_alloc.create_nook_allocs(nooks=current_stories)
     create_new_channels(current_stories, allocations)
-    
     suggested_stories = update_story_suggestions()
     nooks_home.update(suggested_stories=suggested_stories)
 
-    
+
 atexit.register(lambda: cron.shutdown(wait=False))
 
-if __name__ == "__main__":
+
+def main():
     db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
-    
-    #db.member_vectors.remove()
-    #db.all_interacted.remove()
-    #db.temporal_interacted.remove()
+
     # TODO shift to onboarding
     if "member_vectors" not in db.list_collection_names():
         db.create_collection("member_vectors")
         db.member_vectors.create_index("user_id")
-        all_members =  app.client.users_list()["members"]
-        
+        all_members = app.client.users_list()["members"]
+
         member_vectors = np.random.randint(2, size=(len(all_members), MEMBER_FEATURES))
-        db.member_vectors.insert_many([{"user_id": member["id"], "member_vector": member_vectors[i].tolist()} for i, member in enumerate(all_members)])
-        
+        db.member_vectors.insert_many(
+            [
+                {"user_id": member["id"], "member_vector": member_vectors[i].tolist()}
+                for i, member in enumerate(all_members)
+            ]
+        )
+
         member_interacted = np.zeros((len(all_members), len(all_members)))
         db.create_collection("all_interacted")
         db.create_collection("temporal_interacted")
-        
-        db.all_interacted.insert_many([{"user_id": member["id"], "counts": member_interacted[i].tolist()} for i, member in enumerate(all_members)])
-        db.temporal_interacted.insert_many([{"user_id": member["id"], "counts": member_interacted[i].tolist()} for i, member in enumerate(all_members)])
 
+        db.all_interacted.insert_many(
+            [
+                {"user_id": member["id"], "counts": member_interacted[i].tolist()}
+                for i, member in enumerate(all_members)
+            ]
+        )
+        db.temporal_interacted.insert_many(
+            [
+                {"user_id": member["id"], "counts": member_interacted[i].tolist()}
+                for i, member in enumerate(all_members)
+            ]
+        )
+
+
+if __name__ == "__main__":
+    main()
     nooks_home = NooksHome(db=db)
     nooks_alloc = NooksAllocation(db=db)
     flask_app.run(debug=True, use_reloader=False)
-

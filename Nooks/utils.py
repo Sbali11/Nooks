@@ -1,5 +1,3 @@
-# TODO add information about left swiping?
-
 import logging
 import numpy as np
 
@@ -158,7 +156,7 @@ class NooksAllocation:
             })
         self._update_interacted(member_allocs, nooks_allocs)
         return allocations
- 
+
 class NooksHome:
     def __init__(self, db):
         self.db = db
@@ -341,5 +339,3 @@ class NooksHome:
 		        }
 
         )
-
-
