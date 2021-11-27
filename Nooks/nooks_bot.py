@@ -4,7 +4,9 @@
 # TODO convert to bulk ops?
 # TODO error correcting on NooksHome in case server breaks?
 # TODO save channel history
+# TODO confirm the send same day thing
 # TODO ask about cases where the person has created a story--> no longer able to swipe that day?
+# TODO ask about past conversations display
 import os
 import logging
 import atexit
@@ -311,11 +313,12 @@ def show_nooks_info(ack, body, logger):
                         "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
                     },
                 },
+                {"type": "divider"},
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*How can I join a nook?*\nEveryday you will be able to show your interest for suggested nooks topics and using some secret optimizations(that aim to increase socialization) I'll allocate one nook to you the next day.",
+                        "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid socialization, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
                     },
                 },
                 {
@@ -324,11 +327,12 @@ def show_nooks_info(ack, body, logger):
                     "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
                     "alt_text": "image1",
                 },
+                {"type": "divider"},
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*How can I create nooks?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, I also have some sample topics here for :sparkles:inspiration:sparkles:",
+                        "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, I also have some sample topics here for :sparkles:inspiration:sparkles:",
                     },
                 },
                 
@@ -339,11 +343,12 @@ def show_nooks_info(ack, body, logger):
                     "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
                     "alt_text": "image1",
                 },
+                {"type": "divider"},
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "P.S I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
+                        "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
                     },
                 },
                 {
@@ -376,7 +381,7 @@ def onboarding_modal(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ I allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                        "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
                     },
                 },
 
