@@ -40,6 +40,7 @@ app = App()
 cron = BackgroundScheduler(daemon=True)
 cron.start()
 
+
 @app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
     ack()
@@ -132,6 +133,7 @@ def create_story_modal(ack, body, logger):
         },
     )
 
+
 @app.action("story_interested")
 def nook_int(ack, body, logger):
     ack()
@@ -142,6 +144,7 @@ def nook_int(ack, body, logger):
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
+
 @app.action("story_not_interested")
 def nook_not_int(ack, body, logger):
     ack()
@@ -151,6 +154,159 @@ def nook_not_int(ack, body, logger):
     db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_left": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
+
+@app.view("send_dm")
+def handle_send_message(ack, body, client, view, logger):
+    ack()
+    # TODO create a new name if taken?
+    input_data = view["state"]["values"]
+    to_user = view["private_metadata"]
+    message = input_data["message"]["plain_text_input-action"]["value"]
+
+    app.client.chat_postMessage(
+        link_names=True,
+        as_user=True,
+        channel=to_user,
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": message,
+                },
+            },
+
+        ],
+    )
+
+
+@app.action("customize_dm")
+def customize_dm_modal(ack, body, client, view, logger):
+    ack()
+    
+    # TODO create a new name if taken?
+    from_user = body["user"]["id"]
+    to_user = body["actions"][0]["value"]
+    # db.personal_message.insert_one(new_story_info)
+    #app.client.conversations_open(users=to_user)
+    #return
+    app.client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "send_dm",
+            "title": {"type": "plain_text", "text": "Connect beyond Nooks"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {"type": "plain_text", "text": "Send", "emoji": True},
+            "private_metadata": to_user,
+            "blocks": [
+                {
+                    "block_id": "message",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                        "multiline": True,
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Customize message",
+                        "emoji": True,
+                    },
+                },
+            ],
+        },
+    )
+
+
+@app.view("send_message")
+def handle_send_message(ack, body, client, view, logger):
+    ack()
+    input_data = view["state"]["values"]
+    from_user = body["user"]["id"]
+
+    logging.info("BZZZZ")
+    logging.info(view)
+
+    to_user = view["private_metadata"]
+    message = input_data["message"]["plain_text_input-action"]["value"]
+    logging.info("VZZZ")
+    logging.info(body)
+    logging.info(view)
+    new_story_info = {"message": message, "from_user": from_user, "to_user": to_user}
+    db.personal_message.insert_one(new_story_info)
+    app.client.chat_postMessage(
+        link_names=True,
+        channel=to_user,
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": message,
+                },
+            },
+            {
+                "type": "actions",
+                
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "customize_dm",
+                        "value": from_user,
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Send them a DM!",
+                            "emoji": True,
+                        },
+                        "style": "primary",
+                        
+                    }
+                ],
+            },
+        ],
+    )
+
+
+@app.action("contact_person")
+def create_story_modal(ack, body, logger):
+    ack()
+    from_user = body["user"]["id"]
+    to_user = body["actions"][0]["value"]
+
+    app.client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "send_message",
+            "title": {"type": "plain_text", "text": "Connect beyond Nooks"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {"type": "plain_text", "text": "Send", "emoji": True},
+            "private_metadata": to_user,
+            "blocks": [
+                {
+                    "block_id": "message",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                        "multiline": True,
+                        "initial_value": "Hey! "
+                        + app.client.users_profile_get(user=from_user)["profile"][
+                            "real_name"
+                        ]
+                        + " loved talking to you in past nooks, and would like to grab coffee with you!",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Customize message",
+                        "emoji": True,
+                    },
+                },
+            ],
+        },
+    )
+
 
 @app.view("enter_channel")
 def update_message(ack, body, client, view, logger):
@@ -178,9 +334,11 @@ def update_message(ack, body, client, view, logger):
     except Exception as e:
         logging.error(traceback.format_exc())
 
+
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     nooks_home.update_home_tab(client, event, logger)
+
 
 @app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
@@ -193,36 +351,39 @@ def handle_signup(ack, body, client, view, logger):
         new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
-    db.member_vector.insert_one(new_member_info)
-    
+    db.member_vectors.insert_one(new_member_info)
+
     app.client.chat_postMessage(
         link_names=True,
         channel=user,
         text="You're all set! Create your first story ",
     )
 
+
 @app.action("signup")
 def signup_modal(ack, body, logger):
     ack()
     user = body["user"]["id"]
-    if db.member_vector.find_one({'user_id': user}):
-        app.client.views_open(trigger_id=body["trigger_id"],
-        view={
-            "type": "modal",
-            "callback_id": "add_member",
-            "title": {"type": "plain_text", "text": "Sign Up!"},
-            "close": {"type": "plain_text", "text": "Close"},
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Looks like you're already signed up! If you want to withdraw consent or change any information on your profile, contact sbali@andrew.cmu.edu",
+    if db.member_vector.find_one({"user_id": user}):
+        app.client.views_open(
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "callback_id": "add_member",
+                "title": {"type": "plain_text", "text": "Sign Up!"},
+                "close": {"type": "plain_text", "text": "Close"},
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Looks like you're already signed up! If you want to withdraw consent or change any information on your profile, contact sbali@andrew.cmu.edu",
+                        },
                     },
-                },]
-            })
+                ],
+            },
+        )
         return
-
 
     # TODO check if member is already in database?
     app.client.views_open(
@@ -293,81 +454,80 @@ def signup_modal(ack, body, logger):
                         "emoji": True,
                     },
                 },
-
             ],
         },
     )
+
 
 @app.action("onboard_info")
 def show_nooks_info(ack, body, logger):
     ack()
     user_id = body["user"]["id"]
     app.client.chat_postMessage(
-            link_names=True,
-            channel=user_id, 
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
-                    },
+        link_names=True,
+        channel=user_id,
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
                 },
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid socialization, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
-                    },
+            },
+            {"type": "divider"},
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid socialization, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
                 },
-                {
-                    "type": "image",
-                    "title": {"type": "plain_text", "text": "image1", "emoji": True},
-                    "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
-                    "alt_text": "image1",
+            },
+            {
+                "type": "image",
+                "title": {"type": "plain_text", "text": "image1", "emoji": True},
+                "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
+                "alt_text": "image1",
+            },
+            {"type": "divider"},
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, I also have some sample topics here for :sparkles:inspiration:sparkles:",
                 },
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, I also have some sample topics here for :sparkles:inspiration:sparkles:",
-                    },
+            },
+            {
+                "type": "image",
+                "title": {"type": "plain_text", "text": "image1", "emoji": True},
+                "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
+                "alt_text": "image1",
+            },
+            {"type": "divider"},
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
                 },
-                
-                
-                {
-                    "type": "image",
-                    "title": {"type": "plain_text", "text": "image1", "emoji": True},
-                    "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
-                    "alt_text": "image1",
-                },
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
-                    },
-                },
-                {
-                        "type": "actions",
-                        "elements": [
-                                {
-                                    "type": "button",
-                                    "action_id": "signup",
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Sign me up!",
-                                        "emoji": True,
-                                    },
-                                    "style": "primary",
-                                }
-                            ],
-                },
-            ],
-        )
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "signup",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Sign me up!",
+                            "emoji": True,
+                        },
+                        "style": "primary",
+                    }
+                ],
+            },
+        ],
+    )
+
 
 @app.command("/onboard")
 def onboarding_modal(ack, body, logger):
@@ -384,26 +544,25 @@ def onboarding_modal(ack, body, logger):
                         "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
                     },
                 },
-
-
                 {
-                        "type": "actions",
-                        "elements": [
-                                {
-                                    "type": "button",
-                                    "action_id": "onboard_info",
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Tell me more!",
-                                        "emoji": True,
-                                    },
-                                    "style": "primary",
-                                    "value": "join",
-                                }
-                            ],
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": "onboard_info",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Tell me more!",
+                                "emoji": True,
+                            },
+                            "style": "primary",
+                            "value": "join",
+                        }
+                    ],
                 },
             ],
         )
+
 
 # Add functionality here
 from flask import Flask, request
@@ -411,6 +570,7 @@ from flask import Flask, request
 flask_app = Flask(__name__)
 handler = SocketModeHandler(app, SLACK_APP_TOKEN)
 handler.connect()
+
 
 def remove_past_stories():
     active_stories = list(db.stories.find({"status": "active"}))
@@ -425,6 +585,7 @@ def remove_past_stories():
         except Exception as e:
             logging.error(traceback.format_exc())
 
+
 def create_new_channels(new_stories, allocations):
     # create new channels for the day
 
@@ -433,7 +594,7 @@ def create_new_channels(new_stories, allocations):
         creator = new_story["creator"]
         desc = new_story["description"]
         try:
-            response = app.client.conversations_create(name="pkk", is_private=False)
+            response = app.client.conversations_create(name=title, is_private=False)
             ep_channel = response["channel"]["id"]
             initial_thoughts_thread = app.client.chat_postMessage(
                 link_names=True,
@@ -457,6 +618,7 @@ def create_new_channels(new_stories, allocations):
             logging.error(traceback.format_exc())
         return new_stories
 
+
 def update_story_suggestions():
     # all stories
     suggested_stories = list(db.stories.find({"status": "suggested"}))
@@ -477,6 +639,7 @@ def update_story_suggestions():
         except Exception as e:
             logging.error(traceback.format_exc())
     return suggested_stories
+
 
 # TODO change this to hour for final
 @cron.scheduled_job("cron", second="10")
@@ -502,7 +665,7 @@ def main():
         db.create_collection("member_vectors")
         db.member_vectors.create_index("user_id")
         all_members = app.client.users_list()["members"]
-
+        """
         member_vectors = np.random.randint(2, size=(len(all_members), MEMBER_FEATURES))
         db.member_vectors.insert_many(
             [
@@ -510,21 +673,21 @@ def main():
                 for i, member in enumerate(all_members)
             ]
         )
+        """
 
-        member_interacted = np.zeros((len(all_members), len(all_members)))
         db.create_collection("all_interacted")
         db.create_collection("temporal_interacted")
-
+        counts = {member["id"]: 0 for member in all_members}
         db.all_interacted.insert_many(
             [
-                {"user_id": member["id"], "counts": member_interacted[i].tolist()}
-                for i, member in enumerate(all_members)
+                {"user_id": member["id"], "counts": counts.copy()}
+                for member in all_members
             ]
         )
         db.temporal_interacted.insert_many(
             [
-                {"user_id": member["id"], "counts": member_interacted[i].tolist()}
-                for i, member in enumerate(all_members)
+                {"user_id": member["id"], "counts": counts.copy()}
+                for member in all_members
             ]
         )
 
