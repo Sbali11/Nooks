@@ -12,7 +12,7 @@ import random
 import collections
 import traceback
 from datetime import datetime, timezone
-from utils import NooksHome, NooksAllocation
+from utils import NooksHome, NooksAllocation, get_member_vector
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
@@ -38,14 +38,8 @@ app = App()
 cron = BackgroundScheduler(daemon=True)
 cron.start()
 
-
-def random_priority(creator, user, title, desc, to):
-    p = random.randint(0, 2)
-    return p
-
-
 @app.view("new_story")
-def handle_submission(ack, body, client, view, logger):
+def handle_new_story(ack, body, client, view, logger):
     ack()
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
@@ -136,7 +130,6 @@ def create_story_modal(ack, body, logger):
         },
     )
 
-
 @app.action("story_interested")
 def nook_int(ack, body, logger):
     ack()
@@ -147,7 +140,6 @@ def nook_int(ack, body, logger):
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
-
 @app.action("story_not_interested")
 def nook_not_int(ack, body, logger):
     ack()
@@ -157,7 +149,6 @@ def nook_not_int(ack, body, logger):
     db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_left": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
-
 
 @app.view("enter_channel")
 def update_message(ack, body, client, view, logger):
@@ -185,22 +176,58 @@ def update_message(ack, body, client, view, logger):
     except Exception as e:
         logging.error(traceback.format_exc())
 
-
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     nooks_home.update_home_tab(client, event, logger)
 
+@app.view("add_member")
+def handle_signup(ack, body, client, view, logger):
+    ack()
+    # TODO create a new name if taken?
+    input_data = view["state"]["values"]
+    user = body["user"]["id"]
+    new_member_info = {}
+    for key in input_data:
+        new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
+    new_member_info["user_id"] = user
+    new_member_info["member_vector"] = get_member_vector(new_member_info)
+    db.member_vector.insert_one(new_member_info)
+    
+    app.client.chat_postMessage(
+        link_names=True,
+        channel=user,
+        text="You're all set! Create your first story ",
+    )
 
 @app.action("signup")
 def signup_modal(ack, body, logger):
     ack()
-    logging.info("HUZZAH")
+    user = body["user"]["id"]
+    if db.member_vector.find_one({'user_id': user}):
+        app.client.views_open(trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "add_member",
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Looks like you're already signed up! If you want to withdraw consent or change any information on your profile, contact sbali@andrew.cmu.edu",
+                    },
+                },]
+            })
+        return
+
+
     # TODO check if member is already in database?
     app.client.views_open(
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "new_story",
+            "callback_id": "add_member",
             "title": {"type": "plain_text", "text": "Sign Up!"},
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
@@ -209,7 +236,7 @@ def signup_modal(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "To help me optimize, tell me about yourself!",
+                        "text": "To help me optimize your lists, tell me a bit about yourself",
                     },
                 },
                 {
@@ -251,6 +278,19 @@ def signup_modal(ack, body, logger):
                         "emoji": True,
                     },
                 },
+                {
+                    "block_id": "core_periphery",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Do you consider yourself to be well connected in the organization?",
+                        "emoji": True,
+                    },
+                },
 
             ],
         },
@@ -275,9 +315,23 @@ def show_nooks_info(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*Can I create nooks?*\nYes! After we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, we also have some sample topics here for :sparkles:inspiration:sparkles:",
+                        "text": "*How can I join a nook?*\nEveryday you will be able to show your interest for suggested nooks topics and using some secret optimizations(that aim to increase socialization) I'll allocate one nook to you the next day.",
                     },
                 },
+                {
+                    "type": "image",
+                    "title": {"type": "plain_text", "text": "image1", "emoji": True},
+                    "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
+                    "alt_text": "image1",
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*How can I create nooks?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, I also have some sample topics here for :sparkles:inspiration:sparkles:",
+                    },
+                },
+                
                 
                 {
                     "type": "image",
@@ -289,14 +343,8 @@ def show_nooks_info(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*How can I join these nooks?*\nEveryday you will be able to show your interest for suggested nooks topics and using some secret optimizations(that aim to increase socialization) we'll allocate one nook to you the next day.",
+                        "text": "P.S I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
                     },
-                },
-                {
-                    "type": "image",
-                    "title": {"type": "plain_text", "text": "image1", "emoji": True},
-                    "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
-                    "alt_text": "image1",
                 },
                 {
                         "type": "actions",
@@ -315,7 +363,6 @@ def show_nooks_info(ack, body, logger):
                 },
             ],
         )
-
 
 @app.command("/onboard")
 def onboarding_modal(ack, body, logger):
@@ -353,15 +400,12 @@ def onboarding_modal(ack, body, logger):
             ],
         )
 
-
-
 # Add functionality here
 from flask import Flask, request
 
 flask_app = Flask(__name__)
 handler = SocketModeHandler(app, SLACK_APP_TOKEN)
 handler.connect()
-
 
 def remove_past_stories():
     active_stories = list(db.stories.find({"status": "active"}))
@@ -375,7 +419,6 @@ def remove_past_stories():
 
         except Exception as e:
             logging.error(traceback.format_exc())
-
 
 def create_new_channels(new_stories, allocations):
     # create new channels for the day
@@ -409,7 +452,6 @@ def create_new_channels(new_stories, allocations):
             logging.error(traceback.format_exc())
         return new_stories
 
-
 def update_story_suggestions():
     # all stories
     suggested_stories = list(db.stories.find({"status": "suggested"}))
@@ -430,7 +472,6 @@ def update_story_suggestions():
         except Exception as e:
             logging.error(traceback.format_exc())
     return suggested_stories
-
 
 # TODO change this to hour for final
 @cron.scheduled_job("cron", second="10")

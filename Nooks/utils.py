@@ -1,7 +1,17 @@
 import logging
 import numpy as np
+import random
 
 EPSILON = 0.001
+
+MEMBER_FEATURES = 2
+def get_member_vector(member_info):
+    return np.zeros((MEMBER_FEATURES)).tolist()
+
+def random_priority(creator, user, title, desc, to):
+    p = random.randint(0, 2)
+    return p
+
 
 class NooksAllocation:
         
@@ -181,9 +191,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "*Welcome home, <@"
-                            + event["user"]
-                            + "> :house:*",
+                            "text": "*Hello fellow nook-er!",
                         },
                     },
                     {
@@ -215,9 +223,57 @@ class NooksHome:
                 },
             )
     
+    def initial_message(self, client, event):
+        client.views_publish(
+            # Use the user ID associated with the event
+            user_id=event["user"],
+            # Home tabs must be enabled in your app configuration
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Welcome home, <@"
+                            + event["user"]
+                            + "> :house:*",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Create your profile to access nooks! "
+                        },
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "signup",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Sign me up!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                }
+                            ],
+                    },
+                    ],
+                },
+            )
     
+
     def update_home_tab(self, client, event, cur_pos=0):
         user_id = event["user"]
+        member = self.db.member_vectors.find({"user_id": user_id})
+        if not member:
+            self.initial_message(client, event)
+            return
+
         swipes = self.db.user_swipes.find_one({"user_id": user_id})
         to_insert = False
         if not swipes:
@@ -234,7 +290,7 @@ class NooksHome:
             cur_pos += 1
         if cur_pos >= len(self.suggested_stories):
             self.default_message(client, event)
-
+            return 
         if to_insert:
             self.db.user_swipes.insert_one(
                 {
