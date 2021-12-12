@@ -147,7 +147,6 @@ def handle_send_message(ack, body, client, view, logger):
 
     app.client.chat_postMessage(
         link_names=True,
-        as_user=True,
         channel=to_user,
         blocks=[
             {
@@ -156,9 +155,10 @@ def handle_send_message(ack, body, client, view, logger):
                     "type": "mrkdwn",
                     "text": message,
                 },
-            },
+            }
+            ],
 
-        ],
+        
     )
 
 
@@ -220,12 +220,22 @@ def handle_send_message(ack, body, client, view, logger):
     app.client.chat_postMessage(
         link_names=True,
         channel=to_user,
+        
         blocks=[
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": message,
+                    "text": "Hey @" + app.client.users_profile_get(user=from_user)["profile"][
+                            "real_name"
+                        ] + " loved talking to you and would like to talk more. Here's what they said!",
+                },
+            },
+                            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": ">" + message,
                 },
             },
             {
@@ -247,6 +257,7 @@ def handle_send_message(ack, body, client, view, logger):
                 ],
             },
         ],
+
     )
 
 
@@ -273,11 +284,9 @@ def contact_modal(ack, body, logger):
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
                         "multiline": True,
-                        "initial_value": "Hey! @"
-                        + app.client.users_profile_get(user=from_user)["profile"][
-                            "real_name"
-                        ]
-                        + " loved talking to you in past nooks, and would like to grab coffee with you!",
+                        "initial_value": "Hey! Will you be free for a quick Zoom call anytime soon?"
+
+                        ,
                     },
                     "label": {
                         "type": "plain_text",
