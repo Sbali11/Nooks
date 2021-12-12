@@ -170,7 +170,7 @@ def customize_dm_modal(ack, body, client, view, logger):
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
     # db.personal_message.insert_one(new_story_info)
-    #app.client.conversations_open(users=to_user)
+    # app.client.conversations_open(users=to_user)
     #return
     app.client.views_open(
         trigger_id=body["trigger_id"],
@@ -569,9 +569,15 @@ def remove_past_stories():
     # archive all channels of the past day
     for active_story in active_stories:
         try:
+            chat_history = app.client.conversations_history(channel=active_story["channel_id"])["messages"]
             db.stories.update(
-                {"_id": active_story["_id"]}, {"$set": {"status": "archived"}}
+                {"_id": active_story["_id"]}, 
+                {"$set": {"status": "archived",
+                        "chat_history": chat_history}}
+                        
             )
+            
+
             app.client.conversations_archive(channel=active_story["channel_id"])
 
         except Exception as e:
@@ -593,7 +599,7 @@ def create_new_channels(new_stories, allocations):
             initial_thoughts_thread = app.client.chat_postMessage(
                 link_names=True,
                 channel=ep_channel,
-                text="Hmm I'm not advanced enough to have thoughts of my own. But this is what everyone thought while joining",
+                text="Super-excited to hear all of your thoughts :)",
             )
             logging.info("FRRRRE")
             logging.info(allocations[new_story["_id"]])
