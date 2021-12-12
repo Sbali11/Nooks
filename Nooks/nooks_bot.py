@@ -1,12 +1,3 @@
-# TODO do we need to store current user swipes?
-# TODO add don't send the story to
-# TODO valid story title
-# TODO convert to bulk ops?
-# TODO error correcting on NooksHome in case server breaks?
-# TODO save channel history
-# TODO confirm the send same day thing
-# TODO ask about cases where the person has created a story--> no longer able to swipe that day?
-# TODO ask about past conversations display
 import os
 import logging
 import atexit
@@ -34,7 +25,8 @@ MAX_STORIES_GLOBAL = 10
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
 
-db = MongoClient(MONGODB_LINK).nooks
+db = MongoClient(MONGODB_LINK).nooks_db
+
 app = App()
 
 cron = BackgroundScheduler(daemon=True)
@@ -75,17 +67,11 @@ def create_story_modal(ack, body, logger):
         view={
             "type": "modal",
             "callback_id": "new_story",
-            "title": {"type": "plain_text", "text": "Create a Story!"},
+            "title": {"type": "plain_text", "text": "Create a Nook!"},
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
             "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Let's start discussing :smile:.",
-                    },
-                },
+ 
                 {
                     "block_id": "title",
                     "type": "input",
@@ -95,7 +81,7 @@ def create_story_modal(ack, body, logger):
                     },
                     "label": {
                         "type": "plain_text",
-                        "text": "Give your story an interesting title",
+                        "text": "What do you want to talk about?",
                         "emoji": True,
                     },
                 },
@@ -118,15 +104,11 @@ def create_story_modal(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Pick conversations to send the story to",
+                        "text": "Are there any people you don't want to be a part of this conversation?",
                     },
                     "accessory": {
                         "action_id": "text1234",
                         "type": "multi_conversations_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Are there any people you don't want to be a part of this conversations",
-                        },
                     },
                 },
             ],
@@ -269,7 +251,7 @@ def handle_send_message(ack, body, client, view, logger):
 
 
 @app.action("contact_person")
-def create_story_modal(ack, body, logger):
+def contact_modal(ack, body, logger):
     ack()
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
@@ -291,7 +273,7 @@ def create_story_modal(ack, body, logger):
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
                         "multiline": True,
-                        "initial_value": "Hey! "
+                        "initial_value": "Hey! @"
                         + app.client.users_profile_get(user=from_user)["profile"][
                             "real_name"
                         ]
@@ -463,6 +445,7 @@ def signup_modal(ack, body, logger):
 def show_nooks_info(ack, body, logger):
     ack()
     user_id = body["user"]["id"]
+
     app.client.chat_postMessage(
         link_names=True,
         channel=user_id,
@@ -590,10 +573,12 @@ def create_new_channels(new_stories, allocations):
     # create new channels for the day
 
     for new_story in new_stories:
-        title = "sok_" + new_story["title"]
+        title =  new_story["title"]
         creator = new_story["creator"]
         desc = new_story["description"]
         try:
+            logging.info("FRRRRE")
+            logging.info(title)
             response = app.client.conversations_create(name=title, is_private=False)
             ep_channel = response["channel"]["id"]
             initial_thoughts_thread = app.client.chat_postMessage(
@@ -601,9 +586,13 @@ def create_new_channels(new_stories, allocations):
                 channel=ep_channel,
                 text="Hmm I'm not advanced enough to have thoughts of my own. But this is what everyone thought while joining",
             )
+            logging.info("FRRRRE")
+            logging.info(allocations[new_story["_id"]])
+            
             app.client.conversations_invite(
                 channel=ep_channel, users=allocations[new_story["_id"]]
             )
+            
             db.stories.update(
                 {"_id": new_story["_id"]},
                 {

@@ -189,9 +189,6 @@ class NooksAllocation:
         allocations = {}
         for nook_id in range(len(nooks_allocs)):
             right_swipe_mems = nooks_allocs[nook_id].nonzero()[0].tolist()
-            logging.info("UUUNIN")
-            logging.info(right_swipe_mems)
-            # .tolist()
             right_swipe_mems_ids = [
                 self.member_ids[member] for member in right_swipe_mems
             ]
@@ -214,18 +211,14 @@ class NooksHome:
         logging.info("HERERE")
         logging.info(self.suggested_stories)
 
-    def default_message(self, client, event):
-        user_id = event["user"]
+    def get_interaction_blocks(self, client, user_id):
         all_connections = self.db.all_interacted.find_one({"user_id": user_id})
 
         interacted_with = []
         interaction_block_items = []
 
         if all_connections:
-            print("YGYUGUY")
-            print(list(all_connections))
             num_interactions = all_connections["counts"]
-            print((num_interactions))
             interacted_with = [
                 (num_interactions[member], member)
                 for member in num_interactions
@@ -253,10 +246,9 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": client.users_profile_get(user=member)["profile"][
+                            "text": "@" +client.users_profile_get(user=member)["profile"][
                                 "real_name"
                             ]
-                            # "*<fakeLink.toHotelPage.com|Windsor Court Hotel>*\n★★★★★\n$340 per night\nRated: 9.4 - Excellent",
                         },
                         "accessory": {
                             "type": "button",
@@ -272,6 +264,11 @@ class NooksHome:
                     }
                     for _, member in interacted_with
                 ]
+        return interaction_block_items
+
+    def default_message(self, client, event):
+        user_id = event["user"]
+        interaction_block_items = self.get_interaction_blocks(client, user_id)
 
         client.views_publish(
             # Use the user ID associated with the event
@@ -279,7 +276,7 @@ class NooksHome:
             # Home tabs must be enabled in your app configuration
             view={
                 "type": "home",
-                "blocks": [
+                "blocks": ([
                     {
                         "type": "actions",
                         "elements": [
@@ -324,7 +321,7 @@ class NooksHome:
                     },
                     {"type": "divider"},
                 ]
-                + interaction_block_items,
+                + interaction_block_items),
             },
         )
 
@@ -374,8 +371,10 @@ class NooksHome:
     def update_home_tab(self, client, event, cur_pos=0):
         user_id = event["user"]
         member = self.db.member_vectors.find_one({"user_id": user_id})
+
+        interaction_block_items = self.get_interaction_blocks(client, user_id)
         logging.info("MMMZ")
-        logging.info(member)
+        logging.info(interaction_block_items)
         if not member:
             logging.info("WWEJFN")
             self.initial_message(client, event)
@@ -494,7 +493,7 @@ class NooksHome:
                                 "action_id": "story_interested",
                                 "value": str(cur_pos),
                             },
-                        ],
+                        ] 
                     },
                     {"type": "divider"},
                 ],
