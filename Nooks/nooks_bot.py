@@ -588,7 +588,7 @@ def remove_past_stories():
 def create_new_channels(new_stories, allocations):
     # create new channels for the day
     now = datetime.now() # current date and time
-    date = now.strftime("%m-%d-%Y")
+    date = now.strftime("%m-%d-%Y-%H-%M-%S")
     for i, new_story in enumerate(new_stories):
         title =  new_story["title"]
         creator = new_story["creator"]
@@ -602,7 +602,7 @@ def create_new_channels(new_stories, allocations):
             initial_thoughts_thread = app.client.chat_postMessage(
                 link_names=True,
                 channel=ep_channel,
-                text="Super-excited to hear all of your thoughts :)",
+                text="Super-excited to hear all of your thoughts on " + title + "\n" + ">" + desc,
             )
             logging.info("FRRRRE")
             logging.info(allocations[new_story["_id"]])
