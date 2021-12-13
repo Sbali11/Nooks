@@ -108,9 +108,15 @@ def create_story_modal(ack, body, logger):
                     },
                     "accessory": {
                         "action_id": "text1234",
-                        "type": "multi_conversations_select",
+                        				"placeholder": {
+					"type": "plain_text",
+					"text": "Select users you don't want included in this nook",
+					"emoji": True
+				},
+                        "type": "multi_users_select",
                     },
                 },
+
             ],
         },
     )
