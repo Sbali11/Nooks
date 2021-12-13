@@ -332,6 +332,7 @@ class NooksHome:
                             },
                         },
                         {"type": "divider"},
+                        {"type": "divider"},
                         {
                             "type": "section",
                             "text": {
@@ -496,6 +497,7 @@ class NooksHome:
                             "action_id": "new_sample_nook",
                         },
                     },
+                    {"type": "divider"},
                     {"type": "divider"},
                     {
                         "type": "section",
