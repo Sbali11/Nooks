@@ -4,6 +4,7 @@ import atexit
 import random
 import collections
 import traceback
+
 from datetime import datetime, timezone
 from utils import NooksHome, NooksAllocation, get_member_vector
 from dotenv import load_dotenv
@@ -586,15 +587,17 @@ def remove_past_stories():
 
 def create_new_channels(new_stories, allocations):
     # create new channels for the day
-
-    for new_story in new_stories:
+    now = datetime.now() # current date and time
+    date = now.strftime("%m-%d-%Y")
+    for i, new_story in enumerate(new_stories):
         title =  new_story["title"]
         creator = new_story["creator"]
         desc = new_story["description"]
         try:
-            logging.info("FRRRRE")
-            logging.info(title)
-            response = app.client.conversations_create(name=title, is_private=False)
+            
+            channel_name = "nook-" + date + '-' + str(i)
+                
+            response = app.client.conversations_create(name=channel_name, is_private=False)
             ep_channel = response["channel"]["id"]
             initial_thoughts_thread = app.client.chat_postMessage(
                 link_names=True,
