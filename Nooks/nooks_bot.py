@@ -665,6 +665,16 @@ def update_story_suggestions():
             )
         except Exception as e:
             logging.error(traceback.format_exc())
+    if suggested_stories:
+        for user in app.client.users_list()["members"]:
+            try:
+                app.client.chat_postMessage(
+                link_names=True,
+                channel=user["id"],
+                text="Hello! I've updated your Nook Cards List for today!",
+                )
+            except Exception as e:
+                logging.error(traceback.format_exc())
     return suggested_stories
 
 
@@ -676,6 +686,7 @@ def post_stories():
     allocations = nooks_alloc.create_nook_allocs(nooks=current_stories)
     create_new_channels(current_stories, allocations)
     suggested_stories = update_story_suggestions()
+
     nooks_home.update(suggested_stories=suggested_stories)
 
 @cron.scheduled_job("cron", second="1")
