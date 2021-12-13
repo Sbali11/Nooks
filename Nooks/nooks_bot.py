@@ -42,7 +42,8 @@ def handle_new_story(ack, body, client, view, logger):
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
-    banned = input_data["banned"]["text1234"]["selected_conversations"]
+
+    banned = input_data["banned"]["text1234"]["selected_users"]
     new_story_info = {
         "title": title,
         "creator": user,
