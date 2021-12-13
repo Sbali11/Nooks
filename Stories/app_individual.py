@@ -53,7 +53,7 @@ def handle_submission(ack, body, client, view, logger):
         "created_on": datetime.utcnow()
     }    
     db.stories.insert_one(new_story_info)
-    app.client.chat_postMessage(link_names =True,channel=user,
+    app.client.chat_postMessage(link_names=True,channel=user,
                                 text="Nice! I've added your story titled " + title + " to the queue. ")
    
     
