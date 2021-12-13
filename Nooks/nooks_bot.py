@@ -72,7 +72,6 @@ def create_story_modal(ack, body, logger):
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
             "blocks": [
- 
                 {
                     "block_id": "title",
                     "type": "input",
@@ -127,6 +126,20 @@ def nook_int(ack, body, logger):
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
+@app.action("new_sample_nook")
+def update_random_nook(ack, body, logger):
+    ack()
+    user_id = body["user"]["id"]
+    logging.info("UUHNIUN")
+    vals = body["actions"][0]["value"].split('/')
+    logging.info(vals)
+
+    cur_pos = int(vals[0])
+    total_len = int(vals[1])
+    db.sample_nook_pos.update_one({"user_id": user_id}, {"$set": {"cur_nook_pos": (cur_pos+1)%total_len}})
+    
+    nooks_home.update_home_tab(app.client, {"user": user_id})
+
 
 @app.action("story_not_interested")
 def nook_not_int(ack, body, logger):
@@ -137,6 +150,7 @@ def nook_not_int(ack, body, logger):
     db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_left": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
+
 
 @app.view("send_dm")
 def handle_send_message(ack, body, client, view, logger):
@@ -157,22 +171,20 @@ def handle_send_message(ack, body, client, view, logger):
                     "text": message,
                 },
             }
-            ],
-
-        
+        ],
     )
 
 
 @app.action("customize_dm")
 def customize_dm_modal(ack, body, client, view, logger):
     ack()
-    
+
     # TODO create a new name if taken?
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
     # db.personal_message.insert_one(new_story_info)
     # app.client.conversations_open(users=to_user)
-    #return
+    # return
     app.client.views_open(
         trigger_id=body["trigger_id"],
         view={
@@ -221,18 +233,19 @@ def handle_send_message(ack, body, client, view, logger):
     app.client.chat_postMessage(
         link_names=True,
         channel=to_user,
-        
         blocks=[
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "Hey @" + app.client.users_profile_get(user=from_user)["profile"][
-                            "real_name"
-                        ] + " loved talking to you and would like to talk more. Here's what they said!",
+                    "text": "Hey @"
+                    + app.client.users_profile_get(user=from_user)["profile"][
+                        "real_name"
+                    ]
+                    + " loved talking to you and would like to talk more. Here's what they said!",
                 },
             },
-                            {
+            {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
@@ -241,7 +254,6 @@ def handle_send_message(ack, body, client, view, logger):
             },
             {
                 "type": "actions",
-                
                 "elements": [
                     {
                         "type": "button",
@@ -253,12 +265,10 @@ def handle_send_message(ack, body, client, view, logger):
                             "emoji": True,
                         },
                         "style": "primary",
-                        
                     }
                 ],
             },
         ],
-
     )
 
 
@@ -285,9 +295,7 @@ def contact_modal(ack, body, logger):
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
                         "multiline": True,
-                        "initial_value": "Hey! Will you be free for a quick Zoom call anytime soon?"
-
-                        ,
+                        "initial_value": "Hey! Will you be free for a quick Zoom call anytime soon?",
                     },
                     "label": {
                         "type": "plain_text",
@@ -570,14 +578,13 @@ def remove_past_stories():
     # archive all channels of the past day
     for active_story in active_stories:
         try:
-            chat_history = app.client.conversations_history(channel=active_story["channel_id"])["messages"]
+            chat_history = app.client.conversations_history(
+                channel=active_story["channel_id"]
+            )["messages"]
             db.stories.update(
-                {"_id": active_story["_id"]}, 
-                {"$set": {"status": "archived",
-                        "chat_history": chat_history}}
-                        
+                {"_id": active_story["_id"]},
+                {"$set": {"status": "archived", "chat_history": chat_history}},
             )
-            
 
             app.client.conversations_archive(channel=active_story["channel_id"])
 
@@ -587,30 +594,36 @@ def remove_past_stories():
 
 def create_new_channels(new_stories, allocations):
     # create new channels for the day
-    now = datetime.now() # current date and time
+    now = datetime.now()  # current date and time
     date = now.strftime("%m-%d-%Y-%H-%M-%S")
     for i, new_story in enumerate(new_stories):
-        title =  new_story["title"]
+        title = new_story["title"]
         creator = new_story["creator"]
         desc = new_story["description"]
         try:
-            
-            channel_name = "nook-" + date + '-' + str(i)
-                
-            response = app.client.conversations_create(name=channel_name, is_private=False)
+
+            channel_name = "nook-" + date + "-" + str(i)
+
+            response = app.client.conversations_create(
+                name=channel_name, is_private=False
+            )
             ep_channel = response["channel"]["id"]
             initial_thoughts_thread = app.client.chat_postMessage(
                 link_names=True,
                 channel=ep_channel,
-                text="Super-excited to hear all of your thoughts on " + title + "\n" + ">" + desc,
+                text="Super-excited to hear all of your thoughts on "
+                + title
+                + "\n"
+                + ">"
+                + desc,
             )
             logging.info("FRRRRE")
             logging.info(allocations[new_story["_id"]])
-            
+
             app.client.conversations_invite(
                 channel=ep_channel, users=allocations[new_story["_id"]]
             )
-            
+
             db.stories.update(
                 {"_id": new_story["_id"]},
                 {
@@ -658,6 +671,46 @@ def post_stories():
     suggested_stories = update_story_suggestions()
     nooks_home.update(suggested_stories=suggested_stories)
 
+@cron.scheduled_job("cron", second="1")
+def update_sample_nooks():
+    nooks_home.update_sample_nooks()
+
+
+"""
+@cron.scheduled_job("cron", second="5")
+def post_stories():
+    # TODO change this to only members who have signed up
+    for member in app.client.users_list()["members"]:
+        app.client.chat_postMessage(
+            link_names=True,
+            channel=member["id"],
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Hey! Create nooks before to ",
+                    },
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": "onboard_info",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Tell me more!",
+                                "emoji": True,
+                            },
+                            "style": "primary",
+                            "value": "join",
+                        }
+                    ],
+                },
+            ],
+        )
+"""
 
 atexit.register(lambda: cron.shutdown(wait=False))
 
@@ -701,6 +754,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
     nooks_home = NooksHome(db=db)
     nooks_alloc = NooksAllocation(db=db)
     flask_app.run(debug=True, use_reloader=False)

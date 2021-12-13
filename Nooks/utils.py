@@ -205,6 +205,12 @@ class NooksHome:
     def __init__(self, db):
         self.db = db
         self.suggested_stories = []
+        self.sample_nooks = db.sample_nooks.distinct("title")
+        
+
+    def update_sample_nooks(self):
+        self.sample_nooks = self.db.sample_nooks.distinct("title")
+        random.shuffle(self.sample_nooks)
 
     def update(self, suggested_stories):
         self.suggested_stories = suggested_stories
@@ -246,9 +252,10 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "@" +client.users_profile_get(user=member)["profile"][
+                            "text": "@"
+                            + client.users_profile_get(user=member)["profile"][
                                 "real_name"
-                            ]
+                            ],
                         },
                         "accessory": {
                             "type": "button",
@@ -269,59 +276,81 @@ class NooksHome:
     def default_message(self, client, event):
         user_id = event["user"]
         interaction_block_items = self.get_interaction_blocks(client, user_id)
-
+        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id})
+        if not sample_nook_pos:
+            cur_nook_pos = 0
+            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos})
+        else:
+            cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
+        current_sample = self.sample_nooks[cur_nook_pos]    
         client.views_publish(
             # Use the user ID associated with the event
             user_id=user_id,
             # Home tabs must be enabled in your app configuration
             view={
                 "type": "home",
-                "blocks": ([
-                    {
-                        "type": "actions",
-                        "elements": [
-                            {
+                "blocks": (
+                    [
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "create_story",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Create a nook!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                    "value": "join",
+                                },
+                            ],
+                        },
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "*Not sure about the topic? Here's a sample nook to inspire you!*",
+                            },
+                        },
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": ">"+current_sample,
+                            },
+                            "accessory": {
                                 "type": "button",
-                                "action_id": "create_story",
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "Create a nook!",
+                                    "text": "Get new!",
                                     "emoji": True,
                                 },
-                                "style": "primary",
-                                "value": "join",
+                                "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
+                                "action_id": "new_sample_nook",
                             },
-                            {
-                                "type": "button",
-                                "action_id": "ideas",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Get topic inspirations",
-                                    "emoji": True,
-                                },
-                                "value": "join",
+                        },
+                        {"type": "divider"},
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": ":calendar: |   *TODAY'S NOOK CARDS*  | :calendar: ",
                             },
-                        ],
-                    },
-                    {"type": "divider"},
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": ":calendar: |   *TODAY'S NOOK CARDS*  | :calendar: ",
                         },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "You've exhausted your list for the day. I'll be back tomorrow :)  ",
-                            "emoji": True,
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "You've exhausted your list for the day. I'll be back tomorrow :)  ",
+                                "emoji": True,
+                            },
                         },
-                    },
-                    {"type": "divider"},
-                ]
-                + interaction_block_items),
+                        {"type": "divider"},
+                    ]
+                    + interaction_block_items
+                ),
             },
         )
 
@@ -368,37 +397,44 @@ class NooksHome:
             },
         )
 
-    def update_home_tab(self, client, event, cur_pos=0):
+    def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0):
         user_id = event["user"]
         member = self.db.member_vectors.find_one({"user_id": user_id})
-
         interaction_block_items = self.get_interaction_blocks(client, user_id)
-        logging.info("MMMZ")
-        logging.info(interaction_block_items)
+
         if not member:
-            logging.info("WWEJFN")
             self.initial_message(client, event)
             return
 
         swipes = self.db.user_swipes.find_one({"user_id": user_id})
-        to_insert = False
+        
+        swipes_to_insert = False
+        sample_nook_to_insert = False
         if not swipes:
             cur_pos = 0
-            to_insert = True
+            swipes_to_insert = True
         else:
             cur_pos = swipes["cur_pos"]
+        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id})
+        
+        if not sample_nook_pos:
+            cur_nook_pos = 0
+            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos})
+        else:
+            cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
+        cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         while cur_pos < len(self.suggested_stories):
             cur_display_card = self.suggested_stories[cur_pos]
-
             if user_id not in cur_display_card["banned"]:
                 break
             cur_pos += 1
         if cur_pos >= len(self.suggested_stories):
             self.default_message(client, event)
             return
-        if to_insert:
+        if swipes_to_insert:
             self.db.user_swipes.insert_one({"user_id": user_id, "cur_pos": cur_pos})
+        '''
         elif not (cur_pos == found_pos):
             self.db.user_swipes.update_one(
                 {"user_id": user_id},
@@ -407,6 +443,7 @@ class NooksHome:
                 },
                 upsert=True,
             )
+        '''
 
         if not self.suggested_stories or cur_pos >= len(self.suggested_stories):
             self.default_message(client, event)
@@ -433,17 +470,31 @@ class NooksHome:
                                 "style": "primary",
                                 "value": "join",
                             },
-                            {
-                                "type": "button",
-                                "action_id": "ideas",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Get topic inspirations",
-                                    "emoji": True,
-                                },
-                                "value": "join",
-                            },
                         ],
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Not sure about the topic? Here's a sample nook to inspire you!*",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": ">"+cur_sample,
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Get new!",
+                                "emoji": True,
+                            },
+                            "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
+                            "action_id": "new_sample_nook",
+                        },
                     },
                     {"type": "divider"},
                     {
@@ -493,9 +544,10 @@ class NooksHome:
                                 "action_id": "story_interested",
                                 "value": str(cur_pos),
                             },
-                        ] 
+                        ],
                     },
                     {"type": "divider"},
                 ],
             },
         )
+        
