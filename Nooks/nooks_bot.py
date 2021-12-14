@@ -688,11 +688,11 @@ def post_stories():
     suggested_stories = update_story_suggestions()
 
     nooks_home.update(suggested_stories=suggested_stories)
-
+'''
 @cron.scheduled_job("cron", second="1")
 def update_sample_nooks():
     nooks_home.update_sample_nooks()
-
+'''
 
 """
 @cron.scheduled_job("cron", second="5")

@@ -42,15 +42,19 @@ class NooksAllocation:
 
     def __init__(self, db, alpha=2):
         self.db = db
-        self.member_vectors = {
-            member["user_id"]: np.array(member["member_vector"])
-            for member in self.db.member_vectors.find()
-        }
+        all_members = list(self.db.member_vectors.find())
+
+        self.member_vectors = np.array([ np.array(member["member_vector"]) for member in all_members])
+        
         self.member_dict = {}
         self.member_ids = {}
-        for i, member in enumerate(self.member_vectors):
+        for i, member_row in enumerate(all_members):
+            member = member_row["user_id"]
             self.member_dict[member] = i
             self.member_ids[i] = member
+        logging.info("MMZMKZ")
+        logging.info(all_members)
+        logging.info(self.member_dict)
 
         self.total_members = len(self.member_vectors)
         self.temporal_interacted = self._create_interactions_np(
@@ -109,22 +113,25 @@ class NooksAllocation:
         num_nooks = len(nooks)
         nooks_allocs = np.zeros((num_nooks, self.total_members))
         member_allocs = {}
+        nooks_creators = {}
         creators = set([])
+
         nooks_mem_cnt = np.ones((num_nooks))
         nooks_mem_int_cnt = np.zeros((num_nooks, self.total_members))
         nook_swipes = np.zeros((self.total_members, num_nooks))
         # allocates the creator to their respective nooks
         for i, nook in enumerate(nooks):
-            if nook["creator"] not in self.member_dict:
-                continue
+
             creator_key = self.member_dict[nook["creator"]]
             nooks_allocs[i][creator_key] = 1
             member_allocs[creator_key] = i
+            nooks_creators[i] = creator_key
             if "swiped_right" not in nook:
                 continue
             for member in nook["swiped_right"]:
                 nook_swipes[self.member_dict[member]][i] = 1
             creators.add(creator_key)
+            
 
         # iteratively add members to nooks
         for member in range(self.total_members):
@@ -143,9 +150,10 @@ class NooksAllocation:
             all_members_permute = np.random.permutation(self.total_members)
 
             for member in all_members_permute:
-                if member in creators or not (np.sum(nook_swipes[member])):
+                #if member in creators or:
+                #    continue
+                if not (np.sum(nook_swipes[member])):
                     continue
-
                 swipes = nook_swipes[member]
                 median_reps = []
 
@@ -188,14 +196,14 @@ class NooksAllocation:
                 nooks_mem_int_cnt[og_nook] -= self.temporal_interacted[member] >= 1
         allocations = {}
         for nook_id in range(len(nooks_allocs)):
-            right_swipe_mems = nooks_allocs[nook_id].nonzero()[0].tolist()
-            right_swipe_mems_ids = [
-                self.member_ids[member] for member in right_swipe_mems
-            ]
-            allocations[nooks[nook_id]["_id"]] = ",".join(right_swipe_mems_ids)
+            allocated_mems = nooks_allocs[nook_id].nonzero()[0].tolist()
+            allocated_mems = list(set([
+                self.member_ids[member] for member in allocated_mems
+            ] + [self.member_ids[nooks_creators[nook_id]]]))
+            allocations[nooks[nook_id]["_id"]] = ",".join(allocated_mems)
             self.db.stories.update_one(
                 {"_id": nooks[nook_id]["_id"]},
-                {"$set": {"members": right_swipe_mems_ids}},
+                {"$set": {"members": allocated_mems}},
             )
         self._update_interacted(member_allocs, nooks_allocs)
         return allocations
