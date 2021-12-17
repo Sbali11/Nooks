@@ -602,8 +602,6 @@ def remove_past_stories():
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
             all_members = app.client.conversations_members(channel=active_story["channel_id"])["members"]
-            logging.info("ELFKKERF")
-            logging.info("VREWVCER")
             db.temporal_interacted.update_many(
                 {
                     "counts.user_id": {"$in": all_members}, 
@@ -641,7 +639,9 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
             response = app.client.conversations_create(
                 name=channel_name, is_private=False
             )
+
             ep_channel = response["channel"]["id"]
+            app.client.conversations_setTopic(channel=ep_channel, topic=title)
             initial_thoughts_thread = app.client.chat_postMessage(
                 link_names=True,
                 channel=ep_channel,
