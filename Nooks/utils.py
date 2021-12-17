@@ -132,8 +132,7 @@ class NooksAllocation:
                     # median_reps.append(np.linalg.norm(self.member_vectors[member]-median_rep))
 
                 heterophily = np.array(median_reps)
-                interacted_by = 1
-                # nooks_mem_int_cnt[:, member]
+                interacted_by = nooks_mem_int_cnt[:, member]
                 wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
                     1 + (self.alpha * heterophily)
                 )
