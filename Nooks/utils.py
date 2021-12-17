@@ -260,8 +260,8 @@ class NooksHome:
                         "text": {
                             "type": "mrkdwn",
                             "text": "@"
-                            + client.users_profile_get(user=member)["profile"][
-                                "real_name"
+                            + client.users_info(user=member)["user"][
+                                "name"
                             ],
                         },
                         "accessory": {

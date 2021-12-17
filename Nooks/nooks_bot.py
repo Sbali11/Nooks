@@ -248,9 +248,9 @@ def handle_send_message(ack, body, client, view, logger):
                 "text": {
                     "type": "mrkdwn",
                     "text": "Hey @"
-                    + app.client.users_profile_get(user=from_user)["profile"][
-                        "real_name"
-                    ]
+                    + client.users_info(user=from_user)["user"][
+                                "name"
+                            ]
                     + " loved talking to you and would like to talk more. Here's what they said!",
                 },
             },
@@ -335,8 +335,6 @@ def update_message(ack, body, client, view, logger):
             link_names=True,
             channel=ep_channel,
             thread_ts=thread_ts,
-            username=user["profile"]["real_name"],
-            icon_url=user["profile"]["image_24"],
             reply_broadcast=True,
             text=initial_thoughts,
         )
