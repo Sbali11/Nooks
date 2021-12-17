@@ -604,8 +604,6 @@ def remove_past_stories():
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
             all_members = app.client.conversations_members(channel=active_story["channel_id"])["members"]
-            logging.info("HEHEWUIF")
-            logging.info(all_members)
             db.temporal_interacted.update({"counts.user_id": {"$in": all_members}, "user_id": {"$in": all_members}}, {"$inc": { "counts.$.count": 1}}, upsert=True)
             db.all_interacted.update({"counts.user_id": {"$in": all_members}, "user_id": {"$in": all_members}}, {"$inc": { "counts.$.count": 1}}, upsert=True)
             nooks_alloc.update_interactions()

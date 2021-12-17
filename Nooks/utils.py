@@ -99,13 +99,9 @@ class NooksAllocation:
         for member in range(self.total_members):
             if member in member_allocs:
                 continue
-
             if not (np.sum(nook_swipes[member])):
                 members_no_swipes.add(self.member_ids[member])
                 continue
-            
-
-
             swipes = nook_swipes[member]
             median_reps = []
             selected_nook = np.random.choice(num_nooks, p=swipes / np.sum(swipes))
@@ -179,29 +175,31 @@ class NooksAllocation:
 
     def _create_alloc_suggestions(self, nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt):
         num_nooks = len(nooks)
+
         suggested_allocs_list = collections.defaultdict(list)
         suggested_allocs = {}
         for member in members_no_swipes:
-
-            median_reps = []
+            wts = []
             for nook in range(num_nooks):
- 
+                if member in nooks[nook]["banned"]:
+                    wts.append(0)
+                    continue                     
                 same_nook_members = self.member_vectors[nooks_allocs[nook] == 1]
-                count = np.linalg.norm(
+                diff = np.linalg.norm(
                         self.member_vectors[self.member_dict[member]]- same_nook_members
                     )
                 # TODO confirm this
-                median_reps.append(EPSILON + len(count[count > 5]))
-                # median_reps.append(np.linalg.norm(self.member_vectors[member]-median_rep))
-
-            heterophily = np.array(median_reps)
-            interacted_by = 1
-            # nooks_mem_int_cnt[:, member]
-            wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
+                heterophily = (EPSILON + len(diff[diff > 5]))
+                interacted_by = (nooks_allocs[nook]) * (self.temporal_interacted[self.member_dict[member]] > 0)
+                wts.append(((EPSILON + np.sum(interacted_by)) / len(same_nook_members)) * (
                     1 + (self.alpha * heterophily)
-            )
-            total_wts = np.sum(wts)
-            selected_nook = np.argmax(wts / total_wts) # should this be random with probability related to the value instead of argmax?
+                ))
+            #total_wts = np.sum(wts)
+            wts = np.array(wts)
+            # banned from all nooks
+            if not np.sum(wts):
+                continue
+            selected_nook = np.argmax(np.array(wts)) # should this be random with probability related to the value instead of argmax?
             #allocations
             suggested_allocs_list[nooks[selected_nook]["_id"]].append(member)
         for nook_id in suggested_allocs_list:
@@ -443,16 +441,6 @@ class NooksHome:
             return
         if swipes_to_insert:
             self.db.user_swipes.insert_one({"user_id": user_id, "cur_pos": cur_pos})
-        '''
-        elif not (cur_pos == found_pos):
-            self.db.user_swipes.update_one(
-                {"user_id": user_id},
-                {
-                    "$set": {"cur_pos": cur_pos},
-                },
-                upsert=True,
-            )
-        '''
 
         if not self.suggested_stories or cur_pos >= len(self.suggested_stories):
             self.default_message(client, event)
