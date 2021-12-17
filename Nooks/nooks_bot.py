@@ -16,7 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from bson import ObjectId
 import numpy as np
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 # load environment variables
 load_dotenv()
@@ -604,8 +604,23 @@ def remove_past_stories():
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
             all_members = app.client.conversations_members(channel=active_story["channel_id"])["members"]
-            db.temporal_interacted.update({"counts.user_id": {"$in": all_members}, "user_id": {"$in": all_members}}, {"$inc": { "counts.$.count": 1}}, upsert=True)
-            db.all_interacted.update({"counts.user_id": {"$in": all_members}, "user_id": {"$in": all_members}}, {"$inc": { "counts.$.count": 1}}, upsert=True)
+            logging.info("ELFKKERF")
+            logging.info("VREWVCER")
+            db.temporal_interacted.update_many(
+                {
+                    "counts.user_id": {"$in": all_members}, 
+                    "user_id": {"$in": all_members}
+                }, 
+                {"$inc": { "counts.$[element].count": 1}}, 
+                array_filters=[{"element.user_id": {"$in": all_members}}],
+                upsert=True
+                )
+            db.all_interacted.update_many({
+                "counts.user_id": {"$in": all_members}, 
+                "user_id": {"$in": all_members}}, 
+                {"$inc": { "counts.$[element].count": 1}}, 
+                array_filters= [{"element.user_id": {"$in": all_members}}],
+                upsert=True)
             nooks_alloc.update_interactions()
             app.client.conversations_archive(channel=active_story["channel_id"])
 

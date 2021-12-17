@@ -114,8 +114,6 @@ class NooksAllocation:
             all_members_permute = np.random.permutation(self.total_members)
 
             for member in all_members_permute:
-                #if member in creators or:
-                #    continue
                 if not (np.sum(nook_swipes[member])):
                     continue
                 swipes = nook_swipes[member]
@@ -229,12 +227,16 @@ class NooksHome:
         interaction_block_items = []
 
         if all_connections:
+            logging.info("JCIDNWCK")
+            logging.info(user_id)
             interaction_counts = all_connections["counts"]
+            logging.info(interaction_counts)
             interacted_with = [
-                (count_obj["count"], count_obj["uid"]) for  
+                (count_obj["count"], count_obj["user_id"]) for  
                 count_obj in interaction_counts
                 if count_obj["count"] > 0
             ]
+            logging.info(interacted_with)
             interacted_with.sort(reverse=True)
             if interacted_with:
                 interaction_block_items = [
