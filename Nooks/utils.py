@@ -1,3 +1,4 @@
+import collections
 import logging
 import numpy as np
 import random
@@ -23,22 +24,14 @@ class NooksAllocation:
             member_1 = interaction_row["user_id"]
             if member_1 not in self.member_dict:
                 continue
-            for member_2 in interaction_row["counts"]:
+            for counts in interaction_row["counts"]:
+                member_2 = counts["user_id"]
                 if member_2 not in self.member_dict:
                     continue
                 interaction_np[self.member_dict[member_1]][
                     self.member_dict[member_2]
-                ] = interaction_row["counts"][member_2]
+                ] = counts["count"]
         return interaction_np
-
-    def _create_member_interactions_dict(self, interactions_np):
-
-        interactions_dict = {}
-        for member in range(self.total_members):
-            if member not in self.member_ids:
-                continue
-            interactions_dict[self.member_ids[member]] = interactions_np[member]
-        return interactions_dict
 
     def __init__(self, db, alpha=2):
         self.db = db
@@ -52,9 +45,6 @@ class NooksAllocation:
             member = member_row["user_id"]
             self.member_dict[member] = i
             self.member_ids[i] = member
-        logging.info("MMZMKZ")
-        logging.info(all_members)
-        logging.info(self.member_dict)
 
         self.total_members = len(self.member_vectors)
         self.temporal_interacted = self._create_interactions_np(
@@ -66,47 +56,19 @@ class NooksAllocation:
         self.num_iters = 20
         self.alpha = alpha
 
+    def update_interactions(self):
+        self.temporal_interacted = self._create_interactions_np(
+            self.db.temporal_interacted.find()
+        )
+        self.all_interacted = self._create_interactions_np(
+            self.db.all_interacted.find()
+        )
     """
         resets the interactions (for eg at the end of every week)
     """
-
     def reset(self):
-        self.db.interacted.remove()
+        self.db.temporal_interacted.remove()
         self.db.create_collection("interacted")
-
-    """
-        called to update the interactions, also updates the total interactions during the experiment
-    
-    """
-
-    def _update_interacted(self, member_allocs, nooks_allocs):
-        for member in range(self.total_members):
-            if not member in member_allocs:
-                continue
-            self.temporal_interacted[member] += nooks_allocs[member_allocs[member]]
-            self.all_interacted[member] += nooks_allocs[member_allocs[member]]
-            self.db.temporal_interacted.update_one(
-                {"user_id": self.member_ids[member]},
-                {
-                    "$set": {
-                        "counts": self._create_member_interactions_dict(
-                            self.temporal_interacted[member]
-                        )
-                    }
-                },
-                upsert=True,
-            )
-            self.db.all_interacted.update_one(
-                {"user_id": self.member_ids[member]},
-                {
-                    "$set": {
-                        "counts": self._create_member_interactions_dict(
-                            self.all_interacted[member]
-                        )
-                    }
-                },
-                upsert=True,
-            )
 
     # TODO see if running median is needed; space & time
     def create_nook_allocs(self, nooks):
@@ -115,7 +77,7 @@ class NooksAllocation:
         member_allocs = {}
         nooks_creators = {}
         creators = set([])
-
+        members_no_swipes = set([])
         nooks_mem_cnt = np.ones((num_nooks))
         nooks_mem_int_cnt = np.zeros((num_nooks, self.total_members))
         nook_swipes = np.zeros((self.total_members, num_nooks))
@@ -135,8 +97,14 @@ class NooksAllocation:
 
         # iteratively add members to nooks
         for member in range(self.total_members):
-            if member in member_allocs or not (np.sum(nook_swipes[member])):
+            if member in member_allocs:
                 continue
+
+            if not (np.sum(nook_swipes[member])):
+                members_no_swipes.add(self.member_ids[member])
+                continue
+            
+
 
             swipes = nook_swipes[member]
             median_reps = []
@@ -156,7 +124,6 @@ class NooksAllocation:
                     continue
                 swipes = nook_swipes[member]
                 median_reps = []
-
                 for nook in range(num_nooks):
                     if not nook_swipes[member][nook]:
                         median_reps.append(1)  # this value will be ignored
@@ -205,9 +172,42 @@ class NooksAllocation:
                 {"_id": nooks[nook_id]["_id"]},
                 {"$set": {"members": allocated_mems}},
             )
-        self._update_interacted(member_allocs, nooks_allocs)
-        return allocations
+        #self._update_interacted(member_allocs, nooks_allocs)
+        suggested_allocs = self._create_alloc_suggestions(nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt)
+        return allocations, suggested_allocs
 
+
+    def _create_alloc_suggestions(self, nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt):
+        num_nooks = len(nooks)
+        suggested_allocs_list = collections.defaultdict(list)
+        suggested_allocs = {}
+        for member in members_no_swipes:
+
+            median_reps = []
+            for nook in range(num_nooks):
+ 
+                same_nook_members = self.member_vectors[nooks_allocs[nook] == 1]
+                count = np.linalg.norm(
+                        self.member_vectors[self.member_dict[member]]- same_nook_members
+                    )
+                # TODO confirm this
+                median_reps.append(EPSILON + len(count[count > 5]))
+                # median_reps.append(np.linalg.norm(self.member_vectors[member]-median_rep))
+
+            heterophily = np.array(median_reps)
+            interacted_by = 1
+            # nooks_mem_int_cnt[:, member]
+            wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
+                    1 + (self.alpha * heterophily)
+            )
+            total_wts = np.sum(wts)
+            selected_nook = np.argmax(wts / total_wts) # should this be random with probability related to the value instead of argmax?
+            #allocations
+            suggested_allocs_list[nooks[selected_nook]["_id"]].append(member)
+        for nook_id in suggested_allocs_list:
+            suggested_allocs[nook_id] = ",".join(suggested_allocs_list[nook_id])
+            #self.member_vectors[member]] = selected_nook
+        return suggested_allocs_list
 
 class NooksHome:
     def __init__(self, db):
@@ -232,11 +232,11 @@ class NooksHome:
         interaction_block_items = []
 
         if all_connections:
-            num_interactions = all_connections["counts"]
+            interaction_counts = all_connections["counts"]
             interacted_with = [
-                (num_interactions[member], member)
-                for member in num_interactions
-                if num_interactions[member] > 0
+                (count_obj["count"], count_obj["uid"]) for  
+                count_obj in interaction_counts
+                if count_obj["count"] > 0
             ]
             interacted_with.sort(reverse=True)
             if interacted_with:

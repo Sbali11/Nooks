@@ -109,15 +109,14 @@ def create_story_modal(ack, body, logger):
                     },
                     "accessory": {
                         "action_id": "text1234",
-                        				"placeholder": {
-					"type": "plain_text",
-					"text": "Select users you don't want included in this nook",
-					"emoji": True
-				},
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select users you don't want included in this nook",
+                            "emoji": True,
+                        },
                         "type": "multi_users_select",
                     },
                 },
-
             ],
         },
     )
@@ -133,18 +132,21 @@ def nook_int(ack, body, logger):
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
+
 @app.action("new_sample_nook")
 def update_random_nook(ack, body, logger):
     ack()
     user_id = body["user"]["id"]
     logging.info("UUHNIUN")
-    vals = body["actions"][0]["value"].split('/')
+    vals = body["actions"][0]["value"].split("/")
     logging.info(vals)
 
     cur_pos = int(vals[0])
     total_len = int(vals[1])
-    db.sample_nook_pos.update_one({"user_id": user_id}, {"$set": {"cur_nook_pos": (cur_pos+1)%total_len}})
-    
+    db.sample_nook_pos.update_one(
+        {"user_id": user_id}, {"$set": {"cur_nook_pos": (cur_pos + 1) % total_len}}
+    )
+
     nooks_home.update_home_tab(app.client, {"user": user_id})
 
 
@@ -465,6 +467,15 @@ def signup_modal(ack, body, logger):
         },
     )
 
+@app.action("join_without_interest")
+def join_without_interest(ack, body, logger):
+    ack()
+    user = body["user"]["id"]
+    ep_channel = body["actions"][0]["value"]
+    app.client.conversations_invite(
+                channel=ep_channel, users=user
+    )
+
 
 @app.action("onboard_info")
 def show_nooks_info(ack, body, logger):
@@ -592,14 +603,19 @@ def remove_past_stories():
                 {"_id": active_story["_id"]},
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
-
+            all_members = app.client.conversations_members(channel=active_story["channel_id"])["members"]
+            logging.info("HEHEWUIF")
+            logging.info(all_members)
+            db.temporal_interacted.update({"counts.user_id": {"$in": all_members}, "user_id": {"$in": all_members}}, {"$inc": { "counts.$.count": 1}}, upsert=True)
+            db.all_interacted.update({"counts.user_id": {"$in": all_members}, "user_id": {"$in": all_members}}, {"$inc": { "counts.$.count": 1}}, upsert=True)
+            nooks_alloc.update_interactions()
             app.client.conversations_archive(channel=active_story["channel_id"])
 
         except Exception as e:
             logging.error(traceback.format_exc())
 
 
-def create_new_channels(new_stories, allocations):
+def create_new_channels(new_stories, allocations, suggested_allocs):
     # create new channels for the day
     now = datetime.now()  # current date and time
     date = now.strftime("%m-%d-%Y-%H-%M-%S")
@@ -641,6 +657,40 @@ def create_new_channels(new_stories, allocations):
                     }
                 },
             )
+            for member in suggested_allocs[new_story["_id"]]:
+
+                app.client.chat_postMessage(
+                    link_names=True,
+                    channel=member,
+                    blocks=[
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Hello! I saw that you didn't swipe right on any nook yesterday. However, in case you are still interested in getting in on the action, feel free to join in on the topic \""
+                                + title
+                                + '"\n>' + desc,
+                            },
+                        },
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "join_without_interest",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Interested!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                    "value": ep_channel,
+                                }
+                            ],
+                        },
+                    ],
+                )
+
         except Exception as e:
             logging.error(traceback.format_exc())
         return new_stories
@@ -669,9 +719,9 @@ def update_story_suggestions():
         for user in app.client.users_list()["members"]:
             try:
                 app.client.chat_postMessage(
-                link_names=True,
-                channel=user["id"],
-                text="Hello! I've updated your Nook Cards List for today!",
+                    link_names=True,
+                    channel=user["id"],
+                    text="Hello! I've updated your Nook Cards List for today!",
                 )
             except Exception as e:
                 logging.error(traceback.format_exc())
@@ -683,16 +733,25 @@ def update_story_suggestions():
 def post_stories():
     remove_past_stories()
     current_stories = list(db.stories.find({"status": "show"}))
-    allocations = nooks_alloc.create_nook_allocs(nooks=current_stories)
-    create_new_channels(current_stories, allocations)
+    allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
+        nooks=current_stories
+    )
+    create_new_channels(current_stories, allocations, suggested_allocs)
     suggested_stories = update_story_suggestions()
 
     nooks_home.update(suggested_stories=suggested_stories)
-'''
+
+# TODO change this to hour for final
+@cron.scheduled_job("cron", day="1")
+def reset_interactions():
+    nooks_alloc.reset()
+
+
+"""
 @cron.scheduled_job("cron", second="1")
 def update_sample_nooks():
     nooks_home.update_sample_nooks()
-'''
+"""
 
 """
 @cron.scheduled_job("cron", second="5")
@@ -742,7 +801,7 @@ def main():
     if "member_vectors" not in db.list_collection_names():
         db.create_collection("member_vectors")
         db.member_vectors.create_index("user_id")
-        all_members = app.client.users_list()["members"]
+    
         """
         member_vectors = np.random.randint(2, size=(len(all_members), MEMBER_FEATURES))
         db.member_vectors.insert_many(
@@ -752,20 +811,40 @@ def main():
             ]
         )
         """
-
+    all_members = app.client.users_list()["members"]
+    if "all_interacted" not in db.list_collection_names():
         db.create_collection("all_interacted")
         db.create_collection("temporal_interacted")
         counts = {member["id"]: 0 for member in all_members}
+
         db.all_interacted.insert_many(
             [
-                {"user_id": member["id"], "counts": counts.copy()}
-                for member in all_members
+                {
+                    "user_id": from_member["id"], 
+                    "counts": 
+                        [
+                            {
+                                "user_id": to_member["id"], 
+                                "count": 0
+                            } for to_member in all_members
+                        ]
+                }
+                for from_member in all_members
             ]
         )
         db.temporal_interacted.insert_many(
             [
-                {"user_id": member["id"], "counts": counts.copy()}
-                for member in all_members
+                {
+                    "user_id": from_member["id"], 
+                    "counts": 
+                        [
+                            {
+                                "user_id": to_member["id"], 
+                                "count": 0
+                            } for to_member in all_members
+                        ]
+                }
+                for from_member in all_members
             ]
         )
 
