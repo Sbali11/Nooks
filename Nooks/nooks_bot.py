@@ -187,13 +187,33 @@ def handle_send_message(ack, body, client, view, logger):
 @app.action("customize_dm")
 def customize_dm_modal(ack, body, client, view, logger):
     ack()
+    
 
     # TODO create a new name if taken?
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
+    response = app.client.conversations_open(users=from_user+ "," + to_user+ ",U02HTEETX54")
+    channel_id = response["channel"]["id"]
+    app.client.chat_postMessage(
+        link_names=True,
+        channel=channel_id,
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Direct Message Trial"
+
+                },
+            },
+
+
+        ],
+    )
     # db.personal_message.insert_one(new_story_info)
     # app.client.conversations_open(users=to_user)
     # return
+    '''
     app.client.views_open(
         trigger_id=body["trigger_id"],
         view={
@@ -221,6 +241,7 @@ def customize_dm_modal(ack, body, client, view, logger):
             ],
         },
     )
+    '''
 
 
 @app.view("send_message")
@@ -749,8 +770,8 @@ def post_stories():
     )
     create_new_channels(current_stories, allocations, suggested_allocs)
     suggested_stories = update_story_suggestions()
-
     nooks_home.update(suggested_stories=suggested_stories)
+
 
 # TODO change this to hour for final
 @cron.scheduled_job("cron", day="1")
