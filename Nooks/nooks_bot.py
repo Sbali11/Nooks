@@ -57,7 +57,7 @@ def handle_new_story(ack, body, client, view, logger):
     app.client.chat_postMessage(
         link_names=True,
         channel=user,
-        text="Hey! I've added your story titled " + title + " to the queue. ",
+        text="Hey! I've added your story titled \"" + title + "\" to the queue. ",
     )
 
 
