@@ -226,16 +226,12 @@ class NooksHome:
         interaction_block_items = []
 
         if all_connections:
-            logging.info("JCIDNWCK")
-            logging.info(user_id)
             interaction_counts = all_connections["counts"]
-            logging.info(interaction_counts)
             interacted_with = [
                 (count_obj["count"], count_obj["user_id"]) for  
                 count_obj in interaction_counts
                 if count_obj["count"] > 0
             ]
-            logging.info(interacted_with)
             interacted_with.sort(reverse=True)
             if interacted_with:
                 interaction_block_items = [
@@ -355,6 +351,7 @@ class NooksHome:
                             },
                         },
                         {"type": "divider"},
+                        {"type": "divider"},
                     ]
                     + interaction_block_items
                 ),
@@ -446,7 +443,7 @@ class NooksHome:
         if not self.suggested_stories or cur_pos >= len(self.suggested_stories):
             self.default_message(client, event)
             return
-
+        interaction_block_items = self.get_interaction_blocks(client, user_id)
         client.views_publish(
             # Use the user ID associated with the event
             user_id=user_id,
@@ -546,7 +543,8 @@ class NooksHome:
                         ],
                     },
                     {"type": "divider"},
-                ],
+                    {"type": "divider"},
+                ] + interaction_block_items,
             },
         )
         
