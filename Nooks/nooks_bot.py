@@ -771,7 +771,8 @@ def post_stories():
     create_new_channels(current_stories, allocations, suggested_allocs)
     suggested_stories = update_story_suggestions()
     nooks_home.update(suggested_stories=suggested_stories)
-
+    for member in nooks_alloc.member_dict:
+        nooks_home.update_home_tab(client=app.client, event={"user": member})
 
 # TODO change this to hour for final
 @cron.scheduled_job("cron", day="1")

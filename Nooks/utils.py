@@ -36,7 +36,7 @@ class NooksAllocation:
     def __init__(self, db, alpha=2):
         self.db = db
         all_members = list(self.db.member_vectors.find())
-
+        
         self.member_vectors = np.array([ np.array(member["member_vector"]) for member in all_members])
         
         self.member_dict = {}
@@ -209,7 +209,8 @@ class NooksHome:
         self.db = db
         self.suggested_stories = []
         self.sample_nooks = db.sample_nooks.distinct("title")
-        
+        self.all_members = list(self.db.member_vectors.find())
+
 
     def update_sample_nooks(self):
         self.sample_nooks = self.db.sample_nooks.distinct("title")
@@ -217,8 +218,6 @@ class NooksHome:
 
     def update(self, suggested_stories):
         self.suggested_stories = suggested_stories
-        logging.info("HERERE")
-        logging.info(self.suggested_stories)
 
     def get_interaction_blocks(self, client, user_id):
         all_connections = self.db.all_interacted.find_one({"user_id": user_id})
@@ -405,8 +404,9 @@ class NooksHome:
             },
         )
 
-    def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0):
-        user_id = event["user"]
+    def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0, user_id = None):
+        if not user_id:
+            user_id = event["user"]
         member = self.db.member_vectors.find_one({"user_id": user_id})
         interaction_block_items = self.get_interaction_blocks(client, user_id)
 
