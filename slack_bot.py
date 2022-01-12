@@ -9,12 +9,17 @@ from datetime import datetime, timezone
 from utils import NooksHome, NooksAllocation, get_member_vector
 from dotenv import load_dotenv
 from slack_bolt import App
-from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from pymongo import MongoClient
-from apscheduler.schedulers.background import BackgroundScheduler
 from bson import ObjectId
 import numpy as np
+from flask_apscheduler import APScheduler
+
+# set configuration values
+class Config:
+
+    SCHEDULER_API_ENABLED = True
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,9 +34,6 @@ MONGODB_LINK = os.environ["MONGODB_LINK"]
 db = MongoClient(MONGODB_LINK).nooks_db
 
 slack_app = App()
-
-cron = BackgroundScheduler(daemon=True)
-cron.start()
 
 
 @slack_app.view("new_story")
@@ -57,7 +59,7 @@ def handle_new_story(ack, body, client, view, logger):
     slack_app.client.chat_postMessage(
         link_names=True,
         channel=user,
-        text="Hey! I've added your story titled \"" + title + "\" to the queue. ",
+        text="Hey! I've added your story titled \"" + title + '" to the queue. ',
     )
 
 
@@ -187,12 +189,13 @@ def handle_send_message(ack, body, client, view, logger):
 @slack_app.action("customize_dm")
 def customize_dm_modal(ack, body, client, view, logger):
     ack()
-    
 
     # TODO create a new name if taken?
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
-    response = slack_app.client.conversations_open(users=from_user+ "," + to_user+ ",U02HTEETX54")
+    response = slack_app.client.conversations_open(
+        users=from_user + "," + to_user + ",U02HTEETX54"
+    )
     channel_id = response["channel"]["id"]
     slack_app.client.chat_postMessage(
         link_names=True,
@@ -200,20 +203,14 @@ def customize_dm_modal(ack, body, client, view, logger):
         blocks=[
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Direct Message Trial"
-
-                },
+                "text": {"type": "mrkdwn", "text": "Direct Message Trial"},
             },
-
-
         ],
     )
     # db.personal_message.insert_one(new_story_info)
     # slack_app.client.conversations_open(users=to_user)
     # return
-    '''
+    """
     slack_app.client.views_open(
         trigger_id=body["trigger_id"],
         view={
@@ -241,7 +238,7 @@ def customize_dm_modal(ack, body, client, view, logger):
             ],
         },
     )
-    '''
+    """
 
 
 @slack_app.view("send_message")
@@ -269,9 +266,7 @@ def handle_send_message(ack, body, client, view, logger):
                 "text": {
                     "type": "mrkdwn",
                     "text": "Hey @"
-                    + client.users_info(user=from_user)["user"][
-                                "name"
-                            ]
+                    + client.users_info(user=from_user)["user"]["name"]
                     + " loved talking to you and would like to talk more. Here's what they said!",
                 },
             },
@@ -486,14 +481,13 @@ def signup_modal(ack, body, logger):
         },
     )
 
+
 @slack_app.action("join_without_interest")
 def join_without_interest(ack, body, logger):
     ack()
     user = body["user"]["id"]
     ep_channel = body["actions"][0]["value"]
-    slack_app.client.conversations_invite(
-                channel=ep_channel, users=user
-    )
+    slack_app.client.conversations_invite(channel=ep_channel, users=user)
 
 
 @slack_app.action("onboard_info")
@@ -606,6 +600,9 @@ def onboarding_modal(ack, body, logger):
 from flask import Flask, request
 
 app = Flask(__name__)
+cron = APScheduler()
+cron.init_app(app)
+cron.start()
 handler = SocketModeHandler(slack_app, SLACK_APP_TOKEN)
 handler.connect()
 
@@ -622,22 +619,27 @@ def remove_past_stories():
                 {"_id": active_story["_id"]},
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
-            all_members = slack_app.client.conversations_members(channel=active_story["channel_id"])["members"]
+            all_members = slack_app.client.conversations_members(
+                channel=active_story["channel_id"]
+            )["members"]
             db.temporal_interacted.update_many(
                 {
-                    "counts.user_id": {"$in": all_members}, 
-                    "user_id": {"$in": all_members}
-                }, 
-                {"$inc": { "counts.$[element].count": 1}}, 
+                    "counts.user_id": {"$in": all_members},
+                    "user_id": {"$in": all_members},
+                },
+                {"$inc": {"counts.$[element].count": 1}},
                 array_filters=[{"element.user_id": {"$in": all_members}}],
-                upsert=True
-                )
-            db.all_interacted.update_many({
-                "counts.user_id": {"$in": all_members}, 
-                "user_id": {"$in": all_members}}, 
-                {"$inc": { "counts.$[element].count": 1}}, 
-                array_filters= [{"element.user_id": {"$in": all_members}}],
-                upsert=True)
+                upsert=True,
+            )
+            db.all_interacted.update_many(
+                {
+                    "counts.user_id": {"$in": all_members},
+                    "user_id": {"$in": all_members},
+                },
+                {"$inc": {"counts.$[element].count": 1}},
+                array_filters=[{"element.user_id": {"$in": all_members}}],
+                upsert=True,
+            )
             nooks_alloc.update_interactions()
             slack_app.client.conversations_archive(channel=active_story["channel_id"])
 
@@ -701,7 +703,8 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
                                 "type": "mrkdwn",
                                 "text": "Hello! I saw that you didn't swipe right on any nook yesterday. However, in case you are still interested in getting in on the action, feel free to join in on the topic \""
                                 + title
-                                + '"\n>' + desc,
+                                + '"\n>'
+                                + desc,
                             },
                         },
                         {
@@ -761,7 +764,7 @@ def update_story_suggestions():
 
 
 # TODO change this to hour for final
-@cron.scheduled_job("cron", second="10")
+@cron.task("cron", second="10")
 def post_stories():
     remove_past_stories()
     current_stories = list(db.stories.find({"status": "show"}))
@@ -774,8 +777,9 @@ def post_stories():
     for member in nooks_alloc.member_dict:
         nooks_home.update_home_tab(client=slack_app.client, event={"user": member})
 
+
 # TODO change this to hour for final
-@cron.scheduled_job("cron", day="1")
+@cron.task("cron", day="1")
 def reset_interactions():
     nooks_alloc.reset()
 
@@ -822,10 +826,13 @@ def post_stories():
         )
 """
 
-atexit.register(lambda: cron.shutdown(wait=False))
 
+def main(nooks_home_arg, nooks_alloc_arg):
+    global nooks_home
+    global nooks_alloc
+    nooks_home = nooks_home_arg
+    nooks_alloc = nooks_alloc_arg
 
-def main():
     db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
@@ -834,7 +841,7 @@ def main():
     if "member_vectors" not in db.list_collection_names():
         db.create_collection("member_vectors")
         db.member_vectors.create_index("user_id")
-    
+
         """
         member_vectors = np.random.randint(2, size=(len(all_members), MEMBER_FEATURES))
         db.member_vectors.insert_many(
@@ -853,14 +860,11 @@ def main():
         db.all_interacted.insert_many(
             [
                 {
-                    "user_id": from_member["id"], 
-                    "counts": 
-                        [
-                            {
-                                "user_id": to_member["id"], 
-                                "count": 0
-                            } for to_member in all_members
-                        ]
+                    "user_id": from_member["id"],
+                    "counts": [
+                        {"user_id": to_member["id"], "count": 0}
+                        for to_member in all_members
+                    ],
                 }
                 for from_member in all_members
             ]
@@ -868,23 +872,12 @@ def main():
         db.temporal_interacted.insert_many(
             [
                 {
-                    "user_id": from_member["id"], 
-                    "counts": 
-                        [
-                            {
-                                "user_id": to_member["id"], 
-                                "count": 0
-                            } for to_member in all_members
-                        ]
+                    "user_id": from_member["id"],
+                    "counts": [
+                        {"user_id": to_member["id"], "count": 0}
+                        for to_member in all_members
+                    ],
                 }
                 for from_member in all_members
             ]
         )
-
-
-if __name__ == "__main__":
-    main()
-
-    nooks_home = NooksHome(db=db)
-    nooks_alloc = NooksAllocation(db=db)
-    app.run(debug=True, use_reloader=False)
