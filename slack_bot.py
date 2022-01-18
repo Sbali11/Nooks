@@ -391,17 +391,30 @@ def signup_modal_step_2(ack, body, logger):
     question_blocks = [
         {
             "block_id": question,
-            "type": "input",
-            "element": {
-                "type": "plain_text_input",
-                "action_id": "plain_text_input-action",
-            },
-            "label": {
-                "type": "plain_text",
-                "text": question,
+            "type": "section",
+
+            "text": {
+                "type": "mrkdwn",
+                "text": "*" +question + "*",
                 "emoji": True,
             },
-        } for question in all_questions
+            "accessory": {
+                "type": "radio_buttons",
+                "action_id": "this_is_an_action_id",
+                "initial_option": {
+                    "value": "1",
+                    "text": {"type": "plain_text", "text": "1: Strongly Disagree"},
+                },
+                "options": [
+                    {"value": "1", "text": {"type": "plain_text", "text": "1: Strongly Disagree"}},
+                    {"value": "2", "text": {"type": "plain_text", "text": "2"}},
+                    {"value": "3", "text": {"type": "plain_text", "text": "3"}},
+                    {"value": "4", "text": {"type": "plain_text", "text": "4"}},
+                    {"value": "5", "text": {"type": "plain_text", "text": "5: Strongly Agree"}},
+                ],
+            },
+        }
+        for question in all_questions
     ]
 
     ack(
@@ -420,9 +433,9 @@ def signup_modal_step_2(ack, body, logger):
                         "type": "mrkdwn",
                         "text": "Some more :)",
                     },
-                } 
-                ] + question_blocks
-            ,
+                }
+            ]
+            + question_blocks,
         },
     ),
 
@@ -466,7 +479,8 @@ def signup_modal(ack, body, logger):
                 "text": question,
                 "emoji": True,
             },
-        } for question in all_questions
+        }
+        for question in all_questions
     ]
     # TODO check if member is already in database?
     res = slack_app.client.views_open(
@@ -485,7 +499,9 @@ def signup_modal(ack, body, logger):
                         "type": "mrkdwn",
                         "text": "To help me optimize your lists, tell me a bit about yourself",
                     },
-                }] + question_blocks,
+                }
+            ]
+            + question_blocks,
         },
     )
     logging.info(res)

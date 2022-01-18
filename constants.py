@@ -11,7 +11,7 @@ SIGNUP_QUESTIONS = {
         "I feel comfortable sharing my private thoughts and feelings with others at work",
         "When I am at work I don’t mind asking other people for comfort, advice, or help",
         "Sometimes I don’t feel as if I belong in my organization.",
-        "I feel very different from most other employees at my organization."
+        "I feel very different from most other employees at my organization.",
         "When I am at work, people are around me but not with me",
         "At work I can find companionship when I want it",
         "I talk to people in my organization about shared interests."
