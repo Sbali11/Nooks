@@ -14,6 +14,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 import numpy as np
 from flask_apscheduler import APScheduler
+from constants import *
 
 # set configuration values
 class Config:
@@ -383,6 +384,49 @@ def handle_signup(ack, body, client, view, logger):
     )
 
 
+@slack_app.view("signup_step_2")
+def signup_modal_step_2(ack, body, logger):
+    user = body["user"]["id"]
+    all_questions = SIGNUP_QUESTIONS["Step 2"]
+    question_blocks = [
+        {
+            "block_id": question,
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+            },
+            "label": {
+                "type": "plain_text",
+                "text": question,
+                "emoji": True,
+            },
+        } for question in all_questions
+    ]
+
+    ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "callback_id": "add_member",
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {"type": "plain_text", "text": "Next", "emoji": True},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Some more :)",
+                    },
+                } 
+                ] + question_blocks
+            ,
+        },
+    ),
+
+
 @slack_app.action("signup")
 def signup_modal(ack, body, logger):
     ack()
@@ -394,6 +438,7 @@ def signup_modal(ack, body, logger):
                 "type": "modal",
                 "callback_id": "add_member",
                 "title": {"type": "plain_text", "text": "Sign Up!"},
+                "submit": {"type": "plain_text", "text": "Next"},
                 "close": {"type": "plain_text", "text": "Close"},
                 "blocks": [
                     {
@@ -407,16 +452,32 @@ def signup_modal(ack, body, logger):
             },
         )
         return
-
+    all_questions = SIGNUP_QUESTIONS["Step 1"]
+    question_blocks = [
+        {
+            "block_id": question,
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+            },
+            "label": {
+                "type": "plain_text",
+                "text": question,
+                "emoji": True,
+            },
+        } for question in all_questions
+    ]
     # TODO check if member is already in database?
-    slack_app.client.views_open(
+    res = slack_app.client.views_open(
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "add_member",
+            "callback_id": "signup_step_2",
             "title": {"type": "plain_text", "text": "Sign Up!"},
+            "submit": {"type": "plain_text", "text": "Next"},
             "close": {"type": "plain_text", "text": "Close"},
-            "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
+            "submit": {"type": "plain_text", "text": "Next", "emoji": True},
             "blocks": [
                 {
                     "type": "section",
@@ -424,62 +485,10 @@ def signup_modal(ack, body, logger):
                         "type": "mrkdwn",
                         "text": "To help me optimize your lists, tell me a bit about yourself",
                     },
-                },
-                {
-                    "block_id": "gender",
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "plain_text_input-action",
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Gender",
-                        "emoji": True,
-                    },
-                },
-                {
-                    "block_id": "age",
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "plain_text_input-action",
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Age",
-                        "emoji": True,
-                    },
-                },
-                {
-                    "block_id": "yrs_org",
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "plain_text_input-action",
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Number of years in this organization",
-                        "emoji": True,
-                    },
-                },
-                {
-                    "block_id": "core_periphery",
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "plain_text_input-action",
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Do you consider yourself to be well connected in the organization?",
-                        "emoji": True,
-                    },
-                },
-            ],
+                }] + question_blocks,
         },
     )
+    logging.info(res)
 
 
 @slack_app.action("join_without_interest")

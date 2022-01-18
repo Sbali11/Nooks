@@ -8,6 +8,7 @@ EPSILON = 0.001
 MEMBER_FEATURES = 2
 
 
+
 def get_member_vector(member_info):
     return np.zeros((MEMBER_FEATURES)).tolist()
 
