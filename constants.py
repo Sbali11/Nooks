@@ -1,10 +1,26 @@
 SIGNUP_QUESTIONS = {
-    "Step 1": [
-        "Role",
-        "Age", 
-        "Gender",
-        "Tenure",
-    ],
+    "Step 1": {
+        "Role" : {
+            "Professor",
+            "PhD Student",
+            "Master's Student",
+            "Undergrad Student"
+        },
+
+        "Gender": {
+            "Male",
+            "Female", 
+            "Non-Binary",
+            "Prefer Not to Disclose"
+
+        },
+        "Number of years in the organization" : {
+            "0-1 yrs",
+            "1-5 yrs", 
+            "5-10 yrs", 
+            ">10 yrs"
+        },
+    },
     "Step 2": [
         "I get frustrated when others at work are not around as much as I would like",
         "When I’m not connected to people at work, I feel somewhat anxious and insecure",

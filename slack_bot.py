@@ -253,9 +253,7 @@ def handle_send_message(ack, body, client, view, logger):
 
     to_user = view["private_metadata"]
     message = input_data["message"]["plain_text_input-action"]["value"]
-    logging.info("VZZZ")
-    logging.info(body)
-    logging.info(view)
+
     new_story_info = {"message": message, "from_user": from_user, "to_user": to_user}
     db.personal_message.insert_one(new_story_info)
     slack_app.client.chat_postMessage(
@@ -372,7 +370,12 @@ def handle_signup(ack, body, client, view, logger):
     user = body["user"]["id"]
     new_member_info = {}
     for key in input_data:
-        new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
+        if "plain_text_input-action" in input_data[key]:
+            new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
+        elif "radio_input-action" in input_data[key]:
+            new_member_info[key] = input_data[key]["radio_input-action"][
+                "selected_option"
+            ]["value"]
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
     db.member_vectors.insert_one(new_member_info)
@@ -388,29 +391,31 @@ def handle_signup(ack, body, client, view, logger):
 def signup_modal_step_2(ack, body, logger):
     user = body["user"]["id"]
     all_questions = SIGNUP_QUESTIONS["Step 2"]
+
     question_blocks = [
         {
             "block_id": question,
             "type": "section",
-
             "text": {
-                "type": "mrkdwn",
-                "text": "*" +question + "*",
+                "type": "plain_text",
+                "text": question,
                 "emoji": True,
             },
             "accessory": {
-                "type": "radio_buttons",
-                "action_id": "this_is_an_action_id",
-                "initial_option": {
-                    "value": "1",
-                    "text": {"type": "plain_text", "text": "1: Strongly Disagree"},
-                },
+                "type": "static_select",
+                "action_id": "radio_input-action",
                 "options": [
-                    {"value": "1", "text": {"type": "plain_text", "text": "1: Strongly Disagree"}},
+                    {
+                        "value": "1",
+                        "text": {"type": "plain_text", "text": "1: Strongly Disagree"},
+                    },
                     {"value": "2", "text": {"type": "plain_text", "text": "2"}},
                     {"value": "3", "text": {"type": "plain_text", "text": "3"}},
                     {"value": "4", "text": {"type": "plain_text", "text": "4"}},
-                    {"value": "5", "text": {"type": "plain_text", "text": "5: Strongly Agree"}},
+                    {
+                        "value": "5",
+                        "text": {"type": "plain_text", "text": "5: Strongly Agree"},
+                    },
                 ],
             },
         }
@@ -425,7 +430,6 @@ def signup_modal_step_2(ack, body, logger):
             "title": {"type": "plain_text", "text": "Sign Up!"},
             "submit": {"type": "plain_text", "text": "Submit"},
             "close": {"type": "plain_text", "text": "Close"},
-            "submit": {"type": "plain_text", "text": "Next", "emoji": True},
             "blocks": [
                 {
                     "type": "section",
@@ -466,18 +470,37 @@ def signup_modal(ack, body, logger):
         )
         return
     all_questions = SIGNUP_QUESTIONS["Step 1"]
-    question_blocks = [
+    age_block = [
+        {
+
+                "type": "input",
+                "block_id": "Age",
+                "label": {"type": "plain_text", "text": "Age"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "plain_text_input-action",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Enter your Age",
+                    },
+                },
+        }
+    ]
+    question_blocks = age_block + [
         {
             "block_id": question,
-            "type": "input",
-            "element": {
-                "type": "plain_text_input",
-                "action_id": "plain_text_input-action",
-            },
-            "label": {
+            "type": "section",
+            "text": {
                 "type": "plain_text",
                 "text": question,
-                "emoji": True,
+            },
+            "accessory": {
+                "type": "static_select",
+                "action_id": "radio_input-action",
+                "options": [
+                    {"value": value, "text": {"type": "plain_text", "text": value}}
+                    for value in all_questions[question]
+                ],
             },
         }
         for question in all_questions
@@ -536,28 +559,16 @@ def show_nooks_info(ack, body, logger):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid socialization, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
+                    "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid workplace connectedness, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
                 },
-            },
-            {
-                "type": "image",
-                "title": {"type": "plain_text", "text": "image1", "emoji": True},
-                "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
-                "alt_text": "image1",
             },
             {"type": "divider"},
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started. \nP.S, I also have some sample topics here for :sparkles:inspiration:sparkles:",
+                    "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
                 },
-            },
-            {
-                "type": "image",
-                "title": {"type": "plain_text", "text": "image1", "emoji": True},
-                "image_url": "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
-                "alt_text": "image1",
             },
             {"type": "divider"},
             {
