@@ -30,7 +30,9 @@ NUM_MEMBERS = 2
 MEMBER_FEATURES = 2
 MAX_STORIES_GLOBAL = 10
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
+CLIENT_SECRET =  os.environ["CLIENT_SECRET"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
+REDIRECT_URI = os.environ["REDIRECT_URI"]
 
 db = MongoClient(MONGODB_LINK).nooks_db
 
@@ -372,8 +374,8 @@ def handle_signup(ack, body, client, view, logger):
     for key in input_data:
         if "plain_text_input-action" in input_data[key]:
             new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
-        elif "radio_input-action" in input_data[key]:
-            new_member_info[key] = input_data[key]["radio_input-action"][
+        elif "select_input-action" in input_data[key]:
+            new_member_info[key] = input_data[key]["select_input-action"][
                 "selected_option"
             ]["value"]
     new_member_info["user_id"] = user
@@ -386,6 +388,9 @@ def handle_signup(ack, body, client, view, logger):
         text="You're all set! Create your first story ",
     )
 
+@slack_app.action("select_input-action")
+def handle_some_action(ack, body, logger):
+    ack()
 
 @slack_app.view("signup_step_2")
 def signup_modal_step_2(ack, body, logger):
@@ -403,7 +408,7 @@ def signup_modal_step_2(ack, body, logger):
             },
             "accessory": {
                 "type": "static_select",
-                "action_id": "radio_input-action",
+                "action_id": "select_input-action",
                 "options": [
                     {
                         "value": "1",
@@ -496,7 +501,7 @@ def signup_modal(ack, body, logger):
             },
             "accessory": {
                 "type": "static_select",
-                "action_id": "radio_input-action",
+                "action_id": "select_input-action",
                 "options": [
                     {"value": value, "text": {"type": "plain_text", "text": value}}
                     for value in all_questions[question]
@@ -633,7 +638,8 @@ def onboarding_modal(ack, body, logger):
 
 
 # Add functionality here
-from flask import Flask, request
+from flask import Flask, request, redirect
+import requests
 
 app = Flask(__name__)
 cron = APScheduler()
@@ -641,6 +647,23 @@ cron.init_app(app)
 cron.start()
 handler = SocketModeHandler(slack_app, SLACK_APP_TOKEN)
 handler.connect()
+
+
+@app.route("/")
+def slack_install():
+    return "<a href='https://slack.com/oauth/v2/authorize?client_id=" + CLIENT_ID + "&redirect_uri=" + REDIRECT_URI + "&scope=app_mentions:read,channels:history,channels:manage,channels:read,chat:write,commands,groups:history,groups:read,groups:write,im:history,im:read,im:write,mpim:read,mpim:write,users.profile:read,users:read,files:write,files:read&user_scope=channels:read,channels:write,chat:write,files:read,im:write,users:read,mpim:write,groups:write'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
+
+@app.route("/slack/oauth_redirect", methods = ['POST', 'GET'])
+def slack_oauth():
+    logging.info("vfwevf")
+    code = request.args.get("code")
+    logging.info(code)
+    response = slack_app.client.oauth_v2_access(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, code=code, redirect_uri=REDIRECT_URI)
+    #r = requests.post('https://slack.com/api/oauth.v2.access', data={'client_id': CLIENT_ID, 'code': code, 'client_secret': CLIENT_SECRET})
+    
+    #logging.info(vars(response)["incoming_webhook"]["channel_id"])
+
+    return "NEW"
 
 
 def remove_past_stories():

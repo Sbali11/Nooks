@@ -1,25 +1,26 @@
+CLIENT_ID = "2614289134036.2614423805380"
 SIGNUP_QUESTIONS = {
     "Step 1": {
-        "Role" : {
+        "Role" : [
             "Professor",
             "PhD Student",
             "Master's Student",
             "Undergrad Student"
-        },
+        ],
 
-        "Gender": {
+        "Gender": [
             "Male",
             "Female", 
             "Non-Binary",
             "Prefer Not to Disclose"
+        ],
 
-        },
-        "Number of years in the organization" : {
+        "Number of years in the organization" : [
             "0-1 yrs",
             "1-5 yrs", 
             "5-10 yrs", 
             ">10 yrs"
-        },
+        ],
     },
     "Step 2": [
         "I get frustrated when others at work are not around as much as I would like",
