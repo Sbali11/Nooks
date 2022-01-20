@@ -20,18 +20,19 @@ def random_priority(creator, user, title, desc, to):
 
 class NooksAllocation:
     def _create_interactions_np(self, interactions):
+
         interaction_np = np.zeros((self.total_members, self.total_members))
+
         for interaction_row in interactions:
-            member_1 = interaction_row["user_id"]
-            if member_1 not in self.member_dict:
+            logging.info(interaction_row)
+            member_1 = interaction_row["user1_id"]
+            member_2 = interaction_row["user2_id"]
+            if member_1 not in self.member_dict or member_2 not in self.member_dict:
                 continue
-            for counts in interaction_row["counts"]:
-                member_2 = counts["user_id"]
-                if member_2 not in self.member_dict:
-                    continue
-                interaction_np[self.member_dict[member_1]][
+
+            interaction_np[self.member_dict[member_1]][
                     self.member_dict[member_2]
-                ] = counts["count"]
+                ] = interaction_row["count"]
         return interaction_np
 
     def __init__(self, db, alpha=2):
@@ -72,7 +73,7 @@ class NooksAllocation:
     """
     def reset(self):
         self.db.temporal_interacted.remove()
-        self.db.create_collection("interacted")
+        self.db.create_collection("temporal_interacted")
 
     # TODO see if running median is needed; space & time
     def create_nook_allocs(self, nooks):
@@ -225,18 +226,16 @@ class NooksHome:
         self.suggested_stories = suggested_stories
 
     def get_interaction_blocks(self, client, user_id, team_id, token):
-        all_connections = self.db.all_interacted.find_one({"user_id": user_id, "team_id":team_id})
+        all_connections = self.db.all_interacted.find({"user1_id": user_id, "team_id":team_id})
 
         interacted_with = []
         interaction_block_items = []
 
         if all_connections:
-            interaction_counts = all_connections["counts"]
-            interacted_with = [
-                (count_obj["count"], count_obj["user_id"]) for  
-                count_obj in interaction_counts
-                if count_obj["count"] > 0
-            ]
+            for interaction_row in all_connections:
+                interaction_counts = interaction_row["count"]
+                if interaction_row["count"] > 0:
+                    interacted_with.append((interaction_row["count"], interaction_row["user2_id"]))
             interacted_with.sort(reverse=True)
             if interacted_with:
                 interaction_block_items = [
@@ -441,7 +440,11 @@ class NooksHome:
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
+        logging.info("EEEEEE")
+        logging.info(self.suggested_stories)
+        logging.info(team_id)
         suggested_stories_current = self.suggested_stories[team_id]
+        logging.info(suggested_stories_current)
         while cur_pos < len(suggested_stories_current):
             cur_display_card = suggested_stories_current[cur_pos]
             if user_id not in cur_display_card["banned"]:
