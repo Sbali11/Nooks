@@ -70,14 +70,7 @@ def get_token(team_id):
 
 
 installation_store = InstallationDB()
-
-
-oauth_settings = OAuthSettings(
-    install_path="/slack/install",
-    redirect_uri_path="/slack/oauth_redirect",
-    client_id=CLIENT_ID,
-    client_secret=os.environ["CLIENT_SECRET"],
-    scopes=[
+scopes=[
         "app_mentions:read",
         "channels:history",
         "channels:manage",
@@ -96,15 +89,14 @@ oauth_settings = OAuthSettings(
         "users:read",
         "files:write",
         "files:read",
-        "incoming-webhook&user_scope=channels:read",
-        "channels:write",
-        "chat:write",
-        "files:read",
-        "im:write",
-        "users:read",
-        "mpim:write",
-        "groups:write",
-    ],
+    ]
+
+oauth_settings = OAuthSettings(
+    install_path="/slack/install",
+    redirect_uri_path="/slack/oauth_redirect",
+    client_id=CLIENT_ID,
+    client_secret=os.environ["CLIENT_SECRET"],
+    scopes=scopes,
     installation_store=installation_store,
 )
 
@@ -957,19 +949,21 @@ handler.connect()
 
 @app.route("/")
 def slack_install():
+    logging.info("REVFRV")
+    logging.info(",".join(scopes))
     return (
         "<a href='https://slack.com/oauth/v2/authorize?client_id="
         + CLIENT_ID
         + "&redirect_uri="
-        + REDIRECT_URI
-        + "&scope=app_mentions:read,channels:history,channels:manage,channels:read,chat:write,commands,groups:history,groups:read,groups:write,im:history,im:read,im:write,mpim:read,mpim:write,users.profile:read,users:read,files:write,files:read,incoming-webhook&user_scope=channels:read,channels:write,chat:write,files:read,im:write,users:read,mpim:write,groups:write'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
+        + REDIRECT_URI 
+        + "&scope=" + ",".join(scopes) + ",incoming-webhook'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
 
 @app.route("/slack/oauth_redirect", methods=["POST", "GET"])
 def slack_oauth():
     code = request.args.get("code")
-    response = slack_app.client.oauth_v2_access(
+    oauth_response = slack_app.client.oauth_v2_access(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         code=code,
@@ -979,20 +973,42 @@ def slack_oauth():
     # logging.info(response)
     # slack_app = App()
     # os.environ["SLACK_BOT_TOKEN"] = response['access_token']
-    installer = response["authed_user"]
+
+    installed_enterprise = {}
+    #oauth_response.get("enterprise", {})
+    is_enterprise_install = oauth_response.get("is_enterprise_install")
+    installed_team = oauth_response.get("team", {})
+    installer = oauth_response.get("authed_user", {})
+    incoming_webhook = oauth_response.get("incoming_webhook", {})
+
+    bot_token = oauth_response.get("access_token")
+    # NOTE: oauth.v2.access doesn't include bot_id in response
+    bot_id = None
+    enterprise_url = None
+
     installation = Installation(
-        app_id=response["access_token"],
-        team_id=response["team"]["id"],
-        team_name=response["team"]["name"],
-        bot_token=response["access_token"],
-        bot_id=None,
-        user_id=installer["id"],
-        bot_user_id=response["bot_user_id"],
-        bot_scopes=response["scope"],  # comma-separated string
-        user_token=installer["access_token"],
-        user_scopes=installer["scope"],  # comma-separated string
-        token_type=response["token_type"],
+    app_id=oauth_response.get("app_id"),
+    enterprise_id=installed_enterprise.get("id"),
+    enterprise_name=installed_enterprise.get("name"),
+    enterprise_url=enterprise_url,
+    team_id=installed_team.get("id"),
+    team_name=installed_team.get("name"),
+    bot_token=bot_token,
+    bot_id=bot_id,
+    bot_user_id=oauth_response.get("bot_user_id"),
+    bot_scopes=oauth_response.get("scope"),  # comma-separated string
+    user_id=installer.get("id"),
+    user_token=installer.get("access_token"),
+    user_scopes=installer.get("scope"),  # comma-separated string
+    incoming_webhook_url=incoming_webhook.get("url"),
+    incoming_webhook_channel=incoming_webhook.get("channel"),
+    incoming_webhook_channel_id=incoming_webhook.get("channel_id"),
+    incoming_webhook_configuration_url=incoming_webhook.get("configuration_url"),
+    is_enterprise_install=is_enterprise_install,
+    token_type=oauth_response.get("token_type"),
     )
+
+    # Store the installation
     installation_store.save(installation)
     return "NEW"
 
