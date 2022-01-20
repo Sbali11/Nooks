@@ -407,12 +407,11 @@ class NooksHome:
         )
 
     def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0, user_id = None, token=None):
+        logging.info("XAALLEED")
         if not user_id:
             user_id = event["user"]
-        if "view" not in event:
-            logging.info(client)
-            event["view"] = {"team_id" : None}
         member = self.db.member_vectors.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
+        logging.info(member)
         interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
 
         if not member:

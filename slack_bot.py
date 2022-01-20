@@ -462,7 +462,9 @@ def update_message(ack, body, client, view, logger):
 
 @slack_app.event("app_home_opened")
 def update_home_tab(client, event, logger):
-    nooks_home.update_home_tab(client, event)
+    logging.info(event)
+    #if "view" in event:
+    #    nooks_home.update_home_tab(client, event)
 
 @slack_app.event("message")
 def handle_message_events(body, logger):
@@ -484,8 +486,11 @@ def handle_signup(ack, body, client, view, logger):
             ]["value"]
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
-    new_member_info["team_id"] = body["team"]["id"],
+    logging.info("UHFIEF")
+    logging.info(body)
+    new_member_info["team_id"] = body["team"]["id"]
     db.member_vectors.insert_one(new_member_info)
+    nooks_home.update_home_tab(slack_app.client, {"user": user, "view" : { "team_id": body["team"]["id"]}}, token=get_token(body["team"]["id"]) )
 
     slack_app.client.chat_postMessage(
         
@@ -494,6 +499,8 @@ def handle_signup(ack, body, client, view, logger):
         channel=user,
         text="You're all set! Create your first story ",
     )
+
+
 
 
 @slack_app.action("select_input-action")
@@ -563,29 +570,6 @@ def signup_modal(ack, body, logger):
     ack()
     
     user = body["user"]["id"]
-    if db.member_vector.find_one({"user_id": user, "team_id": body["team"]["id"]}) :
-        slack_app.client.views_open(
-            token=get_token(body["team"]["id"]),
-            
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "callback_id": "add_member",
-                "title": {"type": "plain_text", "text": "Sign Up!"},
-                "submit": {"type": "plain_text", "text": "Next"},
-                "close": {"type": "plain_text", "text": "Close"},
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "Looks like you're already signed up! If you want to withdraw consent or change any information on your profile, contact sbali@andrew.cmu.edu",
-                        },
-                    },
-                ],
-            },
-        )
-        return
     all_questions = SIGNUP_QUESTIONS["Step 1"]
     age_block = [
         {
@@ -632,7 +616,6 @@ def signup_modal(ack, body, logger):
             "title": {"type": "plain_text", "text": "Sign Up!"},
             "submit": {"type": "plain_text", "text": "Next"},
             "close": {"type": "plain_text", "text": "Close"},
-            "submit": {"type": "plain_text", "text": "Next", "emoji": True},
             "blocks": [
                 {
                     "type": "section",
@@ -1000,6 +983,7 @@ def post_stories():
     suggested_stories = update_story_suggestions()
     nooks_home.update(suggested_stories=suggested_stories)
     #TODO
+
     for member in nooks_alloc.member_dict:
         nooks_home.update_home_tab(
             client=slack_app.client, event={"user": member, "view" : { "team_id": body["team"]["id"]}}, 
