@@ -504,10 +504,41 @@ def handle_message_events(body, logger):
     logger.info(body)
 
 
-@slack_app.event("channel_joined")
+@slack_app.event("member_joined_channel")
 def handle_message_events(client, event, logger):
-    logging.event("EJWKN")
+
     logger.info(event)
+    for member in client.conversations_members(token=get_token(event["team"]), channel=event["channel"])["members"]:
+        slack_app.client.chat_postMessage(
+            token=get_token(event["team"]),
+            link_names=True,
+            channel=member,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                    },
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": "onboard_info",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Tell me more!",
+                                "emoji": True,
+                            },
+                            "style": "primary",
+                            "value": "join",
+                        }
+                    ],
+                },
+            ],
+        )
 
 
 @slack_app.view("add_member")
