@@ -34,7 +34,6 @@ CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
 REDIRECT_URI = os.environ["REDIRECT_URI"]
 CLIENT_ID = "2614289134036.2614423805380"
-SLACK_BOT_TOKEN = "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
 
 db = MongoClient(MONGODB_LINK).nooks_db
 
@@ -55,8 +54,7 @@ class InstallationDB:
         pass
 
     def find_installation(self, enterprise_id=None, team_id=None, user_id=None, is_enterprise_install=None):
-        logging.info("fnjwkv")
-        logging.info(db.tokens.find_one({"team_id": team_id}))
+
         return Installation(**(db.tokens.find_one({"team_id": team_id})["installation"]))
 
 
@@ -112,12 +110,8 @@ def upload_token(token, team):
     )
 
 
-def get_token(client=None):
-    logging.info(slack_app.client.token)
-    logging.info("WLDOEWMF")
-    return slack_app.client.token
 
-    # db.tokens.find_one({"team_id": app.client.view.team_id})["token"]
+# db.tokens.find_one({"team_id": app.client.view.team_id})["token"]
 
 
 @slack_app.middleware  # or app.use(log_request)
@@ -129,7 +123,7 @@ def log_request(logger, body, next):
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
     ack()
-    token = get_token(client)
+    
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
     user = body["user"]["id"]
@@ -159,7 +153,7 @@ def handle_new_story(ack, body, client, view, logger):
 @slack_app.action("create_story")
 def create_story_modal(ack, body, logger):
     ack()
-    token = get_token()
+    
     slack_app.client.views_open(
         
         trigger_id=body["trigger_id"],
@@ -222,7 +216,7 @@ def create_story_modal(ack, body, logger):
 @slack_app.action("story_interested")
 def nook_int(ack, body, logger):
     ack()
-    token = get_token()
+    
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
     user_story = nooks_home.suggested_stories[cur_pos]
@@ -234,7 +228,7 @@ def nook_int(ack, body, logger):
 @slack_app.action("new_sample_nook")
 def update_random_nook(ack, body, logger):
     ack()
-    token = get_token()
+    
     user_id = body["user"]["id"]
     logging.info("UUHNIUN")
     vals = body["actions"][0]["value"].split("/")
@@ -252,7 +246,7 @@ def update_random_nook(ack, body, logger):
 @slack_app.action("story_not_interested")
 def nook_not_int(ack, body, logger):
     ack()
-    token = get_token()
+    
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
     user_story = nooks_home.suggested_stories[cur_pos]
@@ -264,7 +258,7 @@ def nook_not_int(ack, body, logger):
 @slack_app.view("send_dm")
 def handle_send_message(ack, body, client, view, logger):
     ack()
-    token = get_token()
+    
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
     to_user = view["private_metadata"]
@@ -289,7 +283,7 @@ def handle_send_message(ack, body, client, view, logger):
 @slack_app.action("customize_dm")
 def customize_dm_modal(ack, body, client, view, logger):
     ack()
-    token = get_token()
+    
 
     # TODO create a new name if taken?
     from_user = body["user"]["id"]
@@ -348,7 +342,7 @@ def handle_send_message(ack, body, client, view, logger):
     ack()
     input_data = view["state"]["values"]
     from_user = body["user"]["id"]
-    token = get_token()
+    
 
     logging.info("BZZZZ")
     logging.info(view)
@@ -404,7 +398,7 @@ def contact_modal(ack, body, logger):
     ack()
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
-    token = get_token()
+    
 
     slack_app.client.views_open(
         
@@ -440,7 +434,7 @@ def contact_modal(ack, body, logger):
 @slack_app.view("enter_channel")
 def update_message(ack, body, client, view, logger):
     ack()
-    token = get_token()
+    
     story_id = view["private_metadata"]
     story = db.stories.find_one({"_id": ObjectId(story_id)})
     ep_channel, thread_ts = story["channel_id"], story["ts"]
@@ -473,7 +467,7 @@ def update_home_tab(client, event, logger):
     logging.info("FKEKFZ")
     logging.info(vars(client))
     logging.info(event)
-    token = get_token(client)
+    
 
     nooks_home.update_home_tab(client, event, logger, token=token)
 
@@ -481,7 +475,7 @@ def update_home_tab(client, event, logger):
 @slack_app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
     ack()
-    token = get_token()
+    
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
     user = body["user"]["id"]
@@ -570,7 +564,7 @@ def signup_modal_step_2(ack, body, logger):
 @slack_app.action("signup")
 def signup_modal(ack, body, logger):
     ack()
-    token = get_token()
+    
     user = body["user"]["id"]
     if db.member_vector.find_one({"user_id": user}):
         slack_app.client.views_open(
@@ -658,7 +652,7 @@ def signup_modal(ack, body, logger):
 @slack_app.action("join_without_interest")
 def join_without_interest(ack, body, logger):
     ack()
-    token = get_token()
+    
     user = body["user"]["id"]
     ep_channel = body["actions"][0]["value"]
     slack_app.client.conversations_invite( channel=ep_channel, users=user)
@@ -667,7 +661,7 @@ def join_without_interest(ack, body, logger):
 @slack_app.action("onboard_info")
 def show_nooks_info(ack, body, logger):
     ack()
-    token = get_token()
+    
     user_id = body["user"]["id"]
 
     slack_app.client.chat_postMessage(
@@ -728,7 +722,7 @@ def show_nooks_info(ack, body, logger):
 @slack_app.command("/onboard")
 def onboarding_modal(ack, body, logger):
     ack()
-    token = get_token()
+    
     for member in slack_app.client.users_list(token=token)["members"]:
         slack_app.client.chat_postMessage(
             
@@ -819,7 +813,7 @@ def slack_oauth():
 
 def remove_past_stories():
     active_stories = list(db.stories.find({"status": "active"}))
-    token = get_token()
+    
     # archive all channels of the past day
     for active_story in active_stories:
         try:
@@ -864,7 +858,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
     # create new channels for the day
     now = datetime.now()  # current date and time
     date = now.strftime("%m-%d-%Y-%H-%M-%S")
-    token = get_token()
+    
     for i, new_story in enumerate(new_stories):
         title = new_story["title"]
         creator = new_story["creator"]
@@ -952,7 +946,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
 def update_story_suggestions():
     # all stories
     suggested_stories = list(db.stories.find({"status": "suggested"}))
-    token = get_token()
+    
     # db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
@@ -987,7 +981,7 @@ def update_story_suggestions():
 @cron.task("cron", second="10")
 def post_stories():
     remove_past_stories()
-    token = get_token()
+    
     current_stories = list(db.stories.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
         nooks=current_stories
