@@ -217,6 +217,8 @@ def nook_int(ack, body, logger):
 
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
+    logging.info("NFJKENWRKJ")
+    logging.info(nooks_home.suggested_stories)
     user_story = nooks_home.suggested_stories[body["team"]["id"]][cur_pos]
     db.user_swipes.update_one(
         {"user_id": user_id, "team_id": body["team"]["id"]},
@@ -864,6 +866,16 @@ def remove_past_stories():
                         "user2_id": member_2,
                         "team_id": active_story["team_id"], 
                         "count": 0})
+                    if not db.all_interacted.find({
+                        "user1_id": member_1,
+                        "user2_id": member_2,
+                        "team_id": active_story["team_id"]}):
+
+                        db.all_interacted.insert_one({
+                        "user1_id": member_1,
+                        "user2_id": member_2,
+                        "team_id": active_story["team_id"], 
+                        "count": 0})
 
                 
             db.temporal_interacted.update_many(
@@ -873,7 +885,6 @@ def remove_past_stories():
                     "team_id": active_story["team_id"]
                 },
                 {"$inc": {"count": 1}},
-                upsert=True,
             )
             db.all_interacted.update_many(
                 {
@@ -882,7 +893,6 @@ def remove_past_stories():
                     "team_id": active_story["team_id"]
                 },
                 {"$inc": {"count": 1}},
-                upsert=True,
             )
             nooks_alloc.update_interactions()
             slack_app.client.conversations_archive(
