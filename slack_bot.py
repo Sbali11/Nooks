@@ -15,6 +15,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 import numpy as np
 from flask_apscheduler import APScheduler
+import json
 from constants import *
 
 # set configuration values
@@ -474,7 +475,9 @@ def handle_message_events(body, logger):
 def handle_signup(ack, body, client, view, logger):
     ack()
     # TODO create a new name if taken?
-    input_data = view["state"]["values"]
+    logging.info("nvjkef")
+    logging.info(body)
+    input_data = view["state"]["values"] + json.loads(body["private_metadata"])
     user = body["user"]["id"]
     new_member_info = {}
     for key in input_data:
@@ -509,7 +512,7 @@ def handle_some_action(ack, body, logger):
 
 
 @slack_app.view("signup_step_2")
-def signup_modal_step_2(ack, body, logger):
+def signup_modal_step_2(ack, body, view, logger):
     user = body["user"]["id"]
     all_questions = SIGNUP_QUESTIONS["Step 2"]
 
@@ -548,6 +551,7 @@ def signup_modal_step_2(ack, body, logger):
         view={
             "type": "modal",
             "callback_id": "add_member",
+            "private_metadata": str(view["state"]["values"]),
             "title": {"type": "plain_text", "text": "Sign Up!"},
             "submit": {"type": "plain_text", "text": "Submit"},
             "close": {"type": "plain_text", "text": "Close"},
