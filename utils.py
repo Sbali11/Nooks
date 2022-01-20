@@ -36,8 +36,12 @@ class NooksAllocation:
 
     def __init__(self, db, alpha=2):
         self.db = db
+        self._create_members()
+        self.num_iters = 20
+        self.alpha = alpha
+    
+    def _create_members(self):
         all_members = list(self.db.member_vectors.find())
-        
         self.member_vectors = np.array([ np.array(member["member_vector"]) for member in all_members])
         
         self.member_dict = {}
@@ -54,8 +58,7 @@ class NooksAllocation:
         self.all_interacted = self._create_interactions_np(
             self.db.all_interacted.find()
         )
-        self.num_iters = 20
-        self.alpha = alpha
+
 
     def update_interactions(self):
         self.temporal_interacted = self._create_interactions_np(
@@ -73,6 +76,7 @@ class NooksAllocation:
 
     # TODO see if running median is needed; space & time
     def create_nook_allocs(self, nooks):
+        self._create_members()
         num_nooks = len(nooks)
         nooks_allocs = np.zeros((num_nooks, self.total_members))
         member_allocs = {}
@@ -256,7 +260,7 @@ class NooksHome:
                         "text": {
                             "type": "mrkdwn",
                             "text": "@"
-                            + client.users_info(user=member)["user"][
+                            + client.users_info(token=token, user=member)["user"][
                                 "name"
                             ],
                         },
@@ -437,9 +441,9 @@ class NooksHome:
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
-        suggested_stories_current = self.suggested_stories["team_id"]
+        suggested_stories_current = self.suggested_stories[team_id]
         while cur_pos < len(suggested_stories_current):
-            cur_display_card = suggested_stories_current
+            cur_display_card = suggested_stories_current[cur_pos]
             if user_id not in cur_display_card["banned"]:
                 break
             cur_pos += 1

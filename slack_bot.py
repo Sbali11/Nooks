@@ -211,7 +211,7 @@ def nook_int(ack, body, logger):
     
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
-    user_story = nooks_home.suggested_stories[cur_pos]
+    user_story = nooks_home.suggested_stories[body["team"]["id"]][cur_pos]
     db.user_swipes.update_one({"user_id": user_id, "team_id": body["team"]["id"]}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"], "team_id": body["team"]["id"]}, {"$push": {"swiped_right": user_id}})
     nooks_home.update_home_tab(slack_app.client, {"user": user_id, "view" : { "team_id": body["team"]["id"]}}, token=get_token(body["team"]["id"]) )
@@ -244,7 +244,7 @@ def nook_not_int(ack, body, logger):
     
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
-    user_story = nooks_home.suggested_stories[cur_pos]
+    user_story = nooks_home.suggested_stories[body["team"]["id"]][cur_pos]
     db.user_swipes.update_one({"user_id": user_id, "team_id": body["team"]["id"]}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"], "team_id": body["team"]["id"]}, {"$push": {"swiped_left": user_id}})
     nooks_home.update_home_tab(slack_app.client, {"user": user_id, "view" : { "team_id": body["team"]["id"]}}, token=get_token(body["team"]["id"]) )
@@ -852,10 +852,12 @@ def remove_past_stories():
 
 def create_new_channels(new_stories, allocations, suggested_allocs):
     # create new channels for the day
-    now = datetime.now()  # current date and time
-    date = now.strftime("%m-%d-%Y-%H-%M-%S")
+    
+    
     
     for i, new_story in enumerate(new_stories):
+        now = datetime.now()  # current date and time
+        date = now.strftime("%m-%d-%Y-%H-%M-%S")
         title = new_story["title"]
         creator = new_story["creator"]
         desc = new_story["description"]
