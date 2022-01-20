@@ -208,7 +208,7 @@ class NooksAllocation:
 class NooksHome:
     def __init__(self, db):
         self.db = db
-        self.suggested_stories = []
+        self.suggested_stories = collections.defaultdict(dict)
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
 
@@ -436,18 +436,20 @@ class NooksHome:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
-        while cur_pos < len(self.suggested_stories):
-            cur_display_card = self.suggested_stories[cur_pos]
+        team_id = event["view"]["team_id"]
+        suggested_stories_current = self.suggested_stories["team_id"]
+        while cur_pos < len(suggested_stories_current):
+            cur_display_card = suggested_stories_current
             if user_id not in cur_display_card["banned"]:
                 break
             cur_pos += 1
-        if cur_pos >= len(self.suggested_stories):
+        if cur_pos >= len(suggested_stories_current):
             self.default_message(client, event, token=token)
             return
         if swipes_to_insert:
             self.db.user_swipes.insert_one({"user_id": user_id, "cur_pos": cur_pos})
 
-        if not self.suggested_stories or cur_pos >= len(self.suggested_stories):
+        if not suggested_stories_current or cur_pos >= len(suggested_stories_current):
             self.default_message(client, event, token=token)
             return
         interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)

@@ -948,7 +948,6 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
 def update_story_suggestions():
     # all stories
     suggested_stories = list(db.stories.find({"status": "suggested"}))
-    
     # db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
@@ -977,11 +976,14 @@ def update_story_suggestions():
                 )
             except Exception as e:
                 logging.error(traceback.format_exc())
-    return suggested_stories
+    suggested_stories_per_team = collections.defaultdict(list)
+    for story in suggested_stories:
+        suggested_stories_per_team[story["team_id"]].append(story)
+    return suggested_stories_per_team
 
 
 # TODO change this to hour for final
-#@cron.task("cron", second="10")
+@cron.task("cron", second="10")
 def post_stories():
     remove_past_stories()
     
@@ -995,14 +997,16 @@ def post_stories():
     #TODO
 
     for member in nooks_alloc.member_dict:
+        # TODO change this in case there are overlaps in user ids
+        team_id = db.member_vectors.find_one({"user_id": member})["team_id"]
         nooks_home.update_home_tab(
-            client=slack_app.client, event={"user": member, "view" : { "team_id": body["team"]["id"]}}, 
+            client=slack_app.client, event={"user": member, "view" : { "team_id": team_id}}, 
             #
         )
 
 
 # TODO change this to hour for final
-#@cron.task("cron", day="1")
+@cron.task("cron", day="1")
 def reset_interactions():
     nooks_alloc.reset()
 
