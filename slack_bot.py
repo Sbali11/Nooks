@@ -15,7 +15,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 import numpy as np
 from flask_apscheduler import APScheduler
-import json
+import ast
 from constants import *
 
 # set configuration values
@@ -222,9 +222,9 @@ def update_random_nook(ack, body, logger):
     ack()
     
     user_id = body["user"]["id"]
-    #logging.info("UUHNIUN")
+    logging.info("UUHNIUN")
     vals = body["actions"][0]["value"].split("/")
-    #logging.info(body)
+    logging.info(body)
     team_id = body["team"]["id"]
     cur_pos = int(vals[0])
     total_len = int(vals[1])
@@ -471,13 +471,19 @@ def update_home_tab(client, event, logger):
 def handle_message_events(body, logger):
     logger.info(body)
 
+@slack_app.event("channel_joined")
+def handle_message_events(client, event, logger):
+    logging.event("EJWKN")
+    logger.info(event)
+
 @slack_app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
     ack()
     # TODO create a new name if taken?
     logging.info("nvjkef")
     logging.info(body)
-    input_data = view["state"]["values"] + json.loads(body["private_metadata"])
+    input_data = view["state"]["values"]
+    input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     user = body["user"]["id"]
     new_member_info = {}
     for key in input_data:

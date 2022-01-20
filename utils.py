@@ -279,10 +279,10 @@ class NooksHome:
     def default_message(self, client, event, token):
         user_id = event["user"]
         interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
-        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id})
+        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
         if not sample_nook_pos:
             cur_nook_pos = 0
-            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos})
+            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos, "team_id": event["view"]["team_id"]})
         else:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
         current_sample = self.sample_nooks[cur_nook_pos]   
