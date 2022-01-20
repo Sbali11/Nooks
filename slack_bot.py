@@ -33,13 +33,12 @@ SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
 REDIRECT_URI = os.environ["REDIRECT_URI"]
-CLIENT_ID = "2614289134036.2614423805380"
+CLIENT_ID = os.environ["SLACK_CLIENT_ID"]
 
 db = MongoClient(MONGODB_LINK).nooks_db
 
 from slack_bolt.oauth.oauth_settings import OAuthSettings
-from slack_sdk.oauth.installation_store import FileInstallationStore, Installation
-from slack_sdk.oauth.state_store import FileOAuthStateStore
+from slack_sdk.oauth.installation_store import Installation
 
 
 class InstallationDB:
@@ -222,7 +221,7 @@ def nook_int(ack, body, logger):
     user_story = nooks_home.suggested_stories[cur_pos]
     db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
-    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, token=token)
+    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, )
 
 
 @slack_app.action("new_sample_nook")
@@ -240,7 +239,7 @@ def update_random_nook(ack, body, logger):
         {"user_id": user_id}, {"$set": {"cur_nook_pos": (cur_pos + 1) % total_len}}
     )
 
-    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, token=token)
+    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, )
 
 
 @slack_app.action("story_not_interested")
@@ -252,7 +251,7 @@ def nook_not_int(ack, body, logger):
     user_story = nooks_home.suggested_stories[cur_pos]
     db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
     db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_left": user_id}})
-    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, token=token)
+    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, )
 
 
 @slack_app.view("send_dm")
@@ -469,7 +468,7 @@ def update_home_tab(client, event, logger):
     logging.info(event)
     
 
-    nooks_home.update_home_tab(client, event, logger, token=token)
+    nooks_home.update_home_tab(client, event, logger, )
 
 
 @slack_app.view("add_member")
@@ -723,7 +722,7 @@ def show_nooks_info(ack, body, logger):
 def onboarding_modal(ack, body, logger):
     ack()
     
-    for member in slack_app.client.users_list(token=token)["members"]:
+    for member in slack_app.client.users_list()["members"]:
         slack_app.client.chat_postMessage(
             
             link_names=True,
@@ -991,7 +990,7 @@ def post_stories():
     nooks_home.update(suggested_stories=suggested_stories)
     for member in nooks_alloc.member_dict:
         nooks_home.update_home_tab(
-            client=slack_app.client, event={"user": member}, token=token
+            client=slack_app.client, event={"user": member}, 
         )
 
 
