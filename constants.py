@@ -1,4 +1,3 @@
-CLIENT_ID = "2614289134036.2614423805380"
 SIGNUP_QUESTIONS = {
     "Step 1": {
         "Role" : [

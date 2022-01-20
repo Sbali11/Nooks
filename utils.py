@@ -220,7 +220,7 @@ class NooksHome:
     def update(self, suggested_stories):
         self.suggested_stories = suggested_stories
 
-    def get_interaction_blocks(self, client, user_id):
+    def get_interaction_blocks(self, client, user_id, token):
         all_connections = self.db.all_interacted.find_one({"user_id": user_id})
 
         interacted_with = []
@@ -256,7 +256,7 @@ class NooksHome:
                         "text": {
                             "type": "mrkdwn",
                             "text": "@"
-                            + client.users_info(user=member)["user"][
+                            + client.users_info(user=member, token=token)["user"][
                                 "name"
                             ],
                         },
@@ -276,9 +276,9 @@ class NooksHome:
                 ]
         return interaction_block_items
 
-    def default_message(self, client, event):
+    def default_message(self, client, event, token):
         user_id = event["user"]
-        interaction_block_items = self.get_interaction_blocks(client, user_id)
+        interaction_block_items = self.get_interaction_blocks(client, user_id, token=token)
         sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id})
         if not sample_nook_pos:
             cur_nook_pos = 0
@@ -287,6 +287,7 @@ class NooksHome:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
         current_sample = self.sample_nooks[cur_nook_pos]    
         client.views_publish(
+            
             # Use the user ID associated with the event
             user_id=user_id,
             # Home tabs must be enabled in your app configuration
@@ -359,8 +360,11 @@ class NooksHome:
             },
         )
 
-    def initial_message(self, client, event):
+    def initial_message(self, client, event, token):
+        logging.info("ENFJEKF")
+        logging.info(event)
         client.views_publish(
+            
             # Use the user ID associated with the event
             user_id=event["user"],
             # Home tabs must be enabled in your app configuration
@@ -402,14 +406,14 @@ class NooksHome:
             },
         )
 
-    def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0, user_id = None):
+    def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0, user_id = None, token=None):
         if not user_id:
             user_id = event["user"]
         member = self.db.member_vectors.find_one({"user_id": user_id})
-        interaction_block_items = self.get_interaction_blocks(client, user_id)
+        interaction_block_items = self.get_interaction_blocks(client, user_id, token=token)
 
         if not member:
-            self.initial_message(client, event)
+            self.initial_message(client, event, token=token)
             return
 
         swipes = self.db.user_swipes.find_one({"user_id": user_id})
@@ -436,17 +440,18 @@ class NooksHome:
                 break
             cur_pos += 1
         if cur_pos >= len(self.suggested_stories):
-            self.default_message(client, event)
+            self.default_message(client, event, token=token)
             return
         if swipes_to_insert:
             self.db.user_swipes.insert_one({"user_id": user_id, "cur_pos": cur_pos})
 
         if not self.suggested_stories or cur_pos >= len(self.suggested_stories):
-            self.default_message(client, event)
+            self.default_message(client, event, token=token)
             return
-        interaction_block_items = self.get_interaction_blocks(client, user_id)
+        interaction_block_items = self.get_interaction_blocks(client, user_id, token=token)
         client.views_publish(
             # Use the user ID associated with the event
+            
             user_id=user_id,
             # Home tabs must be enabled in your app configuration
             view={

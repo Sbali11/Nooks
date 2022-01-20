@@ -1,0 +1,20 @@
+{
+    "ok": True,
+    "app_id": "A02J2CFPPB6",
+    "authed_user": {
+        "id": "U02VDF6QCQ0",
+        "scope": "channels:read,files:read,users:read,channels:write,chat:write,groups:write,im:write,mpim:write",
+        "access_token": "xoxp-2988422308705-2999516828816-2961535588135-c3cfdf4cd2b09b49e8a75feeac9371ec",
+        "token_type": "user"
+    },
+    "scope": "app_mentions:read,channels:history,channels:manage,channels:read,chat:write,commands,groups:history,groups:read,groups:write,im:history,im:read,im:write,mpim:read,mpim:write,users.profile:read,users:read,files:write,files:read",
+    "token_type": "bot",
+    "access_token": "xoxb-2988422308705-2975829955811-RymNdwZwSysIunOS94iaS9Ew",
+    "bot_user_id": "U02UPQDU3PV",
+    "team": {
+        "id": "T02V2CE92LR",
+        "name": "NooksTrial"
+    },
+    "enterprise": None,
+    "is_enterprise_install": False
+}
