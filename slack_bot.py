@@ -1242,6 +1242,7 @@ def update_story_suggestions():
         all_users = list(db.member_vectors.find())
         for user in all_users:
             try:
+                logging.info("MKLFQNJFKER")
                 slack_app.client.chat_postMessage(
                     token=get_token(user["team_id"]),
                     link_names=True,
