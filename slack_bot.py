@@ -36,7 +36,7 @@ SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
 REDIRECT_URI = os.environ["REDIRECT_URI"]
-CLIENT_ID = os.environ["SLACK_CLIENT_ID"]
+CLIENT_ID = os.environ["CLIENT_ID"]
 
 db = MongoClient(MONGODB_LINK).nooks_db
 
@@ -47,50 +47,75 @@ from slack_sdk.oauth.installation_store import Installation
 class InstallationDB:
     def save(self, installation):
         # logging.info(vars(installation))
-        db.tokens.insert_one(
+        db.tokens.update(
+            {     "team_id": installation.team_id,
+                "user_id": installation.user_id,
+                },
             {
-                "installation": vars(installation),
                 "team_id": installation.team_id,
+                "user_id": installation.user_id,
+                "installation": vars(installation)
             }
+            , upsert=True
         )
         pass
 
     def find_installation(
         self, enterprise_id=None, team_id=None, user_id=None, is_enterprise_install=None
     ):
+        logging.info("WEFNEWJKN")
+        logging.info(team_id)
+        logging.info(user_id)
+
 
         return Installation(
-            **(db.tokens.find_one({"team_id": team_id})["installation"])
+            **(
+                db.tokens.find_one({"team_id": team_id})[
+                    "installation"
+                ]
+            )
         )
 
 
 @lru_cache(maxsize=None)
 def get_token(team_id):
+    return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
     return db.tokens.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 
-installation_store = InstallationDB()
-scopes=[
-        "app_mentions:read",
-        "channels:history",
-        "channels:manage",
-        "channels:read",
-        "chat:write",
-        "commands",
-        "groups:history",
-        "groups:read",
-        "groups:write",
-        "im:history",
-        "im:read",
-        "im:write",
-        "mpim:read",
-        "mpim:write",
-        "users.profile:read",
-        "users:read",
-        "files:write",
-        "files:read",
-    ]
+#installation_store = InstallationDB()
+scopes = [
+    "app_mentions:read",
+    "channels:history",
+    "channels:manage",
+    "channels:read",
+    "chat:write",
+    "commands",
+    "groups:history",
+    "groups:read",
+    "groups:write",
+    "im:history",
+    "im:read",
+    "im:write",
+    "mpim:read",
+    "mpim:write",
+    "users.profile:read",
+    "users:read",
+    "files:write",
+    "files:read",
+]
+user_scopes = [
+    "channels:read",
+    "channels:write",
+    "chat:write",
+    "files:read",
+    "groups:write",
+    "im:write",
+    "mpim:write",
+    "users:read",
+]
 
+'''
 oauth_settings = OAuthSettings(
     install_path="/slack/install",
     redirect_uri_path="/slack/oauth_redirect",
@@ -99,10 +124,11 @@ oauth_settings = OAuthSettings(
     scopes=scopes,
     installation_store=installation_store,
 )
+'''
 
 
 slack_app = App(
-    signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings
+    #signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings
 )
 
 
@@ -211,15 +237,18 @@ def nook_int(ack, body, logger):
     cur_pos = int(body["actions"][0]["value"])
     logging.info("NFJKENWRKJ")
     logging.info(nooks_home.suggested_stories)
-    user_story = nooks_home.suggested_stories[body["team"]["id"]][cur_pos]
-    db.user_swipes.update_one(
-        {"user_id": user_id, "team_id": body["team"]["id"]},
-        {"$set": {"cur_pos": cur_pos + 1}},
-    )
-    db.stories.update(
-        {"_id": user_story["_id"], "team_id": body["team"]["id"]},
-        {"$push": {"swiped_right": user_id}},
-    )
+    try:
+        user_story = nooks_home.suggested_stories[body["team"]["id"]][cur_pos]
+        db.user_swipes.update_one(
+            {"user_id": user_id, "team_id": body["team"]["id"]},
+            {"$set": {"cur_pos": cur_pos + 1}},
+        )
+        db.stories.update(
+            {"_id": user_story["_id"], "team_id": body["team"]["id"]},
+            {"$push": {"swiped_right": user_id}},
+        )
+    except Exception as e:
+        logging.info(e)
     nooks_home.update_home_tab(
         slack_app.client,
         {"user": user_id, "view": {"team_id": body["team"]["id"]}},
@@ -499,10 +528,11 @@ def handle_message_events(body, logger):
 @slack_app.event("member_joined_channel")
 def handle_message_events(client, event, logger):
 
-    logger.info(event)
     for member in client.conversations_members(
         token=get_token(event["team"]), channel=event["channel"]
     )["members"]:
+        if db.member_vectors.find({"team_id": event["team"], "user_id": member}):
+            continue
         # TODO add duplicate onboarding info
         slack_app.client.chat_postMessage(
             token=get_token(event["team"]),
@@ -955,8 +985,11 @@ def slack_install():
         "<a href='https://slack.com/oauth/v2/authorize?client_id="
         + CLIENT_ID
         + "&redirect_uri="
-        + REDIRECT_URI 
-        + "&scope=" + ",".join(scopes) + ",incoming-webhook'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
+        + REDIRECT_URI
+        + "&scope="
+        + ",".join(scopes)
+        + ",incoming-webhook"
+        + "&user_scope=channels:read,channels:write,chat:write,files:read,groups:write,im:write,mpim:write,users:read'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
 
@@ -975,7 +1008,7 @@ def slack_oauth():
     # os.environ["SLACK_BOT_TOKEN"] = response['access_token']
 
     installed_enterprise = {}
-    #oauth_response.get("enterprise", {})
+    # oauth_response.get("enterprise", {})
     is_enterprise_install = oauth_response.get("is_enterprise_install")
     installed_team = oauth_response.get("team", {})
     installer = oauth_response.get("authed_user", {})
@@ -987,25 +1020,25 @@ def slack_oauth():
     enterprise_url = None
 
     installation = Installation(
-    app_id=oauth_response.get("app_id"),
-    enterprise_id=installed_enterprise.get("id"),
-    enterprise_name=installed_enterprise.get("name"),
-    enterprise_url=enterprise_url,
-    team_id=installed_team.get("id"),
-    team_name=installed_team.get("name"),
-    bot_token=bot_token,
-    bot_id=bot_id,
-    bot_user_id=oauth_response.get("bot_user_id"),
-    bot_scopes=oauth_response.get("scope"),  # comma-separated string
-    user_id=installer.get("id"),
-    user_token=installer.get("access_token"),
-    user_scopes=installer.get("scope"),  # comma-separated string
-    incoming_webhook_url=incoming_webhook.get("url"),
-    incoming_webhook_channel=incoming_webhook.get("channel"),
-    incoming_webhook_channel_id=incoming_webhook.get("channel_id"),
-    incoming_webhook_configuration_url=incoming_webhook.get("configuration_url"),
-    is_enterprise_install=is_enterprise_install,
-    token_type=oauth_response.get("token_type"),
+        app_id=oauth_response.get("app_id"),
+        enterprise_id=installed_enterprise.get("id"),
+        enterprise_name=installed_enterprise.get("name"),
+        enterprise_url=enterprise_url,
+        team_id=installed_team.get("id"),
+        team_name=installed_team.get("name"),
+        bot_token=bot_token,
+        bot_id=bot_id,
+        bot_user_id=oauth_response.get("bot_user_id"),
+        bot_scopes=oauth_response.get("scope"),  # comma-separated string
+        user_id=installer.get("id"),
+        user_token=installer.get("access_token"),
+        user_scopes=installer.get("scope"),  # comma-separated string
+        incoming_webhook_url=incoming_webhook.get("url"),
+        incoming_webhook_channel=incoming_webhook.get("channel"),
+        incoming_webhook_channel_id=incoming_webhook.get("channel_id"),
+        incoming_webhook_configuration_url=incoming_webhook.get("configuration_url"),
+        is_enterprise_install=is_enterprise_install,
+        token_type=oauth_response.get("token_type"),
     )
 
     # Store the installation
