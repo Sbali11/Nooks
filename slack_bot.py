@@ -285,6 +285,7 @@ def customize_dm_modal(ack, body, client, view, logger):
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
     response = slack_app.client.conversations_open(
+        token=get_token(body["team"]["id"]),
          users=from_user + "," + to_user + ",U02HTEETX54"
     )
     channel_id = response["channel"]["id"]
@@ -495,8 +496,6 @@ def handle_signup(ack, body, client, view, logger):
             ]["value"]
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
-    logging.info("UHFIEF")
-    logging.info(body)
     new_member_info["team_id"] = body["team"]["id"]
     db.member_vectors.insert_one(new_member_info)
     nooks_home.update_home_tab(slack_app.client, {"user": user, "view" : { "team_id": body["team"]["id"]}}, token=get_token(body["team"]["id"]) )
@@ -966,12 +965,13 @@ def update_story_suggestions():
             logging.error(traceback.format_exc())
     if suggested_stories:
         #TODO
-        for user in slack_app.client.users_list()["members"]:
+        all_users = list(db.member_vectors.find())
+        for user in all_users:
             try:
                 slack_app.client.chat_postMessage(
-                    
+                    token=get_token(user["team_id"]),
                     link_names=True,
-                    channel=user["id"],
+                    channel=user["user_id"],
                     text="Hello! I've updated your Nook Cards List for today!",
                 )
             except Exception as e:

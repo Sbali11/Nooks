@@ -84,7 +84,7 @@ class NooksAllocation:
         nook_swipes = np.zeros((self.total_members, num_nooks))
         # allocates the creator to their respective nooks
         for i, nook in enumerate(nooks):
-
+            
             creator_key = self.member_dict[nook["creator"]]
             nooks_allocs[i][creator_key] = 1
             member_allocs[creator_key] = i
