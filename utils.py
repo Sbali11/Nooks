@@ -220,8 +220,8 @@ class NooksHome:
     def update(self, suggested_stories):
         self.suggested_stories = suggested_stories
 
-    def get_interaction_blocks(self, client, user_id, token):
-        all_connections = self.db.all_interacted.find_one({"user_id": user_id})
+    def get_interaction_blocks(self, client, user_id, team_id, token):
+        all_connections = self.db.all_interacted.find_one({"user_id": user_id, "team_id":team_id})
 
         interacted_with = []
         interaction_block_items = []
@@ -256,7 +256,7 @@ class NooksHome:
                         "text": {
                             "type": "mrkdwn",
                             "text": "@"
-                            + client.users_info(user=member, token=token)["user"][
+                            + client.users_info(user=member)["user"][
                                 "name"
                             ],
                         },
@@ -278,15 +278,17 @@ class NooksHome:
 
     def default_message(self, client, event, token):
         user_id = event["user"]
-        interaction_block_items = self.get_interaction_blocks(client, user_id, token=token)
+        interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
         sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id})
         if not sample_nook_pos:
             cur_nook_pos = 0
             self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos})
         else:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
-        current_sample = self.sample_nooks[cur_nook_pos]    
-        client.views_publish(
+        current_sample = self.sample_nooks[cur_nook_pos]   
+        #logging.info("LQVMKLE")
+        #logging.info(user_id )
+        client.views_publish(token=token,
             
             # Use the user ID associated with the event
             user_id=user_id,
@@ -361,9 +363,7 @@ class NooksHome:
         )
 
     def initial_message(self, client, event, token):
-        logging.info("ENFJEKF")
-        logging.info(event)
-        client.views_publish(
+        client.views_publish(token=token,
             
             # Use the user ID associated with the event
             user_id=event["user"],
@@ -409,14 +409,17 @@ class NooksHome:
     def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0, user_id = None, token=None):
         if not user_id:
             user_id = event["user"]
-        member = self.db.member_vectors.find_one({"user_id": user_id})
-        interaction_block_items = self.get_interaction_blocks(client, user_id, token=token)
+        if "view" not in event:
+            logging.info(client)
+            event["view"] = {"team_id" : None}
+        member = self.db.member_vectors.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
+        interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
 
         if not member:
             self.initial_message(client, event, token=token)
             return
 
-        swipes = self.db.user_swipes.find_one({"user_id": user_id})
+        swipes = self.db.user_swipes.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
         
         swipes_to_insert = False
         sample_nook_to_insert = False
@@ -425,11 +428,11 @@ class NooksHome:
             swipes_to_insert = True
         else:
             cur_pos = swipes["cur_pos"]
-        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id})
+        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
         
         if not sample_nook_pos:
             cur_nook_pos = 0
-            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos})
+            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos, "team_id": event["view"]["team_id"]})
         else:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
         cur_sample = self.sample_nooks[cur_nook_pos]
@@ -448,8 +451,8 @@ class NooksHome:
         if not self.suggested_stories or cur_pos >= len(self.suggested_stories):
             self.default_message(client, event, token=token)
             return
-        interaction_block_items = self.get_interaction_blocks(client, user_id, token=token)
-        client.views_publish(
+        interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
+        client.views_publish(token=token,
             # Use the user ID associated with the event
             
             user_id=user_id,

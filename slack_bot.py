@@ -1,3 +1,4 @@
+from functools import lru_cache
 import os
 import logging
 import atexit
@@ -24,6 +25,7 @@ class Config:
 
 logging.basicConfig(level=logging.INFO)
 
+
 # load environment variables
 load_dotenv()
 NUM_MEMBERS = 2
@@ -43,7 +45,7 @@ from slack_sdk.oauth.installation_store import Installation
 
 class InstallationDB:
     def save(self, installation):
-        logging.info(vars(installation))
+        #logging.info(vars(installation))
         db.tokens.insert_one(
             {
                 "installation": vars(installation),
@@ -56,6 +58,9 @@ class InstallationDB:
 
         return Installation(**(db.tokens.find_one({"team_id": team_id})["installation"]))
 
+@lru_cache(maxsize=None)
+def get_token(team_id):
+    return db.tokens.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 installation_store = InstallationDB()
 
@@ -101,18 +106,6 @@ slack_app = App(
     signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings
 )
 
-
-def upload_token(token, team):
-    # confirm that we don't need any other information from the response
-    db.tokens.insert_one(
-        {"team_name": team["name"], "team_id": team["id"], "token": token}
-    )
-
-
-
-# db.tokens.find_one({"team_id": app.client.view.team_id})["token"]
-
-
 @slack_app.middleware  # or app.use(log_request)
 def log_request(logger, body, next):
     logger.debug(body)
@@ -122,15 +115,13 @@ def log_request(logger, body, next):
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
     ack()
-    
-    # TODO create a new name if taken?
     input_data = view["state"]["values"]
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
-
     banned = input_data["banned"]["text1234"]["selected_users"]
     new_story_info = {
+        "team_id": body["team"]["id"],
         "title": title,
         "creator": user,
         "description": desc,
@@ -140,7 +131,8 @@ def handle_new_story(ack, body, client, view, logger):
         "swiped_right": [],
     }
     db.stories.insert_one(new_story_info)
-    slack_app.client.chat_postMessage(
+    client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
         
         link_names=True,
         channel=user,
@@ -154,7 +146,7 @@ def create_story_modal(ack, body, logger):
     ack()
     
     slack_app.client.views_open(
-        
+        token=get_token(body["team"]["id"]),        
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
@@ -219,9 +211,9 @@ def nook_int(ack, body, logger):
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
     user_story = nooks_home.suggested_stories[cur_pos]
-    db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
-    db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_right": user_id}})
-    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, )
+    db.user_swipes.update_one({"user_id": user_id, "team_id": body["team"]["id"]}, {"$set": {"cur_pos": cur_pos + 1}})
+    db.stories.update({"_id": user_story["_id"], "team_id": body["team"]["id"]}, {"$push": {"swiped_right": user_id}})
+    nooks_home.update_home_tab(slack_app.client, {"user": user_id, "view" : { "team_id": body["team"]["id"]}}, token=get_token(body["team"]["id"]) )
 
 
 @slack_app.action("new_sample_nook")
@@ -229,17 +221,20 @@ def update_random_nook(ack, body, logger):
     ack()
     
     user_id = body["user"]["id"]
-    logging.info("UUHNIUN")
+    #logging.info("UUHNIUN")
     vals = body["actions"][0]["value"].split("/")
-    logging.info(vals)
-
+    #logging.info(body)
+    team_id = body["team"]["id"]
     cur_pos = int(vals[0])
     total_len = int(vals[1])
     db.sample_nook_pos.update_one(
-        {"user_id": user_id}, {"$set": {"cur_nook_pos": (cur_pos + 1) % total_len}}
+        
+        {"user_id": user_id, "team_id": body["team"]["id"]}, {"$set": {"cur_nook_pos": (cur_pos + 1) % total_len}}
     )
+    
 
-    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, )
+    nooks_home.update_home_tab(slack_app.client, {"user": user_id, "view" : { "team_id": body["team"]["id"]}}, token=get_token(team_id))
+
 
 
 @slack_app.action("story_not_interested")
@@ -249,9 +244,9 @@ def nook_not_int(ack, body, logger):
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
     user_story = nooks_home.suggested_stories[cur_pos]
-    db.user_swipes.update_one({"user_id": user_id}, {"$set": {"cur_pos": cur_pos + 1}})
-    db.stories.update({"_id": user_story["_id"]}, {"$push": {"swiped_left": user_id}})
-    nooks_home.update_home_tab(slack_app.client, {"user": user_id}, )
+    db.user_swipes.update_one({"user_id": user_id, "team_id": body["team"]["id"]}, {"$set": {"cur_pos": cur_pos + 1}})
+    db.stories.update({"_id": user_story["_id"], "team_id": body["team"]["id"]}, {"$push": {"swiped_left": user_id}})
+    nooks_home.update_home_tab(slack_app.client, {"user": user_id, "view" : { "team_id": body["team"]["id"]}}, token=get_token(body["team"]["id"]) )
 
 
 @slack_app.view("send_dm")
@@ -264,6 +259,7 @@ def handle_send_message(ack, body, client, view, logger):
     message = input_data["message"]["plain_text_input-action"]["value"]
 
     slack_app.client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
         
         link_names=True,
         channel=to_user,
@@ -292,6 +288,7 @@ def customize_dm_modal(ack, body, client, view, logger):
     )
     channel_id = response["channel"]["id"]
     slack_app.client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
         
         link_names=True,
         channel=channel_id,
@@ -343,15 +340,16 @@ def handle_send_message(ack, body, client, view, logger):
     from_user = body["user"]["id"]
     
 
-    logging.info("BZZZZ")
-    logging.info(view)
+    #logging.info("BZZZZ")
+    #logging.info(view)
 
     to_user = view["private_metadata"]
     message = input_data["message"]["plain_text_input-action"]["value"]
 
-    new_story_info = {"message": message, "from_user": from_user, "to_user": to_user}
+    new_story_info = {"message": message, "from_user": from_user, "to_user": to_user, "team_id": body["team"]["id"]}
     db.personal_message.insert_one(new_story_info)
     slack_app.client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
         
         link_names=True,
         channel=to_user,
@@ -361,7 +359,7 @@ def handle_send_message(ack, body, client, view, logger):
                 "text": {
                     "type": "mrkdwn",
                     "text": "Hey @"
-                    + client.users_info(user=from_user)["user"]["name"]
+                    + client.users_info(user=from_user, token=get_token(body["team"]["id"]))["user"]["name"]
                     + " loved talking to you and would like to talk more. Here's what they said!",
                 },
             },
@@ -400,6 +398,7 @@ def contact_modal(ack, body, logger):
     
 
     slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
         
         trigger_id=body["trigger_id"],
         view={
@@ -439,15 +438,17 @@ def update_message(ack, body, client, view, logger):
     ep_channel, thread_ts = story["channel_id"], story["ts"]
     input_data = view["state"]["values"]
     user_id = body["user"]["id"]
-    user = slack_app.client.users_profile_get( user=user_id)
+    user = slack_app.client.users_profile_get( user=user_id, token=get_token(body["team"]["id"]))
     initial_thoughts = input_data["initial_thoughts"]["plain_text_input-action"][
         "value"
     ]
     try:
         slack_app.client.conversations_invite(
+            token=get_token(body["team"]["id"]),
              channel=ep_channel, users=user_id
         )
         slack_app.client.chat_postMessage(
+            token=get_token(body["team"]["id"]),
             
             link_names=True,
             channel=ep_channel,
@@ -461,20 +462,15 @@ def update_message(ack, body, client, view, logger):
 
 @slack_app.event("app_home_opened")
 def update_home_tab(client, event, logger):
-    logging.info("FKEKFQ")
-    logging.info(vars(slack_app.client))
-    logging.info("FKEKFZ")
-    logging.info(vars(client))
-    logging.info(event)
-    
+    nooks_home.update_home_tab(client, event)
 
-    nooks_home.update_home_tab(client, event, logger, )
-
+@slack_app.event("message")
+def handle_message_events(body, logger):
+    logger.info(body)
 
 @slack_app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
     ack()
-    
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
     user = body["user"]["id"]
@@ -488,10 +484,12 @@ def handle_signup(ack, body, client, view, logger):
             ]["value"]
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
+    new_member_info["team_id"] = body["team"]["id"],
     db.member_vectors.insert_one(new_member_info)
 
     slack_app.client.chat_postMessage(
         
+        token=get_token(body["team"]["id"]),
         link_names=True,
         channel=user,
         text="You're all set! Create your first story ",
@@ -565,8 +563,9 @@ def signup_modal(ack, body, logger):
     ack()
     
     user = body["user"]["id"]
-    if db.member_vector.find_one({"user_id": user}):
+    if db.member_vector.find_one({"user_id": user, "team_id": body["team"]["id"]}) :
         slack_app.client.views_open(
+            token=get_token(body["team"]["id"]),
             
             trigger_id=body["trigger_id"],
             view={
@@ -624,6 +623,7 @@ def signup_modal(ack, body, logger):
     ]
     # TODO check if member is already in database?
     res = slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
         
         trigger_id=body["trigger_id"],
         view={
@@ -645,7 +645,7 @@ def signup_modal(ack, body, logger):
             + question_blocks,
         },
     )
-    logging.info(res)
+    #logging.info(res)
 
 
 @slack_app.action("join_without_interest")
@@ -654,7 +654,7 @@ def join_without_interest(ack, body, logger):
     
     user = body["user"]["id"]
     ep_channel = body["actions"][0]["value"]
-    slack_app.client.conversations_invite( channel=ep_channel, users=user)
+    slack_app.client.conversations_invite(token=get_token(body["team"]["id"]), channel=ep_channel, users=user)
 
 
 @slack_app.action("onboard_info")
@@ -664,6 +664,7 @@ def show_nooks_info(ack, body, logger):
     user_id = body["user"]["id"]
 
     slack_app.client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
         
         link_names=True,
         channel=user_id,
@@ -724,6 +725,7 @@ def onboarding_modal(ack, body, logger):
     
     for member in slack_app.client.users_list()["members"]:
         slack_app.client.chat_postMessage(
+            token=get_token(body["team"]["id"]),
             
             link_names=True,
             channel=member["id"],
@@ -787,8 +789,8 @@ def slack_oauth():
         code=code,
         redirect_uri=REDIRECT_URI,
     )
-    logging.info("FEGREW")
-    logging.info(response)
+    #logging.info("FEGREW")
+    #logging.info(response)
     # slack_app = App()
     # os.environ["SLACK_BOT_TOKEN"] = response['access_token']
     installer = response["authed_user"]
@@ -806,7 +808,6 @@ def slack_oauth():
         token_type=response["token_type"],
     )
     installation_store.save(installation)
-    # upload_token(token=response["access_token"], team=response["team"])
     return "NEW"
 
 
@@ -817,6 +818,7 @@ def remove_past_stories():
     for active_story in active_stories:
         try:
             chat_history = slack_app.client.conversations_history(
+                 token=get_token(active_story["team_id"]),
                  channel=active_story["channel_id"]
             )["messages"]
             db.stories.update(
@@ -824,6 +826,7 @@ def remove_past_stories():
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
             all_members = slack_app.client.conversations_members(
+                 token=get_token(active_story["team_id"]),
                  channel=active_story["channel_id"]
             )["members"]
             db.temporal_interacted.update_many(
@@ -839,6 +842,7 @@ def remove_past_stories():
                 {
                     "counts.user_id": {"$in": all_members},
                     "user_id": {"$in": all_members},
+                    
                 },
                 {"$inc": {"counts.$[element].count": 1}},
                 array_filters=[{"element.user_id": {"$in": all_members}}],
@@ -846,6 +850,7 @@ def remove_past_stories():
             )
             nooks_alloc.update_interactions()
             slack_app.client.conversations_archive(
+                token=get_token(active_story["team_id"]),
                  channel=active_story["channel_id"]
             )
 
@@ -867,14 +872,17 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
             channel_name = "nook-" + date + "-" + str(i)
 
             response = slack_app.client.conversations_create(
+                    token=get_token(new_story["team_id"]),
                  name=channel_name, is_private=False
             )
 
             ep_channel = response["channel"]["id"]
             slack_app.client.conversations_setTopic(
+                    token=get_token(new_story["team_id"]),
                  channel=ep_channel, topic=title
             )
             initial_thoughts_thread = slack_app.client.chat_postMessage(
+                token=get_token(new_story["team_id"]),
                 
                 link_names=True,
                 channel=ep_channel,
@@ -884,10 +892,11 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
                 + ">"
                 + desc,
             )
-            logging.info("FRRRRE")
-            logging.info(allocations[new_story["_id"]])
+            #logging.info("FRRRRE")
+            #logging.info(allocations[new_story["_id"]])
 
             slack_app.client.conversations_invite(
+                token=get_token(new_story["team_id"]),
                  channel=ep_channel, users=allocations[new_story["_id"]]
             )
 
@@ -904,6 +913,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
             for member in suggested_allocs[new_story["_id"]]:
 
                 slack_app.client.chat_postMessage(
+                    token=get_token(new_story["team_id"]),
                     
                     link_names=True,
                     channel=member,
@@ -963,6 +973,7 @@ def update_story_suggestions():
         except Exception as e:
             logging.error(traceback.format_exc())
     if suggested_stories:
+        #TODO
         for user in slack_app.client.users_list()["members"]:
             try:
                 slack_app.client.chat_postMessage(
@@ -977,7 +988,7 @@ def update_story_suggestions():
 
 
 # TODO change this to hour for final
-@cron.task("cron", second="10")
+#@cron.task("cron", second="10")
 def post_stories():
     remove_past_stories()
     
@@ -988,26 +999,28 @@ def post_stories():
     create_new_channels(current_stories, allocations, suggested_allocs)
     suggested_stories = update_story_suggestions()
     nooks_home.update(suggested_stories=suggested_stories)
+    #TODO
     for member in nooks_alloc.member_dict:
         nooks_home.update_home_tab(
-            client=slack_app.client, event={"user": member}, 
+            client=slack_app.client, event={"user": member, "view" : { "team_id": body["team"]["id"]}}, 
+            #
         )
 
 
 # TODO change this to hour for final
-@cron.task("cron", day="1")
+#@cron.task("cron", day="1")
 def reset_interactions():
     nooks_alloc.reset()
 
 
 """
-@cron.scheduled_job("cron", second="1")
+#@cron.scheduled_job("cron", second="1")
 def update_sample_nooks():
     nooks_home.update_sample_nooks()
 """
 
 """
-@cron.scheduled_job("cron", second="5")
+#@cron.scheduled_job("cron", second="5")
 def post_stories():
     # TODO change this to only members who have signed up
     for member in slack_app.client.users_list()["members"]:
@@ -1049,7 +1062,7 @@ def main(nooks_home_arg, nooks_alloc_arg):
     nooks_home = nooks_home_arg
     nooks_alloc = nooks_alloc_arg
 
-    db.user_swipes.remove()
+    #db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
     '''
