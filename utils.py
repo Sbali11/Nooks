@@ -8,7 +8,6 @@ EPSILON = 0.001
 MEMBER_FEATURES = 2
 
 
-
 def get_member_vector(member_info):
     return np.zeros((MEMBER_FEATURES)).tolist()
 
@@ -31,8 +30,8 @@ class NooksAllocation:
                 continue
 
             interaction_np[self.member_dict[member_1]][
-                    self.member_dict[member_2]
-                ] = interaction_row["count"]
+                self.member_dict[member_2]
+            ] = interaction_row["count"]
         return interaction_np
 
     def __init__(self, db, alpha=2):
@@ -40,11 +39,13 @@ class NooksAllocation:
         self._create_members()
         self.num_iters = 20
         self.alpha = alpha
-    
+
     def _create_members(self):
         all_members = list(self.db.member_vectors.find())
-        self.member_vectors = np.array([ np.array(member["member_vector"]) for member in all_members])
-        
+        self.member_vectors = np.array(
+            [np.array(member["member_vector"]) for member in all_members]
+        )
+
         self.member_dict = {}
         self.member_ids = {}
         for i, member_row in enumerate(all_members):
@@ -60,7 +61,6 @@ class NooksAllocation:
             self.db.all_interacted.find()
         )
 
-
     def update_interactions(self):
         self.temporal_interacted = self._create_interactions_np(
             self.db.temporal_interacted.find()
@@ -68,9 +68,11 @@ class NooksAllocation:
         self.all_interacted = self._create_interactions_np(
             self.db.all_interacted.find()
         )
+
     """
         resets the interactions (for eg at the end of every week)
     """
+
     def reset(self):
         self.db.temporal_interacted.remove()
         self.db.create_collection("temporal_interacted")
@@ -89,7 +91,7 @@ class NooksAllocation:
         nook_swipes = np.zeros((self.total_members, num_nooks))
         # allocates the creator to their respective nooks
         for i, nook in enumerate(nooks):
-            
+
             creator_key = self.member_dict[nook["creator"]]
             nooks_allocs[i][creator_key] = 1
             member_allocs[creator_key] = i
@@ -99,7 +101,6 @@ class NooksAllocation:
             for member in nook["swiped_right"]:
                 nook_swipes[self.member_dict[member]][i] = 1
             creators.add(creator_key)
-            
 
         # iteratively add members to nooks
         for member in range(self.total_members):
@@ -163,20 +164,26 @@ class NooksAllocation:
         allocations = {}
         for nook_id in range(len(nooks_allocs)):
             allocated_mems = nooks_allocs[nook_id].nonzero()[0].tolist()
-            allocated_mems = list(set([
-                self.member_ids[member] for member in allocated_mems
-            ] + [self.member_ids[nooks_creators[nook_id]]]))
+            allocated_mems = list(
+                set(
+                    [self.member_ids[member] for member in allocated_mems]
+                    + [self.member_ids[nooks_creators[nook_id]]]
+                )
+            )
             allocations[nooks[nook_id]["_id"]] = ",".join(allocated_mems)
             self.db.stories.update_one(
                 {"_id": nooks[nook_id]["_id"]},
                 {"$set": {"members": allocated_mems}},
             )
-        #self._update_interacted(member_allocs, nooks_allocs)
-        suggested_allocs = self._create_alloc_suggestions(nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt)
+        # self._update_interacted(member_allocs, nooks_allocs)
+        suggested_allocs = self._create_alloc_suggestions(
+            nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt
+        )
         return allocations, suggested_allocs
 
-
-    def _create_alloc_suggestions(self, nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt):
+    def _create_alloc_suggestions(
+        self, nooks, members_no_swipes, nooks_allocs, nooks_mem_cnt
+    ):
         num_nooks = len(nooks)
 
         suggested_allocs_list = collections.defaultdict(list)
@@ -186,29 +193,35 @@ class NooksAllocation:
             for nook in range(num_nooks):
                 if member in nooks[nook]["banned"]:
                     wts.append(0)
-                    continue                     
+                    continue
                 same_nook_members = self.member_vectors[nooks_allocs[nook] == 1]
                 diff = np.linalg.norm(
-                        self.member_vectors[self.member_dict[member]]- same_nook_members
-                    )
+                    self.member_vectors[self.member_dict[member]] - same_nook_members
+                )
                 # TODO confirm this
-                heterophily = (EPSILON + len(diff[diff > 5]))
-                interacted_by = (nooks_allocs[nook]) * (self.temporal_interacted[self.member_dict[member]] > 0)
-                wts.append(((EPSILON + np.sum(interacted_by)) / len(same_nook_members)) * (
-                    1 + (self.alpha * heterophily)
-                ))
-            #total_wts = np.sum(wts)
+                heterophily = EPSILON + len(diff[diff > 5])
+                interacted_by = (nooks_allocs[nook]) * (
+                    self.temporal_interacted[self.member_dict[member]] > 0
+                )
+                wts.append(
+                    ((EPSILON + np.sum(interacted_by)) / len(same_nook_members))
+                    * (1 + (self.alpha * heterophily))
+                )
+            # total_wts = np.sum(wts)
             wts = np.array(wts)
             # banned from all nooks
             if not np.sum(wts):
                 continue
-            selected_nook = np.argmax(np.array(wts)) # should this be random with probability related to the value instead of argmax?
-            #allocations
+            selected_nook = np.argmax(
+                np.array(wts)
+            )  # should this be random with probability related to the value instead of argmax?
+            # allocations
             suggested_allocs_list[nooks[selected_nook]["_id"]].append(member)
         for nook_id in suggested_allocs_list:
             suggested_allocs[nook_id] = ",".join(suggested_allocs_list[nook_id])
-            #self.member_vectors[member]] = selected_nook
+            # self.member_vectors[member]] = selected_nook
         return suggested_allocs_list
+
 
 class NooksHome:
     def __init__(self, db):
@@ -216,7 +229,6 @@ class NooksHome:
         self.suggested_stories = collections.defaultdict(dict)
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
-
 
     def update_sample_nooks(self):
         self.sample_nooks = self.db.sample_nooks.distinct("title")
@@ -226,7 +238,9 @@ class NooksHome:
         self.suggested_stories = suggested_stories
 
     def get_interaction_blocks(self, client, user_id, team_id, token):
-        all_connections = self.db.all_interacted.find({"user1_id": user_id, "team_id":team_id})
+        all_connections = self.db.all_interacted.find(
+            {"user1_id": user_id, "team_id": team_id}
+        )
 
         interacted_with = []
         interaction_block_items = []
@@ -235,7 +249,9 @@ class NooksHome:
             for interaction_row in all_connections:
                 interaction_counts = interaction_row["count"]
                 if interaction_row["count"] > 0:
-                    interacted_with.append((interaction_row["count"], interaction_row["user2_id"]))
+                    interacted_with.append(
+                        (interaction_row["count"], interaction_row["user2_id"])
+                    )
             interacted_with.sort(reverse=True)
             if interacted_with:
                 interaction_block_items = [
@@ -281,18 +297,28 @@ class NooksHome:
 
     def default_message(self, client, event, token):
         user_id = event["user"]
-        interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
-        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
+        interaction_block_items = self.get_interaction_blocks(
+            client, user_id, team_id=event["view"]["team_id"], token=token
+        )
+        sample_nook_pos = self.db.sample_nook_pos.find_one(
+            {"user_id": user_id, "team_id": event["view"]["team_id"]}
+        )
         if not sample_nook_pos:
             cur_nook_pos = 0
-            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos, "team_id": event["view"]["team_id"]})
+            self.db.sample_nook_pos.insert_one(
+                {
+                    "user_id": user_id,
+                    "cur_nook_pos": cur_nook_pos,
+                    "team_id": event["view"]["team_id"],
+                }
+            )
         else:
-            cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
-        current_sample = self.sample_nooks[cur_nook_pos]   
-        #logging.info("LQVMKLE")
-        #logging.info(user_id )
-        client.views_publish(token=token,
-            
+            cur_nook_pos = sample_nook_pos["cur_nook_pos"]
+        current_sample = self.sample_nooks[cur_nook_pos]
+        # logging.info("LQVMKLE")
+        # logging.info(user_id )
+        client.views_publish(
+            token=token,
             # Use the user ID associated with the event
             user_id=user_id,
             # Home tabs must be enabled in your app configuration
@@ -327,7 +353,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ">"+current_sample,
+                                "text": ">" + current_sample,
                             },
                             "accessory": {
                                 "type": "button",
@@ -336,7 +362,9 @@ class NooksHome:
                                     "text": "Get new!",
                                     "emoji": True,
                                 },
-                                "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
+                                "value": str(cur_nook_pos)
+                                + "/"
+                                + str(len(self.sample_nooks)),
                                 "action_id": "new_sample_nook",
                             },
                         },
@@ -366,8 +394,8 @@ class NooksHome:
         )
 
     def initial_message(self, client, event, token):
-        client.views_publish(token=token,
-            
+        client.views_publish(
+            token=token,
             # Use the user ID associated with the event
             user_id=event["user"],
             # Home tabs must be enabled in your app configuration
@@ -378,16 +406,17 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "*Welcome to Nooks, <@"
+                            "text": "Hey there"
+                            + "<@"
                             + event["user"]
-                            + "> :house:*",
+                            + "> :wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_\n Nooks allow you to do exactly that but over slack! Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
                         },
                     },
                     {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Create your profile to now to start! ",
+                            "text": "Create your profile now to start! ",
                         },
                     },
                     {
@@ -402,27 +431,44 @@ class NooksHome:
                                     "emoji": True,
                                 },
                                 "style": "primary",
-                            }
+                            },
+                            {
+                                "type": "button",
+                                "action_id": "learn_more",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Learn More",
+                                    "emoji": True,
+                                },
+                            },
                         ],
                     },
                 ],
             },
         )
 
-    def update_home_tab(self, client, event, cur_pos=0, cur_nooks_pos=0, user_id = None, token=None):
+    def update_home_tab(
+        self, client, event, cur_pos=0, cur_nooks_pos=0, user_id=None, token=None
+    ):
         logging.info("XAALLEED")
         if not user_id:
             user_id = event["user"]
-        member = self.db.member_vectors.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
+        member = self.db.member_vectors.find_one(
+            {"user_id": user_id, "team_id": event["view"]["team_id"]}
+        )
         logging.info(member)
-        interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
+        interaction_block_items = self.get_interaction_blocks(
+            client, user_id, team_id=event["view"]["team_id"], token=token
+        )
 
         if not member:
             self.initial_message(client, event, token=token)
             return
 
-        swipes = self.db.user_swipes.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
-        
+        swipes = self.db.user_swipes.find_one(
+            {"user_id": user_id, "team_id": event["view"]["team_id"]}
+        )
+
         swipes_to_insert = False
         sample_nook_to_insert = False
         if not swipes:
@@ -430,13 +476,21 @@ class NooksHome:
             swipes_to_insert = True
         else:
             cur_pos = swipes["cur_pos"]
-        sample_nook_pos = self.db.sample_nook_pos.find_one({"user_id": user_id, "team_id": event["view"]["team_id"]})
-        
+        sample_nook_pos = self.db.sample_nook_pos.find_one(
+            {"user_id": user_id, "team_id": event["view"]["team_id"]}
+        )
+
         if not sample_nook_pos:
             cur_nook_pos = 0
-            self.db.sample_nook_pos.insert_one({"user_id": user_id, "cur_nook_pos": cur_nook_pos, "team_id": event["view"]["team_id"]})
+            self.db.sample_nook_pos.insert_one(
+                {
+                    "user_id": user_id,
+                    "cur_nook_pos": cur_nook_pos,
+                    "team_id": event["view"]["team_id"],
+                }
+            )
         else:
-            cur_nook_pos = sample_nook_pos["cur_nook_pos"] 
+            cur_nook_pos = sample_nook_pos["cur_nook_pos"]
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
@@ -459,10 +513,12 @@ class NooksHome:
         if not suggested_stories_current or cur_pos >= len(suggested_stories_current):
             self.default_message(client, event, token=token)
             return
-        interaction_block_items = self.get_interaction_blocks(client, user_id, team_id=event["view"]["team_id"], token=token)
-        client.views_publish(token=token,
+        interaction_block_items = self.get_interaction_blocks(
+            client, user_id, team_id=event["view"]["team_id"], token=token
+        )
+        client.views_publish(
+            token=token,
             # Use the user ID associated with the event
-            
             user_id=user_id,
             # Home tabs must be enabled in your app configuration
             view={
@@ -495,7 +551,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ">"+cur_sample,
+                            "text": ">" + cur_sample,
                         },
                         "accessory": {
                             "type": "button",
@@ -504,7 +560,9 @@ class NooksHome:
                                 "text": "Get new!",
                                 "emoji": True,
                             },
-                            "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
+                            "value": str(cur_nook_pos)
+                            + "/"
+                            + str(len(self.sample_nooks)),
                             "action_id": "new_sample_nook",
                         },
                     },
@@ -561,7 +619,7 @@ class NooksHome:
                     },
                     {"type": "divider"},
                     {"type": "divider"},
-                ] + interaction_block_items,
+                ]
+                + interaction_block_items,
             },
         )
-        

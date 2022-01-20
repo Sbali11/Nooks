@@ -495,8 +495,8 @@ def update_message(ack, body, client, view, logger):
 @slack_app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     logging.info(event)
-    # if "view" in event:
-    #    nooks_home.update_home_tab(client, event)
+    if "view" in event:
+        nooks_home.update_home_tab(client, event)
 
 
 @slack_app.event("message")
@@ -508,7 +508,10 @@ def handle_message_events(body, logger):
 def handle_message_events(client, event, logger):
 
     logger.info(event)
-    for member in client.conversations_members(token=get_token(event["team"]), channel=event["channel"])["members"]:
+    for member in client.conversations_members(
+        token=get_token(event["team"]), channel=event["channel"]
+    )["members"]:
+        # TODO add duplicate onboarding info
         slack_app.client.chat_postMessage(
             token=get_token(event["team"]),
             link_names=True,
@@ -581,6 +584,64 @@ def handle_some_action(ack, body, logger):
     ack()
 
 
+@slack_app.action("learn_more")
+def handle_learn_more(ack, body, logger):
+    ack()
+
+    user = body["user"]["id"]
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "signup_step_1",
+            "title": {"type": "plain_text", "text": "Learn More!"},
+            "submit": {"type": "plain_text", "text": "Sign Up!"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid workplace connectedness, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Would love some more details!*\nFor detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
+                    },
+                },
+            ],
+        },
+    )
+
+
 @slack_app.view("signup_step_2")
 def signup_modal_step_2(ack, body, view, logger):
     user = body["user"]["id"]
@@ -637,6 +698,68 @@ def signup_modal_step_2(ack, body, view, logger):
             + question_blocks,
         },
     ),
+
+
+@slack_app.view("signup_step_1")
+def signup_modal_step_1(ack, body, view, logger):
+
+    all_questions = SIGNUP_QUESTIONS["Step 1"]
+    age_block = [
+        {
+            "type": "input",
+            "block_id": "Age",
+            "label": {"type": "plain_text", "text": "Age"},
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "Enter your Age",
+                },
+            },
+        }
+    ]
+    question_blocks = age_block + [
+        {
+            "block_id": question,
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": question,
+            },
+            "accessory": {
+                "type": "static_select",
+                "action_id": "select_input-action",
+                "options": [
+                    {"value": value, "text": {"type": "plain_text", "text": value}}
+                    for value in all_questions[question]
+                ],
+            },
+        }
+        for question in all_questions
+    ]
+    # TODO check if member is already in database?
+    ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "callback_id": "signup_step_2",
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "submit": {"type": "plain_text", "text": "Next"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "To help me optimize your lists, tell me a bit about yourself",
+                    },
+                }
+            ]
+            + question_blocks,
+        },
+    )
+    # logging.info(res)
 
 
 @slack_app.action("signup")
@@ -750,6 +873,13 @@ def show_nooks_info(ack, body, logger):
                 },
             },
             {"type": "divider"},
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Would love some more details!*\For detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
+                },
+            },
             {
                 "type": "section",
                 "text": {
@@ -887,33 +1017,44 @@ def remove_past_stories():
             )["members"]
             for member_1 in all_members:
                 for member_2 in all_members:
-                    if not db.temporal_interacted.find({
-                        "user1_id": member_1,
-                        "user2_id": member_2,
-                        "team_id": active_story["team_id"]}):
+                    if not db.temporal_interacted.find(
+                        {
+                            "user1_id": member_1,
+                            "user2_id": member_2,
+                            "team_id": active_story["team_id"],
+                        }
+                    ):
 
-                        db.temporal_interacted.insert_one({
-                        "user1_id": member_1,
-                        "user2_id": member_2,
-                        "team_id": active_story["team_id"], 
-                        "count": 0})
-                    if not db.all_interacted.find({
-                        "user1_id": member_1,
-                        "user2_id": member_2,
-                        "team_id": active_story["team_id"]}):
+                        db.temporal_interacted.insert_one(
+                            {
+                                "user1_id": member_1,
+                                "user2_id": member_2,
+                                "team_id": active_story["team_id"],
+                                "count": 0,
+                            }
+                        )
+                    if not db.all_interacted.find(
+                        {
+                            "user1_id": member_1,
+                            "user2_id": member_2,
+                            "team_id": active_story["team_id"],
+                        }
+                    ):
 
-                        db.all_interacted.insert_one({
-                        "user1_id": member_1,
-                        "user2_id": member_2,
-                        "team_id": active_story["team_id"], 
-                        "count": 0})
+                        db.all_interacted.insert_one(
+                            {
+                                "user1_id": member_1,
+                                "user2_id": member_2,
+                                "team_id": active_story["team_id"],
+                                "count": 0,
+                            }
+                        )
 
-                
             db.temporal_interacted.update_many(
                 {
                     "user1_id": {"$in": all_members},
                     "user2_id": {"$in": all_members},
-                    "team_id": active_story["team_id"]
+                    "team_id": active_story["team_id"],
                 },
                 {"$inc": {"count": 1}},
             )
@@ -921,7 +1062,7 @@ def remove_past_stories():
                 {
                     "user1_id": {"$in": all_members},
                     "user2_id": {"$in": all_members},
-                    "team_id": active_story["team_id"]
+                    "team_id": active_story["team_id"],
                 },
                 {"$inc": {"count": 1}},
             )
@@ -951,7 +1092,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
             response = slack_app.client.conversations_create(
                 token=get_token(new_story["team_id"]),
                 name=channel_name,
-                is_private=False,
+                is_private=True,
             )
 
             ep_channel = response["channel"]["id"]
