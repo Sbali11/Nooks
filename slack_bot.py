@@ -1001,6 +1001,7 @@ def post_stories():
         team_id = db.member_vectors.find_one({"user_id": member})["team_id"]
         nooks_home.update_home_tab(
             client=slack_app.client, event={"user": member, "view" : { "team_id": team_id}}, 
+            token=get_token(team_id)
             #
         )
 
