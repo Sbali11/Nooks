@@ -130,7 +130,8 @@ oauth_settings = OAuthSettings(
 
 
 slack_app = App(
-    signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings
+    signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings,
+    installation_store=installation_store
 )
 
 
@@ -1049,6 +1050,16 @@ def slack_oauth():
 
     # Store the installation
     installation_store.save(installation)
+    team_id = installed_team.get("id")
+    for member in slack_app.client.users_list(token=get_token(team_id))["members"]:
+        try:
+            nooks_home.update_home_tab(
+            client=slack_app.client,
+            event={"user": member["id"], "view": {"team_id": installed_team.get("id")}},
+            token=get_token(installed_team.get("id"))
+            )
+        except Exception as e:
+            logging.info(e)
     return "NEW"
 
 
