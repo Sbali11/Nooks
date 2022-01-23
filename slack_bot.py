@@ -33,10 +33,10 @@ NUM_MEMBERS = 2
 MEMBER_FEATURES = 2
 MAX_STORIES_GLOBAL = 10
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
-CLIENT_SECRET = os.environ["CLIENT_SECRET"]
+CLIENT_SECRET = os.environ["SLACK_CLIENT_SECRET"]
 MONGODB_LINK = os.environ["MONGODB_LINK"]
 REDIRECT_URI = os.environ["REDIRECT_URI"]
-CLIENT_ID = os.environ["CLIENT_ID"]
+CLIENT_ID = os.environ["SLACK_CLIENT_ID"]
 
 db = MongoClient(MONGODB_LINK).nooks_db
 
@@ -48,9 +48,10 @@ class InstallationDB:
     def save(self, installation):
         # logging.info(vars(installation))
         db.tokens.update(
-            {     "team_id": installation.team_id,
+            {   
+                "team_id": installation.team_id,
                 "user_id": installation.user_id,
-                },
+            },
             {
                 "team_id": installation.team_id,
                 "user_id": installation.user_id,
@@ -83,7 +84,7 @@ def get_token(team_id):
     return db.tokens.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 
-#installation_store = InstallationDB()
+installation_store = InstallationDB()
 scopes = [
     "app_mentions:read",
     "channels:history",
@@ -115,20 +116,20 @@ user_scopes = [
     "users:read",
 ]
 
-'''
+
 oauth_settings = OAuthSettings(
     install_path="/slack/install",
     redirect_uri_path="/slack/oauth_redirect",
     client_id=CLIENT_ID,
-    client_secret=os.environ["CLIENT_SECRET"],
+    client_secret=os.environ["SLACK_CLIENT_SECRET"],
     scopes=scopes,
     installation_store=installation_store,
 )
-'''
+
 
 
 slack_app = App(
-    #signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings
+    signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings
 )
 
 
