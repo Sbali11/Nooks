@@ -47,7 +47,7 @@ from slack_sdk.oauth.installation_store import Installation
 class InstallationDB:
     def save(self, installation):
         # logging.info(vars(installation))
-        db.tokens.update(
+        db.tokens_2.update(
             {   
                 "team_id": installation.team_id,
                 "user_id": installation.user_id,
@@ -71,7 +71,7 @@ class InstallationDB:
 
         return Installation(
             **(
-                db.tokens.find_one({"team_id": team_id})[
+                db.tokens_2.find_one({"team_id": team_id})[
                     "installation"
                 ]
             )
@@ -80,8 +80,8 @@ class InstallationDB:
 
 @lru_cache(maxsize=None)
 def get_token(team_id):
-    return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
-    return db.tokens.find_one({"team_id": team_id})["installation"]["bot_token"]
+    #return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
+    return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 
 installation_store = InstallationDB()
@@ -123,6 +123,7 @@ oauth_settings = OAuthSettings(
     client_id=CLIENT_ID,
     client_secret=os.environ["SLACK_CLIENT_SECRET"],
     scopes=scopes,
+    user_scopes=user_scopes,
     installation_store=installation_store,
 )
 
@@ -982,7 +983,7 @@ handler = SocketModeHandler(slack_app, SLACK_APP_TOKEN)
 handler.connect()
 
 
-@app.route("/")
+@app.route("/slack/install")
 def slack_install():
     logging.info("REVFRV")
     logging.info(",".join(scopes))
