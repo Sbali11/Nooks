@@ -938,10 +938,13 @@ def show_nooks_info(ack, body, logger):
 @slack_app.command("/onboard")
 def onboarding_modal(ack, body, logger):
     ack()
+    logging.info("FNEQEF")
+    logging.info(body)
 
-    for member in slack_app.client.users_list()["members"]:
-        slack_app.client.chat_postMessage(
-            token=get_token(body["team"]["id"]),
+    for member in slack_app.client.users_list(token=get_token(body["team_id"]))["members"]:
+        try:
+            slack_app.client.chat_postMessage(
+            token=get_token(body["team_id"]),
             link_names=True,
             channel=member["id"],
             blocks=[
@@ -969,7 +972,9 @@ def onboarding_modal(ack, body, logger):
                     ],
                 },
             ],
-        )
+            )
+        except Exception as e:
+            logging.info(e)
 
 
 # Add functionality here
