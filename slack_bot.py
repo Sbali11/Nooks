@@ -137,7 +137,6 @@ def log_request(logger, body, next):
     logger.debug(body)
     return next()
 
-
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
     ack()
@@ -228,6 +227,10 @@ def create_story_modal(ack, body, logger):
         },
     )
 
+@slack_app.action("text1234")
+def handle_some_action(ack, body, logger):
+    ack()
+    logger.info(body)
 
 @slack_app.action("story_interested")
 def nook_int(ack, body, logger):
@@ -249,6 +252,7 @@ def nook_int(ack, body, logger):
         )
     except Exception as e:
         logging.info(e)
+
     nooks_home.update_home_tab(
         slack_app.client,
         {"user": user_id, "view": {"team_id": body["team"]["id"]}},
@@ -1221,7 +1225,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
 def update_story_suggestions():
     # all stories
     suggested_stories = list(db.stories.find({"status": "suggested"}))
-    # db.user_swipes.remove()
+    db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
     for suggested_story in suggested_stories:

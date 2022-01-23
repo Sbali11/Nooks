@@ -494,10 +494,11 @@ class NooksHome:
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
+
+        suggested_stories_current = self.suggested_stories[team_id]
         logging.info("EEEEEE")
         logging.info(self.suggested_stories)
         logging.info(team_id)
-        suggested_stories_current = self.suggested_stories[team_id]
         logging.info(suggested_stories_current)
         while cur_pos < len(suggested_stories_current):
             cur_display_card = suggested_stories_current[cur_pos]
@@ -508,7 +509,7 @@ class NooksHome:
             self.default_message(client, event, token=token)
             return
         if swipes_to_insert:
-            self.db.user_swipes.insert_one({"user_id": user_id, "cur_pos": cur_pos})
+            self.db.user_swipes.insert_one({"user_id": user_id, "team_id": event["view"]["team_id"], "cur_pos": cur_pos})
 
         if not suggested_stories_current or cur_pos >= len(suggested_stories_current):
             self.default_message(client, event, token=token)
