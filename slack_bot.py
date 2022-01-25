@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from functools import lru_cache
 import os
 import logging
@@ -154,7 +155,7 @@ def handle_new_story(ack, body, client, view, logger):
         "created_on": datetime.utcnow(),
         "swiped_right": [],
     }
-    db.stories.insert_one(new_story_info)
+    db.nooks.insert_one(new_story_info)
     client.chat_postMessage(
         token=get_token(body["team"]["id"]),
         link_names=True,
@@ -247,7 +248,7 @@ def nook_int(ack, body, logger):
             {"user_id": user_id, "team_id": body["team"]["id"]},
             {"$set": {"cur_pos": cur_pos + 1}},
         )
-        db.stories.update(
+        db.nooks.update(
             {"_id": user_story["_id"], "team_id": body["team"]["id"]},
             {"$push": {"swiped_right": user_id}},
         )
@@ -295,7 +296,7 @@ def nook_not_int(ack, body, logger):
         {"user_id": user_id, "team_id": body["team"]["id"]},
         {"$set": {"cur_pos": cur_pos + 1}},
     )
-    db.stories.update(
+    db.nooks.update(
         {"_id": user_story["_id"], "team_id": body["team"]["id"]},
         {"$push": {"swiped_left": user_id}},
     )
@@ -492,7 +493,7 @@ def update_message(ack, body, client, view, logger):
     ack()
 
     story_id = view["private_metadata"]
-    story = db.stories.find_one({"_id": ObjectId(story_id)})
+    story = db.nooks.find_one({"_id": ObjectId(story_id)})
     ep_channel, thread_ts = story["channel_id"], story["ts"]
     input_data = view["state"]["values"]
     user_id = body["user"]["id"]
@@ -550,7 +551,7 @@ def handle_message_events(client, event, logger):
     for member in client.conversations_members(
         token=get_token(event["team"]), channel=event["channel"]
     )["members"]:
-        if db.member_vectors.find({"team_id": event["team"], "user_id": member}):
+        if db.member_vectors.find_one({"team_id": event["team"], "user_id": member}):
             continue
         # TODO add duplicate onboarding info
         slack_app.client.chat_postMessage(
@@ -1086,7 +1087,7 @@ def slack_oauth():
 
 
 def remove_past_stories():
-    active_stories = list(db.stories.find({"status": "active"}))
+    active_stories = list(db.nooks.find({"status": "active"}))
 
     # archive all channels of the past day
     for active_story in active_stories:
@@ -1095,7 +1096,7 @@ def remove_past_stories():
                 token=get_token(active_story["team_id"]),
                 channel=active_story["channel_id"],
             )["messages"]
-            db.stories.update(
+            db.nooks.update(
                 {"_id": active_story["_id"]},
                 {"$set": {"status": "archived", "chat_history": chat_history}},
             )
@@ -1103,15 +1104,24 @@ def remove_past_stories():
                 token=get_token(active_story["team_id"]),
                 channel=active_story["channel_id"],
             )["members"]
+            logger.info("YEGFUEWBH")
+            logging.info(all_members)
             for member_1 in all_members:
                 for member_2 in all_members:
-                    if not db.temporal_interacted.find(
+                    logging.info(db.temporal_interacted.find_one(
+                        {
+                            "user1_id": member_1,
+                            "user2_id": member_2,
+                            "team_id": active_story["team_id"],
+                        }))
+                    if not db.temporal_interacted.find_one(
                         {
                             "user1_id": member_1,
                             "user2_id": member_2,
                             "team_id": active_story["team_id"],
                         }
                     ):
+                        logging.info("HERE")
 
                         db.temporal_interacted.insert_one(
                             {
@@ -1121,7 +1131,7 @@ def remove_past_stories():
                                 "count": 0,
                             }
                         )
-                    if not db.all_interacted.find(
+                    if not db.all_interacted.find_one(
                         {
                             "user1_id": member_1,
                             "user2_id": member_2,
@@ -1154,7 +1164,7 @@ def remove_past_stories():
                 },
                 {"$inc": {"count": 1}},
             )
-            nooks_alloc.update_interactions()
+            
             slack_app.client.conversations_archive(
                 token=get_token(active_story["team_id"]),
                 channel=active_story["channel_id"],
@@ -1162,6 +1172,7 @@ def remove_past_stories():
 
         except Exception as e:
             logging.error(traceback.format_exc())
+        nooks_alloc.update_interactions()
 
 
 def create_new_channels(new_stories, allocations, suggested_allocs):
@@ -1206,7 +1217,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
                 users=allocations[new_story["_id"]],
             )
 
-            db.stories.update(
+            db.nooks.update(
                 {"_id": new_story["_id"]},
                 {
                     "$set": {
@@ -1259,14 +1270,14 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
 
 def update_story_suggestions():
     # all stories
-    suggested_stories = list(db.stories.find({"status": "suggested"}))
+    suggested_stories = list(db.nooks.find({"status": "suggested"}))
     db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
     for suggested_story in suggested_stories:
         try:
             # TODO don't need to do this if all are shown
-            db.stories.update(
+            db.nooks.update(
                 {"_id": suggested_story["_id"]},
                 {
                     "$set": {
@@ -1301,7 +1312,7 @@ def update_story_suggestions():
 def post_stories():
     remove_past_stories()
 
-    current_stories = list(db.stories.find({"status": "show"}))
+    current_stories = list(db.nooks.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
         nooks=current_stories
     )

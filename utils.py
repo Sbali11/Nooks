@@ -171,7 +171,7 @@ class NooksAllocation:
                 )
             )
             allocations[nooks[nook_id]["_id"]] = ",".join(allocated_mems)
-            self.db.stories.update_one(
+            self.db.nooks.update_one(
                 {"_id": nooks[nook_id]["_id"]},
                 {"$set": {"members": allocated_mems}},
             )
@@ -450,7 +450,6 @@ class NooksHome:
     def update_home_tab(
         self, client, event, cur_pos=0, cur_nooks_pos=0, user_id=None, token=None
     ):
-        logging.info("XAALLEED")
         if not user_id:
             user_id = event["user"]
         member = self.db.member_vectors.find_one(
