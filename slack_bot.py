@@ -48,16 +48,16 @@ class InstallationDB:
     def save(self, installation):
         # logging.info(vars(installation))
         db.tokens_2.update(
-            {   
+            {
                 "team_id": installation.team_id,
                 "user_id": installation.user_id,
             },
             {
                 "team_id": installation.team_id,
                 "user_id": installation.user_id,
-                "installation": vars(installation)
-            }
-            , upsert=True
+                "installation": vars(installation),
+            },
+            upsert=True,
         )
         pass
 
@@ -68,19 +68,14 @@ class InstallationDB:
         logging.info(team_id)
         logging.info(user_id)
 
-
         return Installation(
-            **(
-                db.tokens_2.find_one({"team_id": team_id})[
-                    "installation"
-                ]
-            )
+            **(db.tokens_2.find_one({"team_id": team_id})["installation"])
         )
 
 
 @lru_cache(maxsize=None)
 def get_token(team_id):
-    #return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
+    # return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
     return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 
@@ -128,10 +123,10 @@ oauth_settings = OAuthSettings(
 )
 
 
-
 slack_app = App(
-    signing_secret=os.environ["SLACK_SIGNING_SECRET"], oauth_settings=oauth_settings,
-    installation_store=installation_store
+    signing_secret=os.environ["SLACK_SIGNING_SECRET"],
+    oauth_settings=oauth_settings,
+    installation_store=installation_store,
 )
 
 
@@ -139,6 +134,7 @@ slack_app = App(
 def log_request(logger, body, next):
     logger.debug(body)
     return next()
+
 
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
@@ -230,10 +226,12 @@ def create_story_modal(ack, body, logger):
         },
     )
 
+
 @slack_app.action("text1234")
 def handle_some_action(ack, body, logger):
     ack()
     logger.info(body)
+
 
 @slack_app.action("story_interested")
 def nook_int(ack, body, logger):
@@ -518,6 +516,20 @@ def update_message(ack, body, client, view, logger):
         )
     except Exception as e:
         logging.error(traceback.format_exc())
+
+
+@slack_app.event("team_join")
+def team_joined(client, event, logger):
+    logging.info("TEAM JOINED")
+    logging.info(event)
+    if "user" in event:
+        nooks_home.update_home_tab(
+            client,
+            {
+                "user": event["user"]["id"],
+                "view": {"team_id": event["user"]["team_id"]},
+            },
+        )
 
 
 @slack_app.event("app_home_opened")
@@ -941,37 +953,39 @@ def onboarding_modal(ack, body, logger):
     logging.info("FNEQEF")
     logging.info(body)
 
-    for member in slack_app.client.users_list(token=get_token(body["team_id"]))["members"]:
+    for member in slack_app.client.users_list(token=get_token(body["team_id"]))[
+        "members"
+    ]:
         try:
             slack_app.client.chat_postMessage(
-            token=get_token(body["team_id"]),
-            link_names=True,
-            channel=member["id"],
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                token=get_token(body["team_id"]),
+                link_names=True,
+                channel=member["id"],
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                        },
                     },
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "action_id": "onboard_info",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Tell me more!",
-                                "emoji": True,
-                            },
-                            "style": "primary",
-                            "value": "join",
-                        }
-                    ],
-                },
-            ],
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "action_id": "onboard_info",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Tell me more!",
+                                    "emoji": True,
+                                },
+                                "style": "primary",
+                                "value": "join",
+                            }
+                        ],
+                    },
+                ],
             )
         except Exception as e:
             logging.info(e)
@@ -1059,13 +1073,16 @@ def slack_oauth():
     for member in slack_app.client.users_list(token=get_token(team_id))["members"]:
         try:
             nooks_home.update_home_tab(
-            client=slack_app.client,
-            event={"user": member["id"], "view": {"team_id": installed_team.get("id")}},
-            token=get_token(installed_team.get("id"))
+                client=slack_app.client,
+                event={
+                    "user": member["id"],
+                    "view": {"team_id": installed_team.get("id")},
+                },
+                token=get_token(installed_team.get("id")),
             )
         except Exception as e:
             logging.info(e)
-    return "NEW"
+    return "Successfully installed"
 
 
 def remove_past_stories():
