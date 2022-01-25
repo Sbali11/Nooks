@@ -2,6 +2,7 @@ import collections
 import logging
 import numpy as np
 import random
+from constants import *
 
 EPSILON = 0.001
 
@@ -248,11 +249,19 @@ class NooksHome:
         if all_connections:
             for interaction_row in all_connections:
                 interaction_counts = interaction_row["count"]
-                if interaction_row["count"] > 0:
-                    interacted_with.append(
-                        (interaction_row["count"], interaction_row["user2_id"])
-                    )
+                if interaction_row["count"] > 0 and not(interaction_row["user2_id"] == user_id):
+                    member = client.users_info(
+                                token=token, user=interaction_row["user2_id"]
+                            )["user"]["name"]
+                    if not(member == NOOKS_BOT_NAME):
+                        interacted_with.append(
+                        (
+                            interaction_row["count"], member
+                        )
+                            
+                        )
             interacted_with.sort(reverse=True)
+
             if interacted_with:
                 interaction_block_items = [
                     {
@@ -275,9 +284,7 @@ class NooksHome:
                         "text": {
                             "type": "mrkdwn",
                             "text": "@"
-                            + client.users_info(token=token, user=member)["user"][
-                                "name"
-                            ],
+                            + member,
                         },
                         "accessory": {
                             "type": "button",
@@ -291,7 +298,7 @@ class NooksHome:
                             "value": member,
                         },
                     }
-                    for _, member in interacted_with
+                    for _, member in interacted_with 
                 ]
         return interaction_block_items
 
@@ -508,7 +515,13 @@ class NooksHome:
             self.default_message(client, event, token=token)
             return
         if swipes_to_insert:
-            self.db.user_swipes.insert_one({"user_id": user_id, "team_id": event["view"]["team_id"], "cur_pos": cur_pos})
+            self.db.user_swipes.insert_one(
+                {
+                    "user_id": user_id,
+                    "team_id": event["view"]["team_id"],
+                    "cur_pos": cur_pos,
+                }
+            )
 
         if not suggested_stories_current or cur_pos >= len(suggested_stories_current):
             self.default_message(client, event, token=token)

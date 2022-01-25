@@ -33,3 +33,4 @@ SIGNUP_QUESTIONS = {
         "I talk to people in my organization about shared interests."
     ]
 }
+NOOKS_BOT_NAME = "nooks-bot"
