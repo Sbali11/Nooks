@@ -315,7 +315,9 @@ def handle_send_message(ack, body, client, view, logger):
     input_data = view["state"]["values"]
     to_user = view["private_metadata"]
     message = input_data["message"]["plain_text_input-action"]["value"]
-
+    logging.info("NFJKRWENF")
+    logging.info(to_user)
+    
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),
         link_names=True,
@@ -341,7 +343,7 @@ def customize_dm_modal(ack, body, client, view, logger):
     to_user = body["actions"][0]["value"]
     response = slack_app.client.conversations_open(
         token=get_token(body["team"]["id"]),
-        users=from_user + "," + to_user + ",U02HTEETX54",
+        users=from_user + "," + to_user,
     )
     channel_id = response["channel"]["id"]
     slack_app.client.chat_postMessage(
@@ -407,6 +409,9 @@ def handle_send_message(ack, body, client, view, logger):
         "to_user": to_user,
         "team_id": body["team"]["id"],
     }
+    logging.info("QFJNVKLENr")
+    logging.info(to_user)
+    logging.info(body)
     db.personal_message.insert_one(new_story_info)
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),

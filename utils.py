@@ -256,7 +256,7 @@ class NooksHome:
                     if not(member == NOOKS_BOT_NAME):
                         interacted_with.append(
                         (
-                            interaction_row["count"], member
+                            interaction_row["count"], member, interaction_row["user2_id"]
                         )
                             
                         )
@@ -295,10 +295,10 @@ class NooksHome:
                                 "emoji": True,
                             },
                             "style": "primary",
-                            "value": member,
+                            "value": member_user_id,
                         },
                     }
-                    for _, member in interacted_with 
+                    for _, member, member_user_id in interacted_with 
                 ]
         return interaction_block_items
 
