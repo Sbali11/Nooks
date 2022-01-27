@@ -291,7 +291,7 @@ class NooksHome:
                             "action_id": "contact_person",
                             "text": {
                                 "type": "plain_text",
-                                "text": "Connect",
+                                "text": "Send a Message",
                                 "emoji": True,
                             },
                             "style": "primary",
@@ -334,26 +334,31 @@ class NooksHome:
                 "blocks": (
                     [
                         {
-                            "type": "actions",
-                            "elements": [
-                                {
-                                    "type": "button",
-                                    "action_id": "create_story",
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Create a nook!",
-                                        "emoji": True,
-                                    },
-                                    "style": "primary",
-                                    "value": "join",
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Have something you want to talk about with your co-workers?" ,
+                            },
+                            "accessory": {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Create a nook!",
+                                    "emoji": True,
                                 },
-                            ],
+                                "style": "primary",
+                                "value": "join",
+                                "action_id": "create_story",
+
+                            },
                         },
+                        {"type": "divider"},
+                        {"type": "divider"},
                         {
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": "*Not sure about the topic? Here's a sample nook to inspire you!*",
+                                "text": "*P.S. Here are some samples to get your started!*",
                             },
                         },
                         {
@@ -366,7 +371,7 @@ class NooksHome:
                                 "type": "button",
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "Get new!",
+                                    "text": "Suggest Another Topic!",
                                     "emoji": True,
                                 },
                                 "value": str(cur_nook_pos)
@@ -612,7 +617,7 @@ class NooksHome:
                                 "type": "button",
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "Pass :x:",
+                                    "text": "Not for me :x:",
                                     "emoji": True,
                                 },
                                 "action_id": "story_not_interested",
