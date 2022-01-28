@@ -296,7 +296,6 @@ class NooksHome:
                                 "text": "Send a Message",
                                 "emoji": True,
                             },
-                            "style": "primary",
                             "value": member_user_id,
                         },
                     }
@@ -349,7 +348,6 @@ class NooksHome:
                         "emoji": True,
                     },
                     "style": "primary",
-                    "value": "join",
                     "action_id": "create_story",
                 },
             },
@@ -382,13 +380,41 @@ class NooksHome:
                     },
                     "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
                     "action_id": "new_sample_nook",
+                    "style": "primary",
                 },
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "• " + current_sample_1 + "\n• " + current_sample_2,
+                    "text": "• " + current_sample_1,
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Use",
+                        "emoji": True,
+                    },
+                    "value": current_sample_1,
+                    "action_id": "create_story",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "• " + current_sample_2,
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Use",
+                        "emoji": True,
+                    },
+                    "value": current_sample_2,
+                    "action_id": "create_story",
                 },
             },
             {

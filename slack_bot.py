@@ -168,7 +168,13 @@ def handle_new_story(ack, body, client, view, logger):
 @slack_app.action("create_story")
 def create_story_modal(ack, body, logger):
     ack()
-
+    logging.info("BFHJSW")
+    
+    if "value" in body["actions"][0]:
+        initial_title = body["actions"][0]["value"]
+    else:
+        initial_title = ""
+    logging.info(initial_title)
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
         trigger_id=body["trigger_id"],
@@ -182,9 +188,11 @@ def create_story_modal(ack, body, logger):
                 {
                     "block_id": "title",
                     "type": "input",
+                    
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
+                        "initial_value": initial_title,
                     },
                     "label": {
                         "type": "plain_text",
