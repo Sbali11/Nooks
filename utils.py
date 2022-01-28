@@ -387,7 +387,7 @@ class NooksHome:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "• " + current_sample_1,
+                    "text": "> " + current_sample_1,
                 },
                 "accessory": {
                     "type": "button",
@@ -404,7 +404,7 @@ class NooksHome:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "• " + current_sample_2,
+                    "text": "> " + current_sample_2,
                 },
                 "accessory": {
                     "type": "button",
