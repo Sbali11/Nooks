@@ -249,19 +249,22 @@ class NooksHome:
         if all_connections:
             for interaction_row in all_connections:
                 interaction_counts = interaction_row["count"]
-                if interaction_row["count"] > 0 and not(interaction_row["user2_id"] == user_id):
+                if interaction_row["count"] > 0 and not (
+                    interaction_row["user2_id"] == user_id
+                ):
                     member = client.users_info(
-                                token=token, user=interaction_row["user2_id"]
-                            )["user"]["name"]
-                    if not(member == NOOKS_BOT_NAME):
+                        token=token, user=interaction_row["user2_id"]
+                    )["user"]["name"]
+                    if not (member == NOOKS_BOT_NAME):
                         interacted_with.append(
-                        (
-                            interaction_row["count"], member, interaction_row["user2_id"]
-                        )
-                            
+                            (
+                                interaction_row["count"],
+                                member,
+                                interaction_row["user2_id"],
+                            )
                         )
             interacted_with.sort(reverse=True)
-
+            interacted_with = interacted_with[:MAX_NUM_CONNECTIONS]
             if interacted_with:
                 interaction_block_items = [
                     {
@@ -275,7 +278,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Don't let these connections go!",
+                            "text": "You've spoken to these colleagues very often in Nooks!",
                         },
                     },
                 ] + [
@@ -283,8 +286,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "@"
-                            + member,
+                            "text": "> @" + member,
                         },
                         "accessory": {
                             "type": "button",
@@ -298,15 +300,12 @@ class NooksHome:
                             "value": member_user_id,
                         },
                     }
-                    for _, member, member_user_id in interacted_with 
+                    for _, member, member_user_id in interacted_with
                 ]
         return interaction_block_items
 
-    def default_message(self, client, event, token):
+    def get_blocks_before_cards(self, client, event, token):
         user_id = event["user"]
-        interaction_block_items = self.get_interaction_blocks(
-            client, user_id, team_id=event["view"]["team_id"], token=token
-        )
         sample_nook_pos = self.db.sample_nook_pos.find_one(
             {"user_id": user_id, "team_id": event["view"]["team_id"]}
         )
@@ -322,8 +321,73 @@ class NooksHome:
         else:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"]
         current_sample = self.sample_nooks[cur_nook_pos]
-        # logging.info("LQVMKLE")
-        # logging.info(user_id )
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Hey there"
+                    + "<@"
+                    + event["user"]
+                    + "> :wave: I'm *NooksBot*. \n\n Nooks allow you to 'bump' into other workplace members over shared interests!",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text":  "> Have something you want to talk about with your co-workers? Give me a topic and I'll do the rest :) P.S all nooks are created anonymously, so you don't need to worry about starting conversations",
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Create a nook",
+                        "emoji": True,
+                    },
+                    "style": "primary",
+                    "value": "join",
+                    "action_id": "create_story",
+                },
+            },
+            {"type": "divider"},
+            {"type": "divider"},
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "* Here are some samples to get your started!*",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": ">" + current_sample,
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Suggest Another Topic!",
+                        "emoji": True,
+                    },
+                    "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
+                    "action_id": "new_sample_nook",
+                },
+            },
+        ]
+        return blocks
+
+    def default_message(self, client, event, token):
+        user_id = event["user"]
+        interaction_block_items = self.get_interaction_blocks(
+            client, user_id, team_id=event["view"]["team_id"], token=token
+        )
+        before_cards_block_items = self.get_blocks_before_cards(
+            client, event, token=token
+        )
+
         client.views_publish(
             token=token,
             # Use the user ID associated with the event
@@ -332,54 +396,8 @@ class NooksHome:
             view={
                 "type": "home",
                 "blocks": (
-                    [
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": "Have something you want to talk about with your co-workers?" ,
-                            },
-                            "accessory": {
-                                "type": "button",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Create a nook!",
-                                    "emoji": True,
-                                },
-                                "style": "primary",
-                                "value": "join",
-                                "action_id": "create_story",
-
-                            },
-                        },
-                        {"type": "divider"},
-                        {"type": "divider"},
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": "*P.S. Here are some samples to get your started!*",
-                            },
-                        },
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": ">" + current_sample,
-                            },
-                            "accessory": {
-                                "type": "button",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Suggest Another Topic!",
-                                    "emoji": True,
-                                },
-                                "value": str(cur_nook_pos)
-                                + "/"
-                                + str(len(self.sample_nooks)),
-                                "action_id": "new_sample_nook",
-                            },
-                        },
+                    before_cards_block_items
+                    + [
                         {"type": "divider"},
                         {"type": "divider"},
                         {
@@ -467,7 +485,6 @@ class NooksHome:
         member = self.db.member_vectors.find_one(
             {"user_id": user_id, "team_id": event["view"]["team_id"]}
         )
-        logging.info(member)
         interaction_block_items = self.get_interaction_blocks(
             client, user_id, team_id=event["view"]["team_id"], token=token
         )
@@ -507,10 +524,6 @@ class NooksHome:
         team_id = event["view"]["team_id"]
 
         suggested_stories_current = self.suggested_stories[team_id]
-        logging.info("EEEEEE")
-        logging.info(self.suggested_stories)
-        logging.info(team_id)
-        logging.info(suggested_stories_current)
         while cur_pos < len(suggested_stories_current):
             cur_display_card = suggested_stories_current[cur_pos]
             if user_id not in cur_display_card["banned"]:
@@ -531,8 +544,12 @@ class NooksHome:
         if not suggested_stories_current or cur_pos >= len(suggested_stories_current):
             self.default_message(client, event, token=token)
             return
+
         interaction_block_items = self.get_interaction_blocks(
             client, user_id, team_id=event["view"]["team_id"], token=token
+        )
+        before_cards_block_items = self.get_blocks_before_cards(
+            client, event, token=token
         )
         client.views_publish(
             token=token,
@@ -541,51 +558,8 @@ class NooksHome:
             # Home tabs must be enabled in your app configuration
             view={
                 "type": "home",
-                "blocks": [
-                    {
-                        "type": "actions",
-                        "elements": [
-                            {
-                                "type": "button",
-                                "action_id": "create_story",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Create a nook!",
-                                    "emoji": True,
-                                },
-                                "style": "primary",
-                                "value": "join",
-                            },
-                        ],
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*Not sure about the topic? Here's a sample nook to inspire you!*",
-                        },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": ">" + cur_sample,
-                        },
-                        "accessory": {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Get new!",
-                                "emoji": True,
-                            },
-                            "value": str(cur_nook_pos)
-                            + "/"
-                            + str(len(self.sample_nooks)),
-                            "action_id": "new_sample_nook",
-                        },
-                    },
-                    {"type": "divider"},
-                    {"type": "divider"},
+                "blocks": before_cards_block_items
+                + [
                     {
                         "type": "section",
                         "text": {

@@ -175,9 +175,9 @@ def create_story_modal(ack, body, logger):
         view={
             "type": "modal",
             "callback_id": "new_story",
-            "title": {"type": "plain_text", "text": "Create a Nook!"},
+            "title": {"type": "plain_text", "text": "Create a Nook"},
             "close": {"type": "plain_text", "text": "Close"},
-            "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
+            "submit": {"type": "plain_text", "text": "Add nook to the queue", "emoji": True},
             "blocks": [
                 {
                     "block_id": "title",

@@ -34,3 +34,4 @@ SIGNUP_QUESTIONS = {
     ]
 }
 NOOKS_BOT_NAME = "nooks-bot"
+MAX_NUM_CONNECTIONS = 10
