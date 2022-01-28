@@ -275,7 +275,7 @@ def update_random_nook(ack, body, logger):
     total_len = int(vals[1])
     db.sample_nook_pos.update_one(
         {"user_id": user_id, "team_id": body["team"]["id"]},
-        {"$set": {"cur_nook_pos": (cur_pos + 1) % total_len}},
+        {"$set": {"cur_nook_pos": (cur_pos + 2) % total_len}},
     )
 
     nooks_home.update_home_tab(

@@ -271,7 +271,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ":people_holding_hands: |   *CONNECT BEYOND NOOKS*  | :people_holding_hands: ",
+                            "text": ":people_holding_hands: |   *Connect Beyond Nooks*  | :people_holding_hands: ",
                         },
                     },
                     {
@@ -320,23 +320,32 @@ class NooksHome:
             )
         else:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"]
-        current_sample = self.sample_nooks[cur_nook_pos]
+        num_samples = len(self.sample_nooks)
+        current_sample_1 = self.sample_nooks[cur_nook_pos%num_samples]
+        current_sample_2 = self.sample_nooks[(cur_nook_pos+1)%num_samples]
         blocks = [
+    		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Nooks Bot"
+			}
+		},
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "Hey there"
+                    "text": "Hey there "
                     + "<@"
                     + event["user"]
-                    + "> :wave: I'm *NooksBot*. \n\n Nooks allow you to 'bump' into other workplace members over shared interests!",
+                    + ">! Nooks allow you to 'bump' into other workplace members over shared interests!",
                 },
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text":  "> Have something you want to talk about with your co-workers? Give me a topic and I'll do the rest :) P.S all nooks are created anonymously, so you don't need to worry about starting conversations",
+                    "text":  "Have something you want to talk about with your co-workers? Give me a topic and I'll do the rest :)\nP.S. all nooks are created anonymously, so you don't need to worry about starting conversations\n\n",
                 },
                 "accessory": {
                     "type": "button",
@@ -350,31 +359,30 @@ class NooksHome:
                     "action_id": "create_story",
                 },
             },
-            {"type": "divider"},
-            {"type": "divider"},
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "* Here are some samples to get your started!*",
+                    "text": "\n\n\n *Here are some samples to get you started !* ",
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Get more samples",
+                        "emoji": True,
+                    },
+                    "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
+                    "action_id": "new_sample_nook",
                 },
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": ">" + current_sample,
+                    "text": "• " + current_sample_1 + "\n• " + current_sample_2,
                 },
-                "accessory": {
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Suggest Another Topic!",
-                        "emoji": True,
-                    },
-                    "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
-                    "action_id": "new_sample_nook",
-                },
+
             },
         ]
         return blocks
@@ -404,7 +412,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ":calendar: |   *TODAY'S NOOK CARDS*  | :calendar: ",
+                                "text": ":calendar: |   *Today's Nook Cards *  | :calendar: ",
                             },
                         },
                         {
