@@ -160,7 +160,7 @@ def handle_new_story(ack, body, client, view, logger):
         token=get_token(body["team"]["id"]),
         link_names=True,
         channel=user,
-        text="Hey! I've added your story titled \"" + title + '" to the queue. ',
+        text="Hey! I've added your nook titled \"" + title + '" to the queue. The nook will shown to your co-workers in the next cycle! ',
     )
 
 
