@@ -271,7 +271,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ":people_holding_hands: |   *Connect Beyond Nooks*  | :people_holding_hands: ",
+                            "text": ":people_holding_hands: |   *CONNECT BEYOND NOOKS*  | :people_holding_hands: ",
                         },
                     },
                     {
@@ -321,16 +321,10 @@ class NooksHome:
         else:
             cur_nook_pos = sample_nook_pos["cur_nook_pos"]
         num_samples = len(self.sample_nooks)
-        current_sample_1 = self.sample_nooks[cur_nook_pos%num_samples]
-        current_sample_2 = self.sample_nooks[(cur_nook_pos+1)%num_samples]
+        current_sample_1 = self.sample_nooks[cur_nook_pos % num_samples]
+        current_sample_2 = self.sample_nooks[(cur_nook_pos + 1) % num_samples]
         blocks = [
-    		{
-			"type": "header",
-			"text": {
-				"type": "plain_text",
-				"text": "Nooks Bot"
-			}
-		},
+            {"type": "header", "text": {"type": "plain_text", "text": "Nooks Bot"}},
             {
                 "type": "section",
                 "text": {
@@ -345,7 +339,7 @@ class NooksHome:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text":  "Have something you want to talk about with your co-workers? Give me a topic and I'll do the rest :)\nP.S. all nooks are created anonymously, so you don't need to worry about starting conversations\n\n",
+                    "text": "Want to feel more connected to your co-workers? Give me a topic and I'll help you find an audience :)\nP.S. all nooks are created anonymously, so you don't need to worry about starting conversations\n\n",
                 },
                 "accessory": {
                     "type": "button",
@@ -357,6 +351,20 @@ class NooksHome:
                     "style": "primary",
                     "value": "join",
                     "action_id": "create_story",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " ",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " ",
                 },
             },
             {
@@ -382,7 +390,26 @@ class NooksHome:
                     "type": "mrkdwn",
                     "text": "• " + current_sample_1 + "\n• " + current_sample_2,
                 },
-
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " ",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " ",
+                },
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {"type": "mrkdwn", "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com"},
+                ],
             },
         ]
         return blocks
@@ -412,7 +439,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ":calendar: |   *Today's Nook Cards *  | :calendar: ",
+                                "text": ":calendar: |   *TODAY'S NOOK CARDS *  | :calendar: ",
                             },
                         },
                         {
@@ -568,6 +595,8 @@ class NooksHome:
                 "type": "home",
                 "blocks": before_cards_block_items
                 + [
+                    {"type": "divider"},
+                    {"type": "divider"},
                     {
                         "type": "section",
                         "text": {
