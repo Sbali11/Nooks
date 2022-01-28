@@ -302,8 +302,8 @@ class NooksHome:
                     for _, member, member_user_id in interacted_with
                 ]
         return interaction_block_items
-
-    def get_blocks_before_cards(self, client, event, token):
+    
+    def get_blocks_after_cards(self, client, event, token):
         user_id = event["user"]
         sample_nook_pos = self.db.sample_nook_pos.find_one(
             {"user_id": user_id, "team_id": event["view"]["team_id"]}
@@ -323,17 +323,13 @@ class NooksHome:
         current_sample_1 = self.sample_nooks[cur_nook_pos % num_samples]
         current_sample_2 = self.sample_nooks[(cur_nook_pos + 1) % num_samples]
         blocks = [
-            {"type": "header", "text": {"type": "plain_text", "text": "Nooks Bot"}},
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Hey there "
-                    + "<@"
-                    + event["user"]
-                    + ">! Nooks allow you to 'bump' into other workplace members over shared interests!",
-                },
-            },
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": ":pencil: |   *CREATE A NOOK*  | :pencil: ",
+                            },
+                        },
             {
                 "type": "section",
                 "text": {
@@ -417,18 +413,41 @@ class NooksHome:
                     "action_id": "create_story",
                 },
             },
+            {"type": "divider"},
+            {"type": "divider"},
+
+        ]
+        return blocks
+
+    def get_blocks_before_cards(self, client, event, token):
+        user_id = event["user"]
+        sample_nook_pos = self.db.sample_nook_pos.find_one(
+            {"user_id": user_id, "team_id": event["view"]["team_id"]}
+        )
+        if not sample_nook_pos:
+            cur_nook_pos = 0
+            self.db.sample_nook_pos.insert_one(
+                {
+                    "user_id": user_id,
+                    "cur_nook_pos": cur_nook_pos,
+                    "team_id": event["view"]["team_id"],
+                }
+            )
+        else:
+            cur_nook_pos = sample_nook_pos["cur_nook_pos"]
+        num_samples = len(self.sample_nooks)
+        current_sample_1 = self.sample_nooks[cur_nook_pos % num_samples]
+        current_sample_2 = self.sample_nooks[(cur_nook_pos + 1) % num_samples]
+        blocks = [
+            {"type": "header", "text": {"type": "plain_text", "text": "Nooks Bot"}},
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": " ",
-                },
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": " ",
+                    "text": "Hey there "
+                    + "<@"
+                    + event["user"]
+                    + ">! Nooks allow you to 'bump' into other workplace members over shared interests!",
                 },
             },
             {
@@ -437,6 +456,7 @@ class NooksHome:
                     {"type": "mrkdwn", "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com"},
                 ],
             },
+
         ]
         return blocks
 
@@ -446,6 +466,9 @@ class NooksHome:
             client, user_id, team_id=event["view"]["team_id"], token=token
         )
         before_cards_block_items = self.get_blocks_before_cards(
+            client, event, token=token
+        )
+        after_cards_block_items = self.get_blocks_after_cards(
             client, event, token=token
         )
 
@@ -471,14 +494,14 @@ class NooksHome:
                         {
                             "type": "section",
                             "text": {
-                                "type": "plain_text",
-                                "text": "You've exhausted your list for the day. I'll be back tomorrow :)  ",
-                                "emoji": True,
+                                "type": "mrkdwn",
+                                "text": ">You've exhausted your list for the day. I'll be back tomorrow :) ",
                             },
                         },
                         {"type": "divider"},
                         {"type": "divider"},
                     ]
+                    + after_cards_block_items
                     + interaction_block_items
                 ),
             },
@@ -612,6 +635,10 @@ class NooksHome:
         before_cards_block_items = self.get_blocks_before_cards(
             client, event, token=token
         )
+        after_cards_block_items = self.get_blocks_after_cards(
+            client, event, token=token
+        )
+
         client.views_publish(
             token=token,
             # Use the user ID associated with the event
@@ -675,6 +702,7 @@ class NooksHome:
                     {"type": "divider"},
                     {"type": "divider"},
                 ]
+                + after_cards_block_items
                 + interaction_block_items,
             },
         )
