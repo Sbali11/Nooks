@@ -141,7 +141,7 @@ def log_request(logger, body, next):
 
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
-    success_modal_ack(ack, body, view, logger, message="Nook added to the queue")
+    success_modal_ack(ack, body, view, logger, message="Nook added to the queue", title="Create a Nook")
     input_data = view["state"]["values"]
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
@@ -166,14 +166,20 @@ def handle_new_story(ack, body, client, view, logger):
     )
 
 
-def success_modal_ack(ack, body, view, logger, message):
-    user = body["user"]["id"]
-    logging.info("LQVNJEjk")
+@slack_app.view("success_close")
+def handle_signup(ack, body, client, view, logger):
+    logging.info("FQKEMEK")
+    ack()
+
+
+def success_modal_ack(ack, body, view, logger, message, title="Success"):
     ack(
         response_action="update",
         view={
             "type": "modal",
-            "private_metadata": str(view["state"]["values"]),
+            "callback_id": "success_close",
+            "title": {"type": "plain_text", "text": title},
+            "close": {"type": "plain_text", "text": "Close"},
             "blocks": [
                 {
                     "type": "section",
@@ -338,7 +344,9 @@ def nook_not_int(ack, body, logger):
 
 @slack_app.view("send_dm")
 def handle_send_message(ack, body, client, view, logger):
-    ack()
+    logging.info("FINERJWFN")
+    success_modal_ack(ack, body, view, logger, message="DM sent!", title="Connect beyond Nooks")
+
 
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
@@ -486,7 +494,7 @@ def handle_send_message(ack, body, client, view, logger):
 
 
 @slack_app.action("contact_person")
-def contact_modal(ack, body, logger):
+def handle_contact_person(ack, body, logger):
     ack()
     from_user = body["user"]["id"]
     to_user = body["actions"][0]["value"]
@@ -621,7 +629,7 @@ def handle_message_events(client, event, logger):
 
 @slack_app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
-    ack()
+    success_modal_ack(ack, body, view, logger, message="Sign up successful!", title="Sign Up!")
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
