@@ -246,7 +246,7 @@ def create_story_modal(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Are there any people you don't want to be a part of this conversation?",
+                        "text": "Are there any members you don't want to be a part of this conversation?",
                     },
                     "accessory": {
                         "action_id": "text1234",
@@ -721,6 +721,42 @@ def handle_learn_more(ack, body, logger):
         },
     )
 
+@slack_app.view("signup_step_3")
+def signup_modal_step_3(ack, body, view, logger):
+    input_data = view["state"]["values"]
+    input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
+    ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "callback_id": "add_member",
+            "private_metadata": str(input_data),
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "block_id": "banned",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Are there any members you *don't* want to interact with?",
+                    },
+                    "accessory": {
+                        "action_id": "text1234",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select any users you *don't* want included in conversations with you",
+                            "emoji": True,
+                        },
+                        "type": "multi_users_select",
+                    },
+                },
+            ]
+        },
+    ),
+
+
 
 @slack_app.view("signup_step_2")
 def signup_modal_step_2(ack, body, view, logger):
@@ -761,10 +797,10 @@ def signup_modal_step_2(ack, body, view, logger):
         response_action="update",
         view={
             "type": "modal",
-            "callback_id": "add_member",
+            "callback_id": "signup_step_3",
             "private_metadata": str(view["state"]["values"]),
             "title": {"type": "plain_text", "text": "Sign Up!"},
-            "submit": {"type": "plain_text", "text": "Submit"},
+            "submit": {"type": "plain_text", "text": "Next"},
             "close": {"type": "plain_text", "text": "Close"},
             "blocks": [
                 {
