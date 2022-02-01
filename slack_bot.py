@@ -343,8 +343,7 @@ def nook_not_int(ack, body, logger):
 
 
 @slack_app.view("send_dm")
-def handle_send_message(ack, body, client, view, logger):
-    logging.info("FINERJWFN")
+def handle_send_dm(ack, body, client, view, logger):
     success_modal_ack(ack, body, view, logger, message="DM sent!", title="Connect beyond Nooks")
 
 
@@ -430,7 +429,7 @@ def customize_dm_modal(ack, body, client, view, logger):
 
 @slack_app.view("send_message")
 def handle_send_message(ack, body, client, view, logger):
-    ack()
+    success_modal_ack(ack, body, view, logger, message="Message sent!", title="Connect beyond Nooks")
     input_data = view["state"]["values"]
     from_user = body["user"]["id"]
 
