@@ -19,6 +19,8 @@ from flask_apscheduler import APScheduler
 import ast
 from constants import *
 
+#TODO remove chat history from permissions
+
 # set configuration values
 class Config:
 
@@ -139,7 +141,7 @@ def log_request(logger, body, next):
 
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
-    ack()
+    success_modal_ack(ack, body, view, logger, message="Nook added to the queue")
     input_data = view["state"]["values"]
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
@@ -164,17 +166,36 @@ def handle_new_story(ack, body, client, view, logger):
     )
 
 
+def success_modal_ack(ack, body, view, logger, message):
+    user = body["user"]["id"]
+    logging.info("LQVNJEjk")
+    ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "private_metadata": str(view["state"]["values"]),
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": message,
+                    },
+                }
+            ]
+        },
+    )
+
+
 # TODO
 @slack_app.action("create_story")
 def create_story_modal(ack, body, logger):
     ack()
-    logging.info("BFHJSW")
     
     if "value" in body["actions"][0]:
         initial_title = body["actions"][0]["value"]
     else:
         initial_title = ""
-    logging.info(initial_title)
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
         trigger_id=body["trigger_id"],
@@ -548,7 +569,6 @@ def team_joined(client, event, logger):
 
 @slack_app.event("app_home_opened")
 def update_home_tab(client, event, logger):
-    logging.info(event)
     if "view" in event:
         nooks_home.update_home_tab(client, event)
 
@@ -603,8 +623,6 @@ def handle_message_events(client, event, logger):
 def handle_signup(ack, body, client, view, logger):
     ack()
     # TODO create a new name if taken?
-    logging.info("nvjkef")
-    logging.info(body)
     input_data = view["state"]["values"]
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     user = body["user"]["id"]
@@ -1105,28 +1123,17 @@ def remove_past_stories():
     # archive all channels of the past day
     for active_story in active_stories:
         try:
-            chat_history = slack_app.client.conversations_history(
-                token=get_token(active_story["team_id"]),
-                channel=active_story["channel_id"],
-            )["messages"]
             db.nooks.update(
                 {"_id": active_story["_id"]},
-                {"$set": {"status": "archived", "chat_history": chat_history}},
+                {"$set": {"status": "archived"}},
             )
             all_members = slack_app.client.conversations_members(
                 token=get_token(active_story["team_id"]),
                 channel=active_story["channel_id"],
             )["members"]
-            logger.info("YEGFUEWBH")
-            logging.info(all_members)
             for member_1 in all_members:
                 for member_2 in all_members:
-                    logging.info(db.temporal_interacted.find_one(
-                        {
-                            "user1_id": member_1,
-                            "user2_id": member_2,
-                            "team_id": active_story["team_id"],
-                        }))
+
                     if not db.temporal_interacted.find_one(
                         {
                             "user1_id": member_1,
