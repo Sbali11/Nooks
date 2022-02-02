@@ -19,7 +19,7 @@ from flask_apscheduler import APScheduler
 import ast
 from constants import *
 
-#TODO remove chat history from permissions
+# TODO remove chat history from permissions
 
 # set configuration values
 class Config:
@@ -141,7 +141,14 @@ def log_request(logger, body, next):
 
 @slack_app.view("new_story")
 def handle_new_story(ack, body, client, view, logger):
-    success_modal_ack(ack, body, view, logger, message="Nook added to the queue", title="Create a Nook")
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Nook added to the queue",
+        title="Create a Nook",
+    )
     input_data = view["state"]["values"]
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
@@ -162,7 +169,9 @@ def handle_new_story(ack, body, client, view, logger):
         token=get_token(body["team"]["id"]),
         link_names=True,
         channel=user,
-        text="Hey! I've added your nook titled \"" + title + '" to the queue. The nook will shown to your co-workers in the next cycle! ',
+        text="Hey! I've added your nook titled \""
+        + title
+        + '" to the queue. The nook will shown to your co-workers in the next cycle! ',
     )
 
 
@@ -188,7 +197,7 @@ def success_modal_ack(ack, body, view, logger, message, title="Success"):
                         "text": message,
                     },
                 }
-            ]
+            ],
         },
     )
 
@@ -197,7 +206,7 @@ def success_modal_ack(ack, body, view, logger, message, title="Success"):
 @slack_app.action("create_story")
 def create_story_modal(ack, body, logger):
     ack()
-    
+
     if "value" in body["actions"][0]:
         initial_title = body["actions"][0]["value"]
     else:
@@ -210,12 +219,15 @@ def create_story_modal(ack, body, logger):
             "callback_id": "new_story",
             "title": {"type": "plain_text", "text": "Create a Nook"},
             "close": {"type": "plain_text", "text": "Close"},
-            "submit": {"type": "plain_text", "text": "Add nook to the queue", "emoji": True},
+            "submit": {
+                "type": "plain_text",
+                "text": "Add nook to the queue",
+                "emoji": True,
+            },
             "blocks": [
                 {
                     "block_id": "title",
                     "type": "input",
-                    
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
@@ -344,8 +356,9 @@ def nook_not_int(ack, body, logger):
 
 @slack_app.view("send_dm")
 def handle_send_dm(ack, body, client, view, logger):
-    success_modal_ack(ack, body, view, logger, message="DM sent!", title="Connect beyond Nooks")
-
+    success_modal_ack(
+        ack, body, view, logger, message="DM sent!", title="Connect beyond Nooks"
+    )
 
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
@@ -353,7 +366,7 @@ def handle_send_dm(ack, body, client, view, logger):
     message = input_data["message"]["plain_text_input-action"]["value"]
     logging.info("NFJKRWENF")
     logging.info(to_user)
-    
+
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),
         link_names=True,
@@ -429,7 +442,9 @@ def customize_dm_modal(ack, body, client, view, logger):
 
 @slack_app.view("send_message")
 def handle_send_message(ack, body, client, view, logger):
-    success_modal_ack(ack, body, view, logger, message="Message sent!", title="Connect beyond Nooks")
+    success_modal_ack(
+        ack, body, view, logger, message="Message sent!", title="Connect beyond Nooks"
+    )
     input_data = view["state"]["values"]
     from_user = body["user"]["id"]
 
@@ -628,7 +643,9 @@ def handle_message_events(client, event, logger):
 
 @slack_app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
-    success_modal_ack(ack, body, view, logger, message="Sign up successful!", title="Sign Up!")
+    success_modal_ack(
+        ack, body, view, logger, message="Sign up successful!", title="Sign Up!"
+    )
     # TODO create a new name if taken?
     input_data = view["state"]["values"]
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
@@ -674,7 +691,7 @@ def handle_learn_more(ack, body, logger):
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "signup_step_1",
+            "callback_id": "signup_step_0",
             "title": {"type": "plain_text", "text": "Learn More!"},
             "submit": {"type": "plain_text", "text": "Sign Up!"},
             "close": {"type": "plain_text", "text": "Close"},
@@ -721,6 +738,7 @@ def handle_learn_more(ack, body, logger):
         },
     )
 
+
 @slack_app.view("signup_step_3")
 def signup_modal_step_3(ack, body, view, logger):
     input_data = view["state"]["values"]
@@ -752,10 +770,70 @@ def signup_modal_step_3(ack, body, view, logger):
                         "type": "multi_users_select",
                     },
                 },
-            ]
+            ],
         },
     ),
 
+
+def get_consent_blocks():
+    consent_details = CONSENT_FORM
+    consent_blocks = [ {"type": "header", "text": {"type": "plain_text", "text": "Study Consent Form"}},]
+    for detail in consent_details:
+        consent_blocks.append(
+            {
+                "block_id": detail,
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*" + detail + "*\n" + consent_details[detail],
+                }
+            }
+        )
+
+        consent_blocks.append({"type": "divider"})
+
+    consent_blocks.append(
+        {
+            "type": "input",
+            "block_id": "consent",
+            "element": {
+                "type": "checkboxes",
+                "action_id": "checkboxes_input-action",
+                "options": [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "I'm age 18 or older",
+                            "emoji": True,
+                        },
+                        "value": "old_enough",
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "I have read and understand the information above",
+                            "emoji": True,
+                        },
+                        "value": "read_all",
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "I want to participate in this research and continue with the application ",
+                            "emoji": True,
+                        },
+                        "value": "want_to_participate",
+                    },
+                ],
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Please read the details above and respond to the questions below to continue",
+                "emoji": True,
+            },
+        }
+    )
+    return consent_blocks
 
 
 @slack_app.view("signup_step_2")
@@ -818,6 +896,31 @@ def signup_modal_step_2(ack, body, view, logger):
 
 @slack_app.view("signup_step_1")
 def signup_modal_step_1(ack, body, view, logger):
+    logging.info("VFEKWN")
+    input_data = view["state"]["values"]
+    logging.info(input_data)
+    # logging.info("BZZZZ")
+    # logging.info(view)
+
+    if len(input_data["consent"]["checkboxes_input-action"]["selected_options"]) < 3:
+        ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Oops! You need to select all the options on the previous page to be eligible. ",
+                    },
+                }
+            ]
+        },
+        )
+        return
 
     all_questions = SIGNUP_QUESTIONS["Step 1"]
     age_block = [
@@ -878,66 +981,38 @@ def signup_modal_step_1(ack, body, view, logger):
     # logging.info(res)
 
 
+@slack_app.action("signup_step_0")
+def signup_modal_step_0(ack, body, view, logger):
+
+    # TODO check if member is already in database?
+    ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "callback_id": "signup_step_1",
+            "title": {"type": "plain_text", "text": "Sign Up!"},
+            "submit": {"type": "plain_text", "text": "Next"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": get_consent_blocks(),
+        },
+    )
+    # logging.info(res)
+
+
 @slack_app.action("signup")
 def signup_modal(ack, body, logger):
     ack()
-
-    user = body["user"]["id"]
-    all_questions = SIGNUP_QUESTIONS["Step 1"]
-    age_block = [
-        {
-            "type": "input",
-            "block_id": "Age",
-            "label": {"type": "plain_text", "text": "Age"},
-            "element": {
-                "type": "plain_text_input",
-                "action_id": "plain_text_input-action",
-                "placeholder": {
-                    "type": "plain_text",
-                    "text": "Enter your Age",
-                },
-            },
-        }
-    ]
-    question_blocks = age_block + [
-        {
-            "block_id": question,
-            "type": "section",
-            "text": {
-                "type": "plain_text",
-                "text": question,
-            },
-            "accessory": {
-                "type": "static_select",
-                "action_id": "select_input-action",
-                "options": [
-                    {"value": value, "text": {"type": "plain_text", "text": value}}
-                    for value in all_questions[question]
-                ],
-            },
-        }
-        for question in all_questions
-    ]
     # TODO check if member is already in database?
     res = slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "signup_step_2",
+            "callback_id": "signup_step_1",
             "title": {"type": "plain_text", "text": "Sign Up!"},
             "submit": {"type": "plain_text", "text": "Next"},
             "close": {"type": "plain_text", "text": "Close"},
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "To help me optimize your lists, tell me a bit about yourself",
-                    },
-                }
-            ]
-            + question_blocks,
+            "blocks": get_consent_blocks(),
         },
     )
     # logging.info(res)
@@ -1227,7 +1302,7 @@ def remove_past_stories():
                 },
                 {"$inc": {"count": 1}},
             )
-            
+
             slack_app.client.conversations_archive(
                 token=get_token(active_story["team_id"]),
                 channel=active_story["channel_id"],
