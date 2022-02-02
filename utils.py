@@ -469,6 +469,15 @@ class NooksHome:
                     + event["user"]
                     + ">! Nooks allow you to 'bump' into other workplace members over shared interests!",
                 },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Tell me more",
+                        "emoji": True,
+                    },
+                    "action_id": "tell_me_more",
+                },
             },
         ]
         return blocks

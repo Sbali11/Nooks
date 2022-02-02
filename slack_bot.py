@@ -681,6 +681,55 @@ def handle_some_action(ack, body, logger):
     ack()
 
 
+@slack_app.action("tell_me_more")
+def handle_tell_me_more(ack, body, logger):
+    ack()
+
+    user = body["user"]["id"]
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Tell me More!"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid workplace connectedness, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Would love some more details!*\nFor detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
+                    },
+                },
+            ],
+        },
+    )
+
+
 @slack_app.action("learn_more")
 def handle_learn_more(ack, body, logger):
     ack()
