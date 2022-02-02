@@ -266,44 +266,61 @@ class NooksHome:
             interacted_with.sort(reverse=True)
             interacted_with = interacted_with[:MAX_NUM_CONNECTIONS]
             if interacted_with:
-                interaction_block_items = [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": ":people_holding_hands: |   *CONNECT BEYOND NOOKS*  | :people_holding_hands: ",
-                        },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "You've spoken to these colleagues very often in Nooks!",
-                        },
-                    },
-                ] + [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "> @" + member,
-                        },
-                        "accessory": {
-                            "type": "button",
-                            "action_id": "contact_person",
+                interaction_block_items = (
+                    [
+                        {
+                            "type": "section",
                             "text": {
-                                "type": "plain_text",
-                                "text": "Send a Message",
-                                "emoji": True,
+                                "type": "mrkdwn",
+                                "text": ":people_holding_hands: |   *CONNECT BEYOND NOOKS*  | :people_holding_hands: ",
                             },
-                            "value": member_user_id,
                         },
-                    }
-                    for _, member, member_user_id in interacted_with
-                ]
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "You've spoken to these colleagues very often in Nooks!",
+                            },
+                        },
+                    ]
+                    + [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "> @" + member,
+                            },
+                            "accessory": {
+                                "type": "button",
+                                "action_id": "contact_person",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Send a Message",
+                                    "emoji": True,
+                                },
+                                "value": member_user_id,
+                                "style": "primary",
+                            },
+                        }
+                        for _, member, member_user_id in interacted_with
+                    ]
+                    + [
+                        {"type": "divider"},
+                        {"type": "divider"},
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com",
+                                },
+                            ],
+                        },
+                    ]
+                )
         return interaction_block_items
-    
-    def get_blocks_after_cards(self, client, event, token):
+
+    def get_create_a_nook_block(self, client, event, token):
         user_id = event["user"]
         sample_nook_pos = self.db.sample_nook_pos.find_one(
             {"user_id": user_id, "team_id": event["view"]["team_id"]}
@@ -323,13 +340,13 @@ class NooksHome:
         current_sample_1 = self.sample_nooks[cur_nook_pos % num_samples]
         current_sample_2 = self.sample_nooks[(cur_nook_pos + 1) % num_samples]
         blocks = [
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": ":pencil: |   *CREATE A NOOK*  | :pencil: ",
-                            },
-                        },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": ":pencil: |   *CREATE A NOOK*  | :pencil: ",
+                },
+            },
             {
                 "type": "section",
                 "text": {
@@ -376,7 +393,6 @@ class NooksHome:
                     },
                     "value": str(cur_nook_pos) + "/" + str(len(self.sample_nooks)),
                     "action_id": "new_sample_nook",
-                    "style": "primary",
                 },
             },
             {
@@ -389,7 +405,7 @@ class NooksHome:
                     "type": "button",
                     "text": {
                         "type": "plain_text",
-                        "text": "Use",
+                        "text": "Edit & Use",
                         "emoji": True,
                     },
                     "value": current_sample_1,
@@ -406,7 +422,7 @@ class NooksHome:
                     "type": "button",
                     "text": {
                         "type": "plain_text",
-                        "text": "Use",
+                        "text": "Edit & Use",
                         "emoji": True,
                     },
                     "value": current_sample_2,
@@ -415,7 +431,6 @@ class NooksHome:
             },
             {"type": "divider"},
             {"type": "divider"},
-
         ]
         return blocks
 
@@ -439,7 +454,7 @@ class NooksHome:
         current_sample_1 = self.sample_nooks[cur_nook_pos % num_samples]
         current_sample_2 = self.sample_nooks[(cur_nook_pos + 1) % num_samples]
         blocks = [
-            {"type": "header", "text": {"type": "plain_text", "text": "Nooks Bot"}},
+            {"type": "header", "text": {"type": "plain_text", "text": "Nooks"}},
             {
                 "type": "section",
                 "text": {
@@ -450,13 +465,6 @@ class NooksHome:
                     + ">! Nooks allow you to 'bump' into other workplace members over shared interests!",
                 },
             },
-            {
-                "type": "context",
-                "elements": [
-                    {"type": "mrkdwn", "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com"},
-                ],
-            },
-
         ]
         return blocks
 
@@ -468,9 +476,7 @@ class NooksHome:
         before_cards_block_items = self.get_blocks_before_cards(
             client, event, token=token
         )
-        after_cards_block_items = self.get_blocks_after_cards(
-            client, event, token=token
-        )
+        create_a_nook_block = self.get_create_a_nook_block(client, event, token=token)
 
         client.views_publish(
             token=token,
@@ -484,6 +490,9 @@ class NooksHome:
                     + [
                         {"type": "divider"},
                         {"type": "divider"},
+                    ]
+                    + create_a_nook_block
+                    + [
                         {
                             "type": "section",
                             "text": {
@@ -501,7 +510,6 @@ class NooksHome:
                         {"type": "divider"},
                         {"type": "divider"},
                     ]
-                    + after_cards_block_items
                     + interaction_block_items
                 ),
             },
@@ -635,9 +643,7 @@ class NooksHome:
         before_cards_block_items = self.get_blocks_before_cards(
             client, event, token=token
         )
-        after_cards_block_items = self.get_blocks_after_cards(
-            client, event, token=token
-        )
+        create_a_nook_block = self.get_create_a_nook_block(client, event, token=token)
 
         client.views_publish(
             token=token,
@@ -650,6 +656,9 @@ class NooksHome:
                 + [
                     {"type": "divider"},
                     {"type": "divider"},
+                ]
+                + create_a_nook_block
+                + [
                     {
                         "type": "section",
                         "text": {
@@ -702,7 +711,6 @@ class NooksHome:
                     {"type": "divider"},
                     {"type": "divider"},
                 ]
-                + after_cards_block_items
                 + interaction_block_items,
             },
         )
