@@ -85,15 +85,13 @@ def get_token(team_id):
 installation_store = InstallationDB()
 scopes = [
     "app_mentions:read",
-    "channels:history",
+    "pins:write",
     "channels:manage",
     "channels:read",
     "chat:write",
     "commands",
-    "groups:history",
     "groups:read",
     "groups:write",
-    "im:history",
     "im:read",
     "im:write",
     "mpim:read",
@@ -109,6 +107,7 @@ user_scopes = [
     "chat:write",
     "files:read",
     "groups:write",
+    "pins:write",
     "im:write",
     "mpim:write",
     "users:read",
@@ -826,7 +825,12 @@ def signup_modal_step_3(ack, body, view, logger):
 
 def get_consent_blocks():
     consent_details = CONSENT_FORM
-    consent_blocks = [ {"type": "header", "text": {"type": "plain_text", "text": "Study Consent Form"}},]
+    consent_blocks = [
+        {
+            "type": "header",
+            "text": {"type": "plain_text", "text": "Study Consent Form"},
+        },
+    ]
     for detail in consent_details:
         consent_blocks.append(
             {
@@ -835,7 +839,7 @@ def get_consent_blocks():
                 "text": {
                     "type": "mrkdwn",
                     "text": "*" + detail + "*\n" + consent_details[detail],
-                }
+                },
             }
         )
 
@@ -953,21 +957,21 @@ def signup_modal_step_1(ack, body, view, logger):
 
     if len(input_data["consent"]["checkboxes_input-action"]["selected_options"]) < 3:
         ack(
-        response_action="update",
-        view={
-            "type": "modal",
-            "title": {"type": "plain_text", "text": "Sign Up!"},
-            "close": {"type": "plain_text", "text": "Close"},
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Oops! You need to select all the options on the previous page to be eligible. ",
-                    },
-                }
-            ]
-        },
+            response_action="update",
+            view={
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Sign Up!"},
+                "close": {"type": "plain_text", "text": "Close"},
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Oops! You need to select all the options on the previous page to be eligible. ",
+                        },
+                    }
+                ],
+            },
         )
         return
 
@@ -1214,7 +1218,9 @@ def slack_install():
         + "&scope="
         + ",".join(scopes)
         + ",incoming-webhook"
-        + "&user_scope=channels:read,channels:write,chat:write,files:read,groups:write,im:write,mpim:write,users:read'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
+        + "&user_scope="
+        + ",".join(user_scopes)
+        + "'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
 
@@ -1374,32 +1380,34 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
         try:
 
             channel_name = "nook-" + date + "-" + str(i)
-
+            token = get_token(new_story["team_id"])
             response = slack_app.client.conversations_create(
-                token=get_token(new_story["team_id"]),
+                token=token,
                 name=channel_name,
                 is_private=True,
             )
 
             ep_channel = response["channel"]["id"]
             slack_app.client.conversations_setTopic(
-                token=get_token(new_story["team_id"]), channel=ep_channel, topic=title
+                token=token, channel=ep_channel, topic=title
             )
+            
             initial_thoughts_thread = slack_app.client.chat_postMessage(
-                token=get_token(new_story["team_id"]),
+                token=token,
                 link_names=True,
                 channel=ep_channel,
-                text="Super-excited to hear all of your thoughts on "
+                text='Super-excited to hear all of your thoughts on \n *'
                 + title
-                + "\n"
+                + '*\n'
                 + ">"
-                + desc,
+                + desc + "\n" +
+                'Remember this chat will be automatically archived at 9AM tomorrow :clock1: ',
             )
-            # logging.info("FRRRRE")
-            # logging.info(allocations[new_story["_id"]])
+            slack_app.client.pins_add(token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"])
+
 
             slack_app.client.conversations_invite(
-                token=get_token(new_story["team_id"]),
+                token=token,
                 channel=ep_channel,
                 users=allocations[new_story["_id"]],
             )
@@ -1417,7 +1425,7 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
             for member in suggested_allocs[new_story["_id"]]:
 
                 slack_app.client.chat_postMessage(
-                    token=get_token(new_story["team_id"]),
+                    token=token,
                     link_names=True,
                     channel=member,
                     blocks=[
