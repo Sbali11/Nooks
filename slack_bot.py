@@ -1068,7 +1068,7 @@ def show_nooks_info(ack, body, logger):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*Would love some more details!*\For detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
+                    "text": "*Would love some more details!*\nFor detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
                 },
             },
             {
