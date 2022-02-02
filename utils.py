@@ -1,5 +1,6 @@
 import collections
 import logging
+from multiprocessing import context
 import numpy as np
 import random
 from constants import *
@@ -238,6 +239,19 @@ class NooksHome:
     def update(self, suggested_stories):
         self.suggested_stories = suggested_stories
 
+    def get_context_block(self):
+        return [
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com",
+                    },
+                ],
+            }
+        ]
+
     def get_interaction_blocks(self, client, user_id, team_id, token):
         all_connections = self.db.all_interacted.find(
             {"user1_id": user_id, "team_id": team_id}
@@ -307,15 +321,6 @@ class NooksHome:
                     + [
                         {"type": "divider"},
                         {"type": "divider"},
-                        {
-                            "type": "context",
-                            "elements": [
-                                {
-                                    "type": "mrkdwn",
-                                    "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com",
-                                },
-                            ],
-                        },
                     ]
                 )
         return interaction_block_items
@@ -476,6 +481,7 @@ class NooksHome:
         before_cards_block_items = self.get_blocks_before_cards(
             client, event, token=token
         )
+        context_block_items = self.get_context_block()
         create_a_nook_block = self.get_create_a_nook_block(client, event, token=token)
 
         client.views_publish(
@@ -510,7 +516,8 @@ class NooksHome:
                         {"type": "divider"},
                         {"type": "divider"},
                     ]
-                    + interaction_block_items
+                    + interaction_block_items 
+                    + context_block_items
                 ),
             },
         )
@@ -580,7 +587,7 @@ class NooksHome:
         interaction_block_items = self.get_interaction_blocks(
             client, user_id, team_id=event["view"]["team_id"], token=token
         )
-
+        context_block_items = self.get_context_block()
         if not member:
             self.initial_message(client, event, token=token)
             return
@@ -711,6 +718,6 @@ class NooksHome:
                     {"type": "divider"},
                     {"type": "divider"},
                 ]
-                + interaction_block_items,
+                + interaction_block_items + context_block_items
             },
         )
