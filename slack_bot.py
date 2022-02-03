@@ -401,7 +401,7 @@ def customize_dm_modal(ack, body, client, view, logger):
         blocks=[
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": "Direct Message Trial"},
+                "text": {"type": "mrkdwn", "text": "Hey There!"},
             },
         ],
     )
