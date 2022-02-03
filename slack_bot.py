@@ -671,7 +671,7 @@ def handle_signup(ack, body, client, view, logger):
         token=get_token(body["team"]["id"]),
         link_names=True,
         channel=user,
-        text="You're all set! Create your first story ",
+        text="You're all set! Create your first nook! ",
     )
 
 
