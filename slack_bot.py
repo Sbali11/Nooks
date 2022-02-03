@@ -1034,7 +1034,7 @@ def signup_modal_step_1(ack, body, view, logger):
     # logging.info(res)
 
 
-@slack_app.action("signup_step_0")
+@slack_app.view("signup_step_0")
 def signup_modal_step_0(ack, body, view, logger):
 
     # TODO check if member is already in database?
