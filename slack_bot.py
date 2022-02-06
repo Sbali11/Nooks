@@ -69,9 +69,6 @@ class InstallationDB:
     def find_installation(
         self, enterprise_id=None, team_id=None, user_id=None, is_enterprise_install=None
     ):
-        logging.info("WEFNEWJKN")
-        logging.info(team_id)
-        logging.info(user_id)
 
         return Installation(
             **(db.tokens_2.find_one({"team_id": team_id})["installation"])
@@ -133,10 +130,13 @@ slack_app = App(
     installation_store=installation_store,
 )
 
+
 def get_member_vector(member_info):
     member_vector = [0] * (len(HOMOPHILY_FACTORS))
     for i, homophily_factor in enumerate(sorted(HOMOPHILY_FACTORS)):
-        member_vector[i] = HOMOPHILY_FACTORS[homophily_factor][member_info[homophily_factor]]
+        member_vector[i] = HOMOPHILY_FACTORS[homophily_factor][
+            member_info[homophily_factor]
+        ]
     return member_vector
 
 
@@ -160,12 +160,15 @@ def handle_new_story(ack, body, client, view, logger):
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
+    allow_two_members = len(input_data["allow_two_members"]["checkboxes_input-action"]["selected_options"]) == 1
     banned = input_data["banned"]["user_select"]["selected_users"]
+
     new_story_info = {
         "team_id": body["team"]["id"],
         "title": title,
         "creator": user,
         "description": desc,
+        "allow_two_members": allow_two_members,
         "banned": banned,
         "status": "suggested",
         "created_on": datetime.utcnow(),
@@ -260,12 +263,13 @@ def create_story_modal(ack, body, logger):
                         "emoji": True,
                     },
                 },
+
                 {
                     "block_id": "banned",
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Are there any members you don't want to be a part of this conversation?",
+                        "text": "*Are there any members you don't want to be a part of this conversation?*",
                     },
                     "accessory": {
                         "action_id": "user_select",
@@ -275,6 +279,29 @@ def create_story_modal(ack, body, logger):
                             "emoji": True,
                         },
                         "type": "multi_users_select",
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "allow_two_members",
+                    "element": {
+                        "type": "checkboxes",
+                        "action_id": "checkboxes_input-action",
+                        "options": [
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Allow nook to be created with only 1 additional member.",
+                                    "emoji": True,
+                                },
+                                "value": "allow_two_member",
+                            }
+                        ],
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "By default, I only create nooks with atleast 3 total members to hide the creator's identity. Nooks that don't satisfy this condition are not created. ",
+                        "emoji": True,
                     },
                 },
             ],
@@ -321,9 +348,7 @@ def update_random_nook(ack, body, logger):
     ack()
 
     user_id = body["user"]["id"]
-    logging.info("UUHNIUN")
     vals = body["actions"][0]["value"].split("/")
-    logging.info(body)
     team_id = body["team"]["id"]
     cur_pos = int(vals[0])
     total_len = int(vals[1])
@@ -461,16 +486,13 @@ def handle_send_message(ack, body, client, view, logger):
     to_user = view["private_metadata"]
     message = input_data["message"]["plain_text_input-action"]["value"]
 
-    new_story_info = {
+    personal_message_info = {
         "message": message,
         "from_user": from_user,
         "to_user": to_user,
         "team_id": body["team"]["id"],
     }
-    logging.info("QFJNVKLENr")
-    logging.info(to_user)
-    logging.info(body)
-    db.personal_message.insert_one(new_story_info)
+    db.personal_message.insert_one(personal_message_info)
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),
         link_names=True,
@@ -658,7 +680,7 @@ def handle_signup(ack, body, client, view, logger):
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     user = body["user"]["id"]
     new_member_info = {}
-    
+
     for key in input_data:
         if "plain_text_input-action" in input_data[key]:
             new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
@@ -992,7 +1014,7 @@ def signup_modal_step_1(ack, body, view, logger):
 
     all_questions = SIGNUP_QUESTIONS["Step 1"]
 
-    question_blocks =[
+    question_blocks = [
         {
             "block_id": question,
             "type": "section",
@@ -1608,49 +1630,3 @@ def main(nooks_home_arg, nooks_alloc_arg):
     # db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
-    '''
-    # TODO shift to onboarding
-    if "member_vectors" not in db.list_collection_names():
-        db.create_collection("member_vectors")
-        db.member_vectors.create_index("user_id")
-
-        """
-        member_vectors = np.random.randint(2, size=(len(all_members), MEMBER_FEATURES))
-        db.member_vectors.insert_many(
-            [
-                {"user_id": member["id"], "member_vector": member_vectors[i].tolist()}
-                for i, member in enumerate(all_members)
-            ]
-        )
-        """
-    all_members = slack_app.client.users_list()["members"]
-    if "all_interacted" not in db.list_collection_names():
-        db.create_collection("all_interacted")
-        db.create_collection("temporal_interacted")
-        counts = {member["id"]: 0 for member in all_members}
-
-        db.all_interacted.insert_many(
-            [
-                {
-                    "user_id": from_member["id"],
-                    "counts": [
-                        {"user_id": to_member["id"], "count": 0}
-                        for to_member in all_members
-                    ],
-                }
-                for from_member in all_members
-            ]
-        )
-        db.temporal_interacted.insert_many(
-            [
-                {
-                    "user_id": from_member["id"],
-                    "counts": [
-                        {"user_id": to_member["id"], "count": 0}
-                        for to_member in all_members
-                    ],
-                }
-                for from_member in all_members
-            ]
-        )
-    '''

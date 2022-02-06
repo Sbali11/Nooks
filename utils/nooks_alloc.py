@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from audioop import reverse
 import collections
 import logging
@@ -123,7 +124,6 @@ class NooksAllocation:
         nook_swipes = np.zeros((self.total_members, num_nooks))
         # allocates the creator to their respective nooks
         for i, nook in enumerate(nooks):
-
             creator_key = self.member_dict[nook["creator"]]
             nooks_allocs[i][creator_key] = 1
             member_allocs[creator_key] = i
@@ -138,7 +138,7 @@ class NooksAllocation:
         for member in range(self.total_members):
             if member in member_allocs:
                 continue
-            if not (np.sum(nook_swipes[member])):
+            if not (np.sum(nook_swipes[member])) :
                 members_no_swipes.add(self.member_ids[member])
                 continue
             swipes = nook_swipes[member]
@@ -156,6 +156,14 @@ class NooksAllocation:
                     continue
                 swipes = nook_swipes[member]
                 heterophily_nook = []
+                interacted_nook = []
+                og_nook = member_allocs[member]
+                if nooks_mem_cnt[og_nook] <= 2:
+                    # can't have only 1 member in the nook
+                    continue
+                elif nooks_mem_cnt[og_nook] == 3 and not nooks[og_nook]["allow_two_members"]:
+                    continue
+                
                 for nook in range(num_nooks):
                     if not nook_swipes[member][nook]:
                         heterophily_nook.append(1)  # this value will be ignored
@@ -164,10 +172,11 @@ class NooksAllocation:
                     member_diff = np.linalg.norm(
                         self.member_vectors[member] - same_nook_members
                     )
-                    priority = self.member_heterophily_priority[same_nook_members] + self.member_heterophily_priority[member]
-                    heterophily_nook.append(EPSILON + (priority * member_diff ).sum(dim=1))
-
-                heterophily = np.array(heterophily_nook)
+                    priority = self.member_heterophily_priority[nooks_allocs[nook] == 1] + (self.member_heterophily_priority[member].reshape(1, -1))
+                    heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
+                    interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[member] > 0)).sum())
+                interacted_by = np.array(interacted_nook)          
+                heterophily = np.array(heterophily_nook)     
                 interacted_by = nooks_mem_int_cnt[:, member]
                 wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
                     1 + (self.alpha * heterophily)
@@ -177,7 +186,7 @@ class NooksAllocation:
 
                 total_sel_wts = np.sum(sel_wts)
                 selected_nook = np.argmax(sel_wts / total_sel_wts)
-                og_nook = member_allocs[member]
+                
                 if selected_nook == og_nook:
                     continue
 
@@ -221,20 +230,21 @@ class NooksAllocation:
         suggested_allocs = {}
         for member in members_no_swipes:
             heterophily_nook = []
+            interacted_nook = []
+            member_pos = self.member_dict[member]
             for nook in range(num_nooks):
                 if member in nooks[nook]["banned"]:
                     heterophily_nook.append(0)  # this value will be ignored
                     continue
                 same_nook_members = self.member_vectors[nooks_allocs[nook] == 1]
                 member_diff = np.linalg.norm(
-                    self.member_vectors[member] - same_nook_members
+                    self.member_vectors[member_pos] - same_nook_members
                 )
-                priority = self.member_heterophily_priority[same_nook_members] + self.member_heterophily_priority[member]
-                heterophily_nook.append(EPSILON + (priority * member_diff ).sum(dim=1))
-            heterophily = np.array(heterophily_nook)
-            interacted_by = (nooks_allocs[nook]) * (
-                    self.temporal_interacted[self.member_dict[member]] > 0
-                )            
+                priority = self.member_heterophily_priority[nooks_allocs[nook] == 1] + (self.member_heterophily_priority[member_pos].reshape(1, -1))
+                heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
+                interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[member_pos] > 0)).sum())
+            interacted_by = np.array(interacted_nook)          
+            heterophily = np.array(heterophily_nook)           
             wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
                 1 + (self.alpha * heterophily)
             )
