@@ -99,6 +99,7 @@ scopes = [
     "users:read",
     "files:write",
     "files:read",
+    "channels:join"
 ]
 user_scopes = [
     "channels:read",
@@ -349,6 +350,8 @@ def handle_onboard_members(ack, body, client, view, logger):
     all_registered_users = {row["user_id"] for row in list(db.member_vectors.find({"team_id": body["team"]["id"]}))}
 
     for conversation in conversations_all:
+        logging.info("mvkenw")
+        slack_app.client.conversations_join(token=token, channel=conversation)
         for member in slack_app.client.conversations_members(token=token, channel=conversation)["members"]:
             if member in dont_include or member in all_registered_users:
                 continue

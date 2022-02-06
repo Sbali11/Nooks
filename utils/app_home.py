@@ -68,15 +68,6 @@ class NooksHome:
                     },
                 ],
             },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com",
-                    },
-                ],
-            },
         ]
 
     def get_interaction_blocks(self, client, user_id, team_id, token):
