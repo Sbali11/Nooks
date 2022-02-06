@@ -109,6 +109,9 @@ user_scopes = [
     "pins:write",
     "im:write",
     "mpim:write",
+    "groups:read",
+    "mpim:read",
+    "im:read",
     "users:read",
 ]
 
@@ -160,7 +163,14 @@ def handle_new_story(ack, body, client, view, logger):
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
-    allow_two_members = len(input_data["allow_two_members"]["checkboxes_input-action"]["selected_options"]) == 1
+    allow_two_members = (
+        len(
+            input_data["allow_two_members"]["checkboxes_input-action"][
+                "selected_options"
+            ]
+        )
+        == 1
+    )
     banned = input_data["banned"]["user_select"]["selected_users"]
 
     new_story_info = {
@@ -263,7 +273,6 @@ def create_story_modal(ack, body, logger):
                         "emoji": True,
                     },
                 },
-
                 {
                     "block_id": "banned",
                     "type": "section",
@@ -278,7 +287,8 @@ def create_story_modal(ack, body, logger):
                             "text": "Select users you don't want included in this nook",
                             "emoji": True,
                         },
-                        "type": "multi_users_select",
+                        "filter": {"include": ["im"], "exclude_bot_users": True},
+                        "type": "multi_conversations_select",
                     },
                 },
                 {
@@ -315,14 +325,131 @@ def handle_some_action(ack, body, logger):
     logger.info(body)
 
 
+@slack_app.action("channel_selected")
+def handle_some_action(ack, body, logger):
+    ack()
+    logger.info(body)
+
+
+@slack_app.view("onboard_members")
+def handle_onboard_members(ack, body, client, view, logger):
+    input_data = view["state"]["values"]
+    ack()
+    conversations_all = input_data["members"]["channel_selected"]["selected_conversations"]
+    dont_include = set(input_data["dont_include"]["channel_selected"]["selected_conversations"])
+    token = get_token(body["team"]["id"])
+    all_members = set([])
+    for conversation in conversations_all:
+        for member in slack_app.client.conversations_members(token=token, channel=conversation)["members"]:
+            if member in dont_include:
+                continue
+            all_members.add(member)
+    for member in all_members:
+        try:
+            slack_app.client.chat_postMessage(
+                token=token,
+                link_names=True,
+                channel=member,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                        },
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "action_id": "onboard_info",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Tell me more!",
+                                    "emoji": True,
+                                },
+                                "style": "primary",
+                                "value": "join",
+                            }
+                        ],
+                    },
+                ],
+            )
+        except Exception as e:
+            logging.info(e)
+
+
+
+
+@slack_app.action("onboard_from_channel")
+def handle_some_action(ack, body, logger):
+    ack()
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "onboard_members",
+            "title": {"type": "plain_text", "text": "Onboard Members"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {
+                "type": "plain_text",
+                "text": "Onboard",
+                "emoji": True,
+            },
+            "blocks": [
+                {
+                    "block_id": "members",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Select channels/members you want to onboard!*",
+                    },
+                    "accessory": {
+
+                                "type": "multi_conversations_select",
+                                "placeholder": {
+                                    "type": "plain_text",
+                                    "text": "Select a channel",
+                                    "emoji": True,
+                                },
+                                "filter": {"exclude_bot_users": True},
+                                "action_id": "channel_selected",
+                            }
+                },
+                {
+                    "block_id": "dont_include",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
+                    },
+                    "accessory": {
+
+                                "type": "multi_conversations_select",
+                                "placeholder": {
+                                    "type": "plain_text",
+                                    "text": "Select a channel",
+                                    "emoji": True,
+                                },
+                                "filter": {
+                                    "include": ["im"],
+                                    "exclude_bot_users": True},
+                                "action_id": "channel_selected",
+                            }
+                }
+            ],
+        },
+    )
+
+
 @slack_app.action("story_interested")
 def nook_int(ack, body, logger):
     ack()
 
     user_id = body["user"]["id"]
     cur_pos = int(body["actions"][0]["value"])
-    logging.info("NFJKENWRKJ")
-    logging.info(nooks_home.suggested_stories)
     try:
         user_story = nooks_home.suggested_stories[body["team"]["id"]][cur_pos]
         db.user_swipes.update_one(
@@ -396,9 +523,6 @@ def handle_send_dm(ack, body, client, view, logger):
     input_data = view["state"]["values"]
     to_user = view["private_metadata"]
     message = input_data["message"]["plain_text_input-action"]["value"]
-    logging.info("NFJKRWENF")
-    logging.info(to_user)
-
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),
         link_names=True,
@@ -852,7 +976,8 @@ def signup_modal_step_3(ack, body, view, logger):
                             "text": "Select any users you *don't* want included in conversations with you",
                             "emoji": True,
                         },
-                        "type": "multi_users_select",
+                        "filter": {"include": ["im"], "exclude_bot_users": True},
+                        "type": "multi_conversations_select",
                     },
                 },
             ],
@@ -1048,7 +1173,8 @@ def signup_modal_step_1(ack, body, view, logger):
                 "text": "Select the top 5 people you interact with",
                 "emoji": True,
             },
-            "type": "multi_users_select",
+            "filter": {"include": ["im"], "exclude_bot_users": True},
+            "type": "multi_conversations_select",
         },
     }
     question_blocks.append(top_interacted_block)
@@ -1196,9 +1322,6 @@ def show_nooks_info(ack, body, logger):
 @slack_app.command("/onboard")
 def onboarding_modal(ack, body, logger):
     ack()
-    logging.info("FNEQEF")
-    logging.info(body)
-
     for member in slack_app.client.users_list(token=get_token(body["team_id"]))[
         "members"
     ]:

@@ -25,6 +25,51 @@ class NooksHome:
     def get_context_block(self):
         return [
             {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": ":gear: |   *SETTINGS*  | :gear: ",
+                },
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "onboard_from_channel",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Onboard Members",
+                            "emoji": True,
+                        },
+                        "style": "primary",
+                        "value": "onboard",
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "send_feedback",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Give Feedback",
+                            "emoji": True,
+                        },
+                        "value": "feedback",
+                        "url": "https://google.com",
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "go_to_website",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Visit Website",
+                            "emoji": True,
+                        },
+                        "value": "website",
+                        "url": "https://nooks.vercel.app/",
+                    },
+                ],
+            },
+            {
                 "type": "context",
                 "elements": [
                     {
@@ -32,7 +77,7 @@ class NooksHome:
                         "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users! Email us your thoughts at shreyabali.cs@gmail.com",
                     },
                 ],
-            }
+            },
         ]
 
     def get_interaction_blocks(self, client, user_id, team_id, token):
@@ -308,7 +353,7 @@ class NooksHome:
                         {"type": "divider"},
                         {"type": "divider"},
                     ]
-                    + interaction_block_items 
+                    + interaction_block_items
                     + context_block_items
                 ),
             },
@@ -511,6 +556,7 @@ class NooksHome:
                     {"type": "divider"},
                     {"type": "divider"},
                 ]
-                + interaction_block_items + context_block_items
+                + interaction_block_items
+                + context_block_items,
             },
         )

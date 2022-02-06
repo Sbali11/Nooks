@@ -202,7 +202,7 @@ class NooksAllocation:
                 nooks_mem_int_cnt[og_nook] -= self.temporal_interacted[member] >= 1
         allocations = {}
         for nook_id in range(len(nooks_allocs)):
-            if nooks_mem_cnt[nook_id] <= 3 and not nooks[og_nook]["allow_two_members"]:
+            if nooks_mem_cnt[nook_id] <= 3 and not nooks[nook_id]["allow_two_members"]:
                 continue
             allocated_mems = nooks_allocs[nook_id].nonzero()[0].tolist()
             allocated_mems = list(
