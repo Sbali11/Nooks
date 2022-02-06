@@ -81,6 +81,11 @@ def get_token(team_id):
     return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 
+def get_bot_id(team_id):
+    # return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
+    return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_user_id"]
+
+
 installation_store = InstallationDB()
 scopes = [
     "app_mentions:read",
@@ -99,14 +104,14 @@ scopes = [
     "users:read",
     "files:write",
     "files:read",
-    "channels:join"
+    "channels:join",
 ]
 user_scopes = [
     "channels:read",
     "channels:write",
+    "groups:write",
     "chat:write",
     "files:read",
-    "groups:write",
     "pins:write",
     "im:write",
     "mpim:write",
@@ -343,16 +348,25 @@ def handle_onboard_members(ack, body, client, view, logger):
         message="Yay! I'm now sending the onboarding invites to members",
         title="Onboard Members",
     )
-    conversations_all = input_data["members"]["channel_selected"]["selected_conversations"]
-    dont_include = set(input_data["dont_include"]["channel_selected"]["selected_conversations"])
+
+    conversations_all = input_data["members"]["channel_selected"][
+        "selected_options"
+    ]
+    conversations_ids = [conv["value"] for conv in conversations_all]
+    dont_include = set(
+        input_data["dont_include"]["channel_selected"]["selected_conversations"]
+    )
     token = get_token(body["team"]["id"])
     all_members = set([])
-    all_registered_users = {row["user_id"] for row in list(db.member_vectors.find({"team_id": body["team"]["id"]}))}
+    all_registered_users = {
+        row["user_id"]
+        for row in list(db.member_vectors.find({"team_id": body["team"]["id"]}))
+    }
 
-    for conversation in conversations_all:
-        logging.info("mvkenw")
-        slack_app.client.conversations_join(token=token, channel=conversation)
-        for member in slack_app.client.conversations_members(token=token, channel=conversation)["members"]:
+    for conversation in conversations_ids:
+        for member in slack_app.client.conversations_members(
+            token=token, channel=conversation
+        )["members"]:
             if member in dont_include or member in all_registered_users:
                 continue
             all_members.add(member)
@@ -392,13 +406,25 @@ def handle_onboard_members(ack, body, client, view, logger):
             logging.info(e)
 
 
-
-
 @slack_app.action("onboard_from_channel")
 def handle_onboard_from_channel(ack, body, logger):
     ack()
+    token = get_token(body["team"]["id"])
+    bot_id = get_bot_id(body["team"]["id"])
+    logging.info(bot_id)
+    channel_options = [
+        {
+            "text": {
+                "type": "plain_text",
+                "text": channel["name"],
+            },
+            "value": channel["id"],
+        }
+        for channel in slack_app.client.users_conversations(token=token, types="public_channel,private_channel")["channels"]
+    ]
+    
     slack_app.client.views_open(
-        token=get_token(body["team"]["id"]),
+        token=token,
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
@@ -416,19 +442,17 @@ def handle_onboard_from_channel(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*Select channels/members you want to onboard!*",
+                        "text": "*Select channels whose members you want to onboard!*\n If you can't see a channel, make sure the bot is a part of it first",
                     },
                     "accessory": {
-
-                                "type": "multi_conversations_select",
-                                "placeholder": {
-                                    "type": "plain_text",
-                                    "text": "Select a channel",
-                                    "emoji": True,
-                                },
-                                "filter": {"exclude_bot_users": True},
-                                "action_id": "channel_selected",
-                            }
+                        "action_id": "channel_selected",
+                        "type": "multi_static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select channels",
+                        },
+                        "options": channel_options,
+                    },
                 },
                 {
                     "block_id": "dont_include",
@@ -438,36 +462,32 @@ def handle_onboard_from_channel(ack, body, logger):
                         "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
                     },
                     "accessory": {
-
-                                "type": "multi_conversations_select",
-                                "placeholder": {
-                                    "type": "plain_text",
-                                    "text": "Select a channel",
-                                    "emoji": True,
-                                },
-                                "filter": {
-                                    "include": ["im"],
-                                    "exclude_bot_users": True},
-                                "action_id": "channel_selected",
-                            }
-                }
+                        "type": "multi_conversations_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select a channel",
+                            "emoji": True,
+                        },
+                        "filter": {"include": ["im"], "exclude_bot_users": True},
+                        "action_id": "channel_selected",
+                    },
+                },
             ],
         },
     )
+
 
 @slack_app.view("save_feedback")
 def handle_save_feedback(ack, body, client, view, logger):
 
     input_data = view["state"]["values"]
-    #logging.info(input_data)
+    # logging.info(input_data)
     feedback = input_data["feedback"]["plain_text_input-action"]["value"]
     feedback = {
         "team_id": body["team"]["id"],
         "user_id": body["user"]["id"],
-        "feedback": feedback
-
-
-    }    
+        "feedback": feedback,
+    }
     success_modal_ack(
         ack,
         body,
@@ -477,6 +497,7 @@ def handle_save_feedback(ack, body, client, view, logger):
         title="Send Feedback",
     )
     db.feedback.insert_one(feedback)
+
 
 @slack_app.action("send_feedback")
 def handle_some_action(ack, body, logger):
@@ -508,10 +529,10 @@ def handle_some_action(ack, body, logger):
                         "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users!",
                         "emoji": True,
                     },
-                },],
+                },
+            ],
         },
     )
-
 
 
 @slack_app.action("story_interested")
