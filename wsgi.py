@@ -1,4 +1,5 @@
-from utils import NooksHome, NooksAllocation, get_member_vector
+from utils.app_home import NooksHome
+from utils.nooks_alloc import NooksAllocation
 from slack_bot import main, db
 
 nooks_home = NooksHome(db=db)

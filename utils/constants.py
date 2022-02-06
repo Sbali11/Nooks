@@ -1,3 +1,5 @@
+EPSILON = 0.001
+
 SAME_HOMOPHILY_FACTORS = {
     "Gender"
 }
@@ -25,6 +27,22 @@ HOMOPHILY_FACTORS = {
         ">10 yrs": 3,
     },
 }
+
+def get_fibonacci(n):
+    # calculate fibonacci series 
+    i = 0
+    j = 1
+    fib = []
+    fib.append(j)
+    for i in range(n-1):
+        new_i = j
+        j = i + j
+        i = new_i 
+        fib.append(j)
+    return fib
+
+FIBONACCI = get_fibonacci(len(HOMOPHILY_FACTORS))
+
 
 
 def get_homophily_question_options(factor):

@@ -8,7 +8,9 @@ import collections
 import traceback
 
 from datetime import datetime, timezone
-from utils import NooksHome, NooksAllocation, get_member_vector
+from utils.app_home import NooksHome
+from utils.nooks_alloc import NooksAllocation
+
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -17,7 +19,7 @@ from bson import ObjectId
 import numpy as np
 from flask_apscheduler import APScheduler
 import ast
-from constants import *
+from utils.constants import *
 
 # TODO remove chat history from permissions
 
@@ -131,6 +133,12 @@ slack_app = App(
     installation_store=installation_store,
 )
 
+def get_member_vector(member_info):
+    member_vector = [0] * (len(HOMOPHILY_FACTORS))
+    for i, homophily_factor in enumerate(sorted(HOMOPHILY_FACTORS)):
+        member_vector[i] = HOMOPHILY_FACTORS[homophily_factor][member_info[homophily_factor]]
+    return member_vector
+
 
 @slack_app.middleware  # or app.use(log_request)
 def log_request(logger, body, next):
@@ -152,7 +160,7 @@ def handle_new_story(ack, body, client, view, logger):
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
-    banned = input_data["banned"]["text1234"]["selected_users"]
+    banned = input_data["banned"]["user_select"]["selected_users"]
     new_story_info = {
         "team_id": body["team"]["id"],
         "title": title,
@@ -260,7 +268,7 @@ def create_story_modal(ack, body, logger):
                         "text": "Are there any members you don't want to be a part of this conversation?",
                     },
                     "accessory": {
-                        "action_id": "text1234",
+                        "action_id": "user_select",
                         "placeholder": {
                             "type": "plain_text",
                             "text": "Select users you don't want included in this nook",
@@ -274,7 +282,7 @@ def create_story_modal(ack, body, logger):
     )
 
 
-@slack_app.action("text1234")
+@slack_app.action("user_select")
 def handle_some_action(ack, body, logger):
     ack()
     logger.info(body)
@@ -650,6 +658,7 @@ def handle_signup(ack, body, client, view, logger):
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     user = body["user"]["id"]
     new_member_info = {}
+    
     for key in input_data:
         if "plain_text_input-action" in input_data[key]:
             new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
@@ -657,6 +666,12 @@ def handle_signup(ack, body, client, view, logger):
             new_member_info[key] = input_data[key]["select_input-action"][
                 "selected_option"
             ]["value"]
+        elif "user_select" in input_data[key]:
+            new_member_info[key] = input_data[key]["user_select"]["selected_users"]
+        else:
+            logging.info("WFIOEWFN")
+            logging.info(input_data[key])
+
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
     new_member_info["team_id"] = body["team"]["id"]
@@ -809,7 +824,7 @@ def signup_modal_step_3(ack, body, view, logger):
                         "text": "Are there any members you *don't* want to interact with?",
                     },
                     "accessory": {
-                        "action_id": "text1234",
+                        "action_id": "user_select",
                         "placeholder": {
                             "type": "plain_text",
                             "text": "Select any users you *don't* want included in conversations with you",
@@ -976,22 +991,8 @@ def signup_modal_step_1(ack, body, view, logger):
         return
 
     all_questions = SIGNUP_QUESTIONS["Step 1"]
-    age_block = [
-        {
-            "type": "input",
-            "block_id": "Age",
-            "label": {"type": "plain_text", "text": "Age"},
-            "element": {
-                "type": "plain_text_input",
-                "action_id": "plain_text_input-action",
-                "placeholder": {
-                    "type": "plain_text",
-                    "text": "Enter your Age",
-                },
-            },
-        }
-    ]
-    question_blocks = age_block + [
+
+    question_blocks =[
         {
             "block_id": question,
             "type": "section",
@@ -1010,6 +1011,26 @@ def signup_modal_step_1(ack, body, view, logger):
         }
         for question in all_questions
     ]
+    # TODO change to only channel members
+    top_interacted_block = {
+        "block_id": "top_members",
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": "Who are the top 5 people you talk the most with?",
+        },
+        "accessory": {
+            "action_id": "user_select",
+            "placeholder": {
+                "type": "plain_text",
+                "text": "Select the top 5 people you interact with",
+                "emoji": True,
+            },
+            "type": "multi_users_select",
+        },
+    }
+    question_blocks.append(top_interacted_block)
+
     # TODO check if member is already in database?
     ack(
         response_action="update",
@@ -1391,20 +1412,22 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
             slack_app.client.conversations_setTopic(
                 token=token, channel=ep_channel, topic=title
             )
-            
+
             initial_thoughts_thread = slack_app.client.chat_postMessage(
                 token=token,
                 link_names=True,
                 channel=ep_channel,
-                text='Super-excited to hear all of your thoughts on \n *'
+                text="Super-excited to hear all of your thoughts on \n *"
                 + title
-                + '*\n'
+                + "*\n"
                 + ">"
-                + desc + "\n" +
-                'Remember this chat will be automatically archived at 9AM tomorrow :clock1: ',
+                + desc
+                + "\n"
+                + "Remember this chat will be automatically archived at 9AM tomorrow :clock1: ",
             )
-            slack_app.client.pins_add(token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"])
-
+            slack_app.client.pins_add(
+                token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"]
+            )
 
             slack_app.client.conversations_invite(
                 token=token,
