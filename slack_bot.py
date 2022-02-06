@@ -334,14 +334,23 @@ def handle_some_action(ack, body, logger):
 @slack_app.view("onboard_members")
 def handle_onboard_members(ack, body, client, view, logger):
     input_data = view["state"]["values"]
-    ack()
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Yay! I'm now sending the onboarding invites to members",
+        title="Onboard Members",
+    )
     conversations_all = input_data["members"]["channel_selected"]["selected_conversations"]
     dont_include = set(input_data["dont_include"]["channel_selected"]["selected_conversations"])
     token = get_token(body["team"]["id"])
     all_members = set([])
+    all_registered_users = {row["user_id"] for row in list(db.member_vectors.find({"team_id": body["team"]["id"]}))}
+
     for conversation in conversations_all:
         for member in slack_app.client.conversations_members(token=token, channel=conversation)["members"]:
-            if member in dont_include:
+            if member in dont_include or member in all_registered_users:
                 continue
             all_members.add(member)
     for member in all_members:
@@ -383,7 +392,7 @@ def handle_onboard_members(ack, body, client, view, logger):
 
 
 @slack_app.action("onboard_from_channel")
-def handle_some_action(ack, body, logger):
+def handle_onboard_from_channel(ack, body, logger):
     ack()
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
@@ -442,6 +451,64 @@ def handle_some_action(ack, body, logger):
             ],
         },
     )
+
+@slack_app.view("save_feedback")
+def handle_save_feedback(ack, body, client, view, logger):
+
+    input_data = view["state"]["values"]
+    #logging.info(input_data)
+    feedback = input_data["feedback"]["plain_text_input-action"]["value"]
+    feedback = {
+        "team_id": body["team"]["id"],
+        "user_id": body["user"]["id"],
+        "feedback": feedback
+
+
+    }    
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Thank you! I've saved your feedback",
+        title="Send Feedback",
+    )
+    db.feedback.insert_one(feedback)
+
+@slack_app.action("send_feedback")
+def handle_some_action(ack, body, logger):
+    ack()
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "save_feedback",
+            "title": {"type": "plain_text", "text": "Send Feedback"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {
+                "type": "plain_text",
+                "text": "Send Feedback",
+                "emoji": True,
+            },
+            "blocks": [
+                {
+                    "block_id": "feedback",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                        "multiline": True,
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Nooks is a part of an ongoing research project and we would love to hear feedback from our initial users!",
+                        "emoji": True,
+                    },
+                },],
+        },
+    )
+
 
 
 @slack_app.action("story_interested")

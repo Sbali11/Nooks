@@ -50,11 +50,10 @@ class NooksHome:
                         "action_id": "send_feedback",
                         "text": {
                             "type": "plain_text",
-                            "text": "Give Feedback",
+                            "text": "Send Feedback",
                             "emoji": True,
                         },
                         "value": "feedback",
-                        "url": "https://google.com",
                     },
                     {
                         "type": "button",
