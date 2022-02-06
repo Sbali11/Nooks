@@ -74,12 +74,26 @@ class NooksAllocation:
 
         self.member_dict = {}
         self.member_ids = {}
-        
-
+        self.members_not_together = np.zeros((len(all_members), len(all_members)))
         for i, member_row in enumerate(all_members):
             member = member_row["user_id"]
             self.member_dict[member] = i
             self.member_ids[i] = member
+        for blacklist_row in all_members:
+            member_pos = self.member_dict[blacklist_row["user_id"]]
+            if "blacklisted_from" in blacklist_row:
+                for b_from in blacklist_row["blacklisted_from"]:
+                    if b_from not in self.member_dict:
+                        continue
+                    self.members_not_together[member_pos][self.member_dict[b_from]] = 1
+                    self.members_not_together[self.member_dict[b_from]][member_pos] = 1
+            if "black_list" in blacklist_row:
+                for b in blacklist_row["black_list"]:
+                    if b not in self.member_dict:
+                        continue
+                    self.members_not_together[member_pos][self.member_dict[b]] = 1
+                    self.members_not_together[self.member_dict[b]][member_pos] = 1
+
         self.total_members = len(self.member_vectors)
         self.member_heterophily_priority = np.zeros((self.total_members, len(self.homophily_factors)))
         for member_row in all_members:
@@ -142,6 +156,16 @@ class NooksAllocation:
                 members_no_swipes.add(self.member_ids[member])
                 continue
             swipes = nook_swipes[member]
+            selected_nook = -1
+            for nook in np.random.permutation(num_nooks):
+                if not swipes[nook] or self.members_not_together[nooks_allocs[nook]==1].sum(axis=0)[member]:
+                    continue
+                selected_nook = nook
+                break
+            if selected_nook==-1:
+                continue
+
+
             selected_nook = np.random.choice(num_nooks, p=swipes / np.sum(swipes))
             nooks_allocs[selected_nook][member] = 1
             member_allocs[member] = selected_nook
@@ -165,7 +189,7 @@ class NooksAllocation:
 
                 for nook in range(num_nooks):
                     if not nook_swipes[member][nook]:
-                        heterophily_nook.append(1)  # this value will be ignored
+                        heterophily_nook.append(0)  # this value will be ignored
                         continue
                     same_nook_members = self.member_vectors[nooks_allocs[nook] == 1]
                     member_diff = np.linalg.norm(
@@ -182,10 +206,16 @@ class NooksAllocation:
                 )
 
                 sel_wts = wts * nook_swipes[member]
+                for nook in range(num_nooks):
+                    if self.members_not_together[nooks_allocs[nook]==1].sum(axis=0)[member]:
+                        sel_wts[nook] = 0
 
                 total_sel_wts = np.sum(sel_wts)
+                if total_sel_wts == 0:
+                    continue
+
                 selected_nook = np.argmax(sel_wts / total_sel_wts)
-                
+
                 if selected_nook == og_nook:
                     continue
 
@@ -249,6 +279,9 @@ class NooksAllocation:
             wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
                 1 + (self.alpha * heterophily)
             )
+            for nook in range(num_nooks):
+                if self.members_not_together[nooks_allocs[nook]==1].sum(axis=0)[member_pos]:
+                    wts[nook] = 0
             # banned from all nooks
             if not np.sum(wts):
                 continue

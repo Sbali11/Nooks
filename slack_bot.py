@@ -8,6 +8,7 @@ import collections
 import traceback
 
 from datetime import datetime, timezone
+
 from utils.app_home import NooksHome
 from utils.nooks_alloc import NooksAllocation
 
@@ -169,15 +170,16 @@ def handle_new_story(ack, body, client, view, logger):
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
+    logging.info(input_data["allow_two_members"])
     allow_two_members = (
-        len(
-            input_data["allow_two_members"]["checkboxes_input-action"][
-                "selected_options"
-            ]
-        )
-        == 1
+        
+            input_data["allow_two_members"]["radio_buttons-action"][
+                "selected_option"
+            ]["value"]
+        
+        == "allow_two_member"
     )
-    banned = input_data["banned"]["user_select"]["selected_users"]
+    banned = input_data["banned"]["user_select"]["selected_conversations"]
 
     new_story_info = {
         "team_id": body["team"]["id"],
@@ -301,13 +303,30 @@ def create_story_modal(ack, body, logger):
                     "type": "input",
                     "block_id": "allow_two_members",
                     "element": {
-                        "type": "checkboxes",
-                        "action_id": "checkboxes_input-action",
+                        "type": "radio_buttons",
+                        "action_id": "radio_buttons-action",
+                        "initial_option":
+                                                    {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Don't create nook if there is only one additional member",
+                                    "emoji": True,
+                                },
+                                "value": "dont_allow_two_member",
+                            },
                         "options": [
                             {
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "Allow nook to be created with only 1 additional member.",
+                                    "text": "Don't create nook if there is only one additional member",
+                                    "emoji": True,
+                                },
+                                "value": "dont_allow_two_member",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Allow nook to be created with only one additional additional member.",
                                     "emoji": True,
                                 },
                                 "value": "allow_two_member",
@@ -349,9 +368,7 @@ def handle_onboard_members(ack, body, client, view, logger):
         title="Onboard Members",
     )
 
-    conversations_all = input_data["members"]["channel_selected"][
-        "selected_options"
-    ]
+    conversations_all = input_data["members"]["channel_selected"]["selected_options"]
     conversations_ids = [conv["value"] for conv in conversations_all]
     dont_include = set(
         input_data["dont_include"]["channel_selected"]["selected_conversations"]
@@ -420,9 +437,11 @@ def handle_onboard_from_channel(ack, body, logger):
             },
             "value": channel["id"],
         }
-        for channel in slack_app.client.users_conversations(token=token, types="public_channel,private_channel")["channels"]
+        for channel in slack_app.client.users_conversations(
+            token=token, types="public_channel,private_channel"
+        )["channels"]
     ]
-    
+
     slack_app.client.views_open(
         token=token,
         trigger_id=body["trigger_id"],
@@ -442,7 +461,7 @@ def handle_onboard_from_channel(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*Select channels whose members you want to onboard!*\n If you can't see a channel, make sure the bot is a part of it first",
+                        "text": "*Select channels whose members you want to onboard!*\n To add more channels to this list, just add me to the channel",
                     },
                     "accessory": {
                         "action_id": "channel_selected",
@@ -895,7 +914,7 @@ def handle_signup(ack, body, client, view, logger):
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     user = body["user"]["id"]
     new_member_info = {}
-
+    logging.info(input_data)
     for key in input_data:
         if "plain_text_input-action" in input_data[key]:
             new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
@@ -904,7 +923,9 @@ def handle_signup(ack, body, client, view, logger):
                 "selected_option"
             ]["value"]
         elif "user_select" in input_data[key]:
-            new_member_info[key] = input_data[key]["user_select"]["selected_users"]
+            new_member_info[key] = input_data[key]["user_select"][
+                "selected_conversations"
+            ]
         else:
             logging.info("WFIOEWFN")
             logging.info(input_data[key])
@@ -913,6 +934,41 @@ def handle_signup(ack, body, client, view, logger):
     new_member_info["member_vector"] = get_member_vector(new_member_info)
     new_member_info["team_id"] = body["team"]["id"]
     db.member_vectors.insert_one(new_member_info)
+    db.blacklisted.update_one(
+        {"user_id": user, "team_id": body["team"]["id"]},
+        {
+            "$set": {
+                "user_id": user,
+                "team_id": body["team"]["id"],
+                "black_list": new_member_info["black_list"],
+            }
+        },
+        upsert=True,
+    )
+
+    for member in new_member_info["black_list"]:
+        blacklist_row = db.blacklisted.find_one(
+            {"user_id": member, "team_id": body["team"]["id"]}
+        )
+        if blacklist_row and "blacklisted_from" in blacklist_row:
+            db.blacklisted.update_one(
+                {"user_id": member, "team_id": body["team"]["id"]},
+                {"$push": {"blacklisted_from": user}},
+            )
+        else:
+            db.blacklisted.update_one(
+                {"user_id": member, "team_id": body["team"]["id"]},
+                {
+                    "$set": {
+                        "user_id": member,
+                        "team_id": body["team"]["id"],
+                        "blacklisted_from": [user],
+                        "black_list": [],
+                    }
+                },
+                upsert=True,
+            )
+
     nooks_home.update_home_tab(
         slack_app.client,
         {"user": user, "view": {"team_id": body["team"]["id"]}},
@@ -1054,7 +1110,7 @@ def signup_modal_step_3(ack, body, view, logger):
             "close": {"type": "plain_text", "text": "Close"},
             "blocks": [
                 {
-                    "block_id": "banned",
+                    "block_id": "black_list",
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
@@ -1265,6 +1321,7 @@ def signup_modal_step_1(ack, body, view, logger):
                 "emoji": True,
             },
             "filter": {"include": ["im"], "exclude_bot_users": True},
+            "max_selected_items": 5,
             "type": "multi_conversations_select",
         },
     }
