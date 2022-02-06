@@ -5,7 +5,7 @@ from multiprocessing import context
 import numpy as np
 import random
 from constants import *
-from utils.constants import FIBONACCI
+from utils.constants import *
 
 
 class NooksAllocation:
@@ -220,26 +220,24 @@ class NooksAllocation:
         suggested_allocs_list = collections.defaultdict(list)
         suggested_allocs = {}
         for member in members_no_swipes:
-            wts = []
+            heterophily_nook = []
             for nook in range(num_nooks):
                 if member in nooks[nook]["banned"]:
-                    wts.append(0)
+                    heterophily_nook.append(0)  # this value will be ignored
                     continue
                 same_nook_members = self.member_vectors[nooks_allocs[nook] == 1]
-                diff = np.linalg.norm(
-                    self.member_vectors[self.member_dict[member]] - same_nook_members
+                member_diff = np.linalg.norm(
+                    self.member_vectors[member] - same_nook_members
                 )
-                # TODO confirm this
-                heterophily = EPSILON + len(diff[diff > 5])
-                interacted_by = (nooks_allocs[nook]) * (
+                priority = self.member_heterophily_priority[same_nook_members] + self.member_heterophily_priority[member]
+                heterophily_nook.append(EPSILON + (priority * member_diff ).sum(dim=1))
+            heterophily = np.array(heterophily_nook)
+            interacted_by = (nooks_allocs[nook]) * (
                     self.temporal_interacted[self.member_dict[member]] > 0
-                )
-                wts.append(
-                    ((EPSILON + np.sum(interacted_by)) / len(same_nook_members))
-                    * (1 + (self.alpha * heterophily))
-                )
-            # total_wts = np.sum(wts)
-            wts = np.array(wts)
+                )            
+            wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
+                1 + (self.alpha * heterophily)
+            )
             # banned from all nooks
             if not np.sum(wts):
                 continue
