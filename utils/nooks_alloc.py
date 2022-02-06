@@ -159,11 +159,10 @@ class NooksAllocation:
                 interacted_nook = []
                 og_nook = member_allocs[member]
                 if nooks_mem_cnt[og_nook] <= 2:
-                    # can't have only 1 member in the nook
                     continue
                 elif nooks_mem_cnt[og_nook] == 3 and not nooks[og_nook]["allow_two_members"]:
                     continue
-                
+
                 for nook in range(num_nooks):
                     if not nook_swipes[member][nook]:
                         heterophily_nook.append(1)  # this value will be ignored
@@ -203,6 +202,8 @@ class NooksAllocation:
                 nooks_mem_int_cnt[og_nook] -= self.temporal_interacted[member] >= 1
         allocations = {}
         for nook_id in range(len(nooks_allocs)):
+            if nooks_mem_cnt[nook_id] <= 3 and not nooks[og_nook]["allow_two_members"]:
+                continue
             allocated_mems = nooks_allocs[nook_id].nonzero()[0].tolist()
             allocated_mems = list(
                 set(

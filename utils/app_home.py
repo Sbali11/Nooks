@@ -323,6 +323,7 @@ class NooksHome:
             view={
                 "type": "home",
                 "blocks": [
+                    {"type": "header", "text": {"type": "plain_text", "text": "Nooks"}},
                     {
                         "type": "section",
                         "text": {
