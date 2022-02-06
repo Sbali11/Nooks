@@ -2,7 +2,6 @@ from audioop import reverse
 import collections
 import logging
 from multiprocessing import context
-from tkinter import E
 import numpy as np
 import random
 from constants import *
