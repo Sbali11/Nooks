@@ -41,10 +41,11 @@ class NooksAllocation:
         homophily_factors = self.homophily_factors
 
         member_vector = member["member_vector"]
+        print(top_int_members)
         for interacted_member in top_int_members:
             if interacted_member not in self.member_dict:
                 continue
-            interacted_member_vector = self.member_vectors[interacted_member]
+            interacted_member_vector = self.member_vectors[self.member_dict[interacted_member]]
             for i, homophily_factor in enumerate(homophily_factors):
                 if homophily_factor in SAME_HOMOPHILY_FACTORS:
                     weight_factor[homophily_factor] += not (

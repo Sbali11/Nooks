@@ -274,6 +274,11 @@ def create_story_modal(ack, body, logger):
                         "type": "plain_text_input",
                         "multiline": True,
                         "action_id": "plain_text_input-action",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Use this space to add in some initial thoughts, related links or a detailed description of the nook topic!",
+                            "emoji": True,
+                        },
                     },
                     "label": {
                         "type": "plain_text",
@@ -484,7 +489,7 @@ def handle_onboard_from_channel(ack, body, logger):
                         "type": "multi_conversations_select",
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "Select a channel",
+                            "text": "Select members not to include in onboarding",
                             "emoji": True,
                         },
                         "filter": {"include": ["im"], "exclude_bot_users": True},
@@ -1691,6 +1696,9 @@ def create_new_channels(new_stories, allocations, suggested_allocs):
         title = new_story["title"]
         creator = new_story["creator"]
         desc = new_story["description"]
+        if new_story["_id"] not in allocations:
+            continue
+
         try:
 
             channel_name = "nook-" + date + "-" + str(i)
