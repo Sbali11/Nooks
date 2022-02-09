@@ -62,10 +62,12 @@ To enable the public distribution of the app, go to Manage Distribution in the S
 
 #### Install to workspace
 If you're using the publicly distributed app(the default option for the github repository), just head over to the {{host}}/slack/install and click on the install button. If you've updated the code to only run on a single workspace, install to the workspace by heading over to the app settings page
+-----
 
 
 ### Create a MongoDB Cluster
 Follow the steps listed here https://www.mongodb.com/basics/create-database
+-----
 
 
 ### Set up environment locally
@@ -94,7 +96,7 @@ SLACK_SIGNING_SECRET=
 [Bot token is ignored when the app is publicly distributed]
 SLACK_BOT_TOKEN= 
 
-[Client Secret and Client Id are used publicly distributed slack apps]
+[Client Secret and Client Id are used in publicly distributed slack apps]
 SLACK_CLIENT_SECRET=
 SLACK_CLIENT_ID=
 
