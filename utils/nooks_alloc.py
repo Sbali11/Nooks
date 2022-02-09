@@ -182,6 +182,8 @@ class NooksAllocation:
                 swipes = nook_swipes[member]
                 heterophily_nook = []
                 interacted_nook = []
+                if member not in member_allocs:
+                    continue
                 og_nook = member_allocs[member]
                 if nooks_mem_cnt[og_nook] <= 2:
                     continue

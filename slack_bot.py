@@ -364,6 +364,8 @@ def handle_some_action(ack, body, logger):
 @slack_app.view("onboard_members")
 def handle_onboard_members(ack, body, client, view, logger):
     input_data = view["state"]["values"]
+    input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
+
     success_modal_ack(
         ack,
         body,
@@ -375,8 +377,11 @@ def handle_onboard_members(ack, body, client, view, logger):
 
     conversations_all = input_data["members"]["channel_selected"]["selected_options"]
     conversations_ids = [conv["value"] for conv in conversations_all]
+    logging.info("ELKEQKMRF")
+    logging.info( input_data["dont_include"]["channel_selected"]["selected_options"])
+    dont_include_list = input_data["dont_include"]["channel_selected"]["selected_options"]
     dont_include = set(
-        input_data["dont_include"]["channel_selected"]["selected_conversations"]
+        dont_include_opt["value"] for dont_include_opt in dont_include_list
     )
     token = get_token(body["team"]["id"])
     all_members = set([])
@@ -427,13 +432,73 @@ def handle_onboard_members(ack, body, client, view, logger):
         except Exception as e:
             logging.info(e)
 
+@slack_app.view("unselect_members_onboard")
+def handle_unselect_members(ack, body, view, logger):
+    user = body["user"]["id"]
+    input_data = view["state"]["values"]
+
+    conversations_all = input_data["members"]["channel_selected"]["selected_options"]
+    conversations_ids = [conv["value"] for conv in conversations_all]
+    token = get_token(body["team"]["id"])
+    all_members = set([])
+
+    for conversation in conversations_ids:
+        for member in slack_app.client.conversations_members(
+            token=token, channel=conversation
+        )["members"]:
+            user_info = slack_app.client.users_info(user=member, token=token)["user"]
+            if not user_info["is_bot"]:
+                all_members.add((member, user_info["name"]))
+
+    channel_options = [
+        {
+            "text": {
+                "type": "plain_text",
+                "text": member_name,
+            },
+            "value": member,
+        }
+        for member, member_name in all_members
+    ]
+    logging.info(channel_options)
+    ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "callback_id": "onboard_members",
+            "private_metadata": str(view["state"]["values"]),
+            "title": {"type": "plain_text", "text": "Onboard Members"},
+            "submit": {"type": "plain_text", "text": "Onboard"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "block_id": "dont_include",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
+                    },
+                    "accessory": {
+                        "type": "multi_static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select members not to include in onboarding",
+                            "emoji": True,
+                        },
+                        "options": channel_options,
+                        "action_id": "channel_selected",
+                    },
+                },
+            ]
+        },
+    ),
+
 
 @slack_app.action("onboard_from_channel")
 def handle_onboard_from_channel(ack, body, logger):
     ack()
     token = get_token(body["team"]["id"])
     bot_id = get_bot_id(body["team"]["id"])
-    logging.info(bot_id)
     channel_options = [
         {
             "text": {
@@ -452,12 +517,12 @@ def handle_onboard_from_channel(ack, body, logger):
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "onboard_members",
+            "callback_id": "unselect_members_onboard",
             "title": {"type": "plain_text", "text": "Onboard Members"},
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {
                 "type": "plain_text",
-                "text": "Onboard",
+                "text": "Next",
                 "emoji": True,
             },
             "blocks": [
@@ -478,24 +543,7 @@ def handle_onboard_from_channel(ack, body, logger):
                         "options": channel_options,
                     },
                 },
-                {
-                    "block_id": "dont_include",
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
-                    },
-                    "accessory": {
-                        "type": "multi_conversations_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select members not to include in onboarding",
-                            "emoji": True,
-                        },
-                        "filter": {"include": ["im"], "exclude_bot_users": True},
-                        "action_id": "channel_selected",
-                    },
-                },
+
             ],
         },
     )
