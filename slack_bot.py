@@ -9,7 +9,7 @@ import traceback
 
 from datetime import datetime, timezone
 
-from utils.app_ui.app_home import NooksHome
+from utils.slack_app_backend.app_home import NooksHome
 from utils.matching_algorithm.nooks_alloc import NooksAllocation
 
 from dotenv import load_dotenv
@@ -21,12 +21,10 @@ import numpy as np
 from flask_apscheduler import APScheduler
 import ast
 from utils.constants import *
-
-# TODO remove chat history from permissions
-
+from utils.slack_app_backend.daily_functions import remove_past_stories, create_new_channels, update_story_suggestions
+from utils.slack_app_backend.ui_text import SIGNUP_QUESTIONS, CONSENT_FORM
 # set configuration values
 class Config:
-
     SCHEDULER_API_ENABLED = True
 
 
@@ -48,46 +46,10 @@ db = MongoClient(MONGODB_LINK).nooks_db
 
 from slack_bolt.oauth.oauth_settings import OAuthSettings
 from slack_sdk.oauth.installation_store import Installation
+from utils.slack_app_backend.installation import InstallationDB
 
 
-class InstallationDB:
-    def save(self, installation):
-        # logging.info(vars(installation))
-        db.tokens_2.update(
-            {
-                "team_id": installation.team_id,
-                "user_id": installation.user_id,
-            },
-            {
-                "team_id": installation.team_id,
-                "user_id": installation.user_id,
-                "installation": vars(installation),
-            },
-            upsert=True,
-        )
-        pass
-
-    def find_installation(
-        self, enterprise_id=None, team_id=None, user_id=None, is_enterprise_install=None
-    ):
-
-        return Installation(
-            **(db.tokens_2.find_one({"team_id": team_id})["installation"])
-        )
-
-
-@lru_cache(maxsize=None)
-def get_token(team_id):
-    # return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
-    return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_token"]
-
-
-def get_bot_id(team_id):
-    # return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
-    return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_user_id"]
-
-
-installation_store = InstallationDB()
+installation_store = InstallationDB(db)
 scopes = [
     "app_mentions:read",
     "pins:write",
@@ -123,6 +85,8 @@ user_scopes = [
 ]
 
 
+
+
 oauth_settings = OAuthSettings(
     install_path="/slack/install",
     redirect_uri_path="/slack/oauth_redirect",
@@ -139,6 +103,11 @@ slack_app = App(
     oauth_settings=oauth_settings,
     installation_store=installation_store,
 )
+
+@lru_cache(maxsize=None)
+def get_token(team_id):
+    # return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
+    return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_token"]
 
 
 def get_member_vector(member_info):
@@ -376,8 +345,6 @@ def handle_onboard_members(ack, body, client, view, logger):
 
     conversations_all = input_data["members"]["channel_selected"]["selected_options"]
     conversations_ids = [conv["value"] for conv in conversations_all]
-    logging.info("ELKEQKMRF")
-    logging.info( input_data["dont_include"]["channel_selected"]["selected_options"])
     dont_include_list = input_data["dont_include"]["channel_selected"]["selected_options"]
     dont_include = set(
         dont_include_opt["value"] for dont_include_opt in dont_include_list
@@ -497,7 +464,6 @@ def handle_unselect_members(ack, body, view, logger):
 def handle_onboard_from_channel(ack, body, logger):
     ack()
     token = get_token(body["team"]["id"])
-    bot_id = get_bot_id(body["team"]["id"])
     channel_options = [
         {
             "text": {
@@ -1599,11 +1565,6 @@ def slack_oauth():
         code=code,
         redirect_uri=REDIRECT_URI,
     )
-    # logging.info("FEGREW")
-    # logging.info(response)
-    # slack_app = App()
-    # os.environ["SLACK_BOT_TOKEN"] = response['access_token']
-
     installed_enterprise = {}
     # oauth_response.get("enterprise", {})
     is_enterprise_install = oauth_response.get("is_enterprise_install")
@@ -1655,237 +1616,17 @@ def slack_oauth():
             logging.info(e)
     return "Successfully installed"
 
-
-def remove_past_stories():
-    active_stories = list(db.nooks.find({"status": "active"}))
-
-    # archive all channels of the past day
-    for active_story in active_stories:
-        try:
-            db.nooks.update(
-                {"_id": active_story["_id"]},
-                {"$set": {"status": "archived"}},
-            )
-            all_members = slack_app.client.conversations_members(
-                token=get_token(active_story["team_id"]),
-                channel=active_story["channel_id"],
-            )["members"]
-            for member_1 in all_members:
-                for member_2 in all_members:
-
-                    if not db.temporal_interacted.find_one(
-                        {
-                            "user1_id": member_1,
-                            "user2_id": member_2,
-                            "team_id": active_story["team_id"],
-                        }
-                    ):
-                        logging.info("HERE")
-
-                        db.temporal_interacted.insert_one(
-                            {
-                                "user1_id": member_1,
-                                "user2_id": member_2,
-                                "team_id": active_story["team_id"],
-                                "count": 0,
-                            }
-                        )
-                    if not db.all_interacted.find_one(
-                        {
-                            "user1_id": member_1,
-                            "user2_id": member_2,
-                            "team_id": active_story["team_id"],
-                        }
-                    ):
-
-                        db.all_interacted.insert_one(
-                            {
-                                "user1_id": member_1,
-                                "user2_id": member_2,
-                                "team_id": active_story["team_id"],
-                                "count": 0,
-                            }
-                        )
-
-            db.temporal_interacted.update_many(
-                {
-                    "user1_id": {"$in": all_members},
-                    "user2_id": {"$in": all_members},
-                    "team_id": active_story["team_id"],
-                },
-                {"$inc": {"count": 1}},
-            )
-            db.all_interacted.update_many(
-                {
-                    "user1_id": {"$in": all_members},
-                    "user2_id": {"$in": all_members},
-                    "team_id": active_story["team_id"],
-                },
-                {"$inc": {"count": 1}},
-            )
-
-            slack_app.client.conversations_archive(
-                token=get_token(active_story["team_id"]),
-                channel=active_story["channel_id"],
-            )
-
-        except Exception as e:
-            logging.error(traceback.format_exc())
-        nooks_alloc.update_interactions()
-
-
-def create_new_channels(new_stories, allocations, suggested_allocs):
-    # create new channels for the day
-
-    for i, new_story in enumerate(new_stories):
-        now = datetime.now()  # current date and time
-        date = now.strftime("%m-%d-%Y-%H-%M-%S")
-        title = new_story["title"]
-        creator = new_story["creator"]
-        desc = new_story["description"]
-        if new_story["_id"] not in allocations:
-            continue
-
-        try:
-
-            channel_name = "nook-" + date + "-" + str(i)
-            token = get_token(new_story["team_id"])
-            response = slack_app.client.conversations_create(
-                token=token,
-                name=channel_name,
-                is_private=True,
-            )
-
-            ep_channel = response["channel"]["id"]
-            slack_app.client.conversations_setTopic(
-                token=token, channel=ep_channel, topic=title
-            )
-
-            initial_thoughts_thread = slack_app.client.chat_postMessage(
-                token=token,
-                link_names=True,
-                channel=ep_channel,
-                text="Super-excited to hear all of your thoughts on \n *"
-                + title
-                + "*\n"
-                + ">"
-                + desc
-                + "\n"
-                + "Remember this chat will be automatically archived at 9AM tomorrow :clock1: ",
-            )
-            slack_app.client.pins_add(
-                token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"]
-            )
-
-            slack_app.client.conversations_invite(
-                token=token,
-                channel=ep_channel,
-                users=allocations[new_story["_id"]],
-            )
-
-            db.nooks.update(
-                {"_id": new_story["_id"]},
-                {
-                    "$set": {
-                        "status": "active",
-                        "channel_id": ep_channel,
-                        "ts": initial_thoughts_thread["ts"],
-                    }
-                },
-            )
-            for member in suggested_allocs[new_story["_id"]]:
-
-                slack_app.client.chat_postMessage(
-                    token=token,
-                    link_names=True,
-                    channel=member,
-                    blocks=[
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": "Hello! I saw that you didn't swipe right on any nook yesterday. However, in case you are still interested in getting in on the action, feel free to join in on the topic \""
-                                + title
-                                + '"\n>'
-                                + desc,
-                            },
-                        },
-                        {
-                            "type": "actions",
-                            "elements": [
-                                {
-                                    "type": "button",
-                                    "action_id": "join_without_interest",
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Interested!",
-                                        "emoji": True,
-                                    },
-                                    "style": "primary",
-                                    "value": ep_channel,
-                                }
-                            ],
-                        },
-                    ],
-                )
-
-        except Exception as e:
-            logging.error(traceback.format_exc())
-        return new_stories
-
-
-def update_story_suggestions():
-    # all stories
-    suggested_stories = list(db.nooks.find({"status": "suggested"}))
-    db.user_swipes.remove()
-    if "user_swipes" not in db.list_collection_names():
-        db.create_collection("user_swipes")
-    for suggested_story in suggested_stories:
-        try:
-            # TODO don't need to do this if all are shown
-            db.nooks.update(
-                {"_id": suggested_story["_id"]},
-                {
-                    "$set": {
-                        "status": "show",
-                    }
-                },
-            )
-        except Exception as e:
-            logging.error(traceback.format_exc())
-    if suggested_stories:
-        # TODO
-        all_users = list(db.member_vectors.find())
-        for user in all_users:
-            try:
-                logging.info("MKLFQNJFKER")
-                slack_app.client.chat_postMessage(
-                    token=get_token(user["team_id"]),
-                    link_names=True,
-                    channel=user["user_id"],
-                    text="Hello! I've updated your Nook Cards List for today!",
-                )
-            except Exception as e:
-                logging.error(traceback.format_exc())
-    suggested_stories_per_team = collections.defaultdict(list)
-    for story in suggested_stories:
-        suggested_stories_per_team[story["team_id"]].append(story)
-    return suggested_stories_per_team
-
-
 # TODO change this to hour for final
-@cron.task("cron", second="10")
+@cron.task("cron", hour="9")
 def post_stories():
-    remove_past_stories()
-
+    remove_past_stories(db, slack_app, nooks_alloc)
     current_stories = list(db.nooks.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
         nooks=current_stories
     )
-    create_new_channels(current_stories, allocations, suggested_allocs)
-    suggested_stories = update_story_suggestions()
+    create_new_channels(slack_app, db, current_stories, allocations, suggested_allocs)
+    suggested_stories = update_story_suggestions(slack_app, db)
     nooks_home.update(suggested_stories=suggested_stories)
-    # TODO
 
     for member in nooks_alloc.member_dict:
         # TODO change this in case there are overlaps in user ids
@@ -1894,7 +1635,6 @@ def post_stories():
             client=slack_app.client,
             event={"user": member, "view": {"team_id": team_id}},
             token=get_token(team_id)
-            #
         )
 
 
@@ -1902,49 +1642,6 @@ def post_stories():
 @cron.task("cron", day="1")
 def reset_interactions():
     nooks_alloc.reset()
-
-
-"""
-#@cron.scheduled_job("cron", second="1")
-def update_sample_nooks():
-    nooks_home.update_sample_nooks()
-"""
-
-"""
-#@cron.scheduled_job("cron", second="5")
-def post_stories():
-    # TODO change this to only members who have signed up
-    for member in slack_app.client.users_list()["members"]:
-        slack_app.client.chat_postMessage(
-            link_names=True,
-            channel=member["id"],
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Hey! Create nooks before to ",
-                    },
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "action_id": "onboard_info",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Tell me more!",
-                                "emoji": True,
-                            },
-                            "style": "primary",
-                            "value": "join",
-                        }
-                    ],
-                },
-            ],
-        )
-"""
 
 
 def main(nooks_home_arg, nooks_alloc_arg):

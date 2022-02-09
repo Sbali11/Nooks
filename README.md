@@ -22,6 +22,8 @@ The repository is set up to run using Digital Ocean.
 │   ├── constants.py                # all the constants used across the workspace
 ├── slack_bot.py                    # workflow and code for the slack bot backend and flask app backend
 ├── wsgi.py                         # file to run the app formatted to run on Digital ocean
+├── environment.yml                 # conda environment
+├── requirements.txt                # pip environment 
 └── README.md
 ```
 
@@ -119,8 +121,8 @@ python wsgi.py
 
 -----
 
-### [Optional] Create a Digital Ocean Cluster
-The code in this repository is already structured to run on Digital Ocean. To run the code on digital ocean, create a new "App", link the app to your github repository(or upload code manually). After the app has been created, go to settings and edit the App-level environment variables to include the values stored in your .env file. Make sure you don't include any double quotes to indicate strings here-they would automatically be loaded as the correct values in the python file. 
+### [Optional] Create a Digital Ocean Instance
+The code in this repository is already structured to run on Digital Ocean(https://www.digitalocean.com/). To run the code on digital ocean, create a new "App", link the app to your github repository(or upload your code manually). After the app has been created, go to settings and edit the App-level environment variables to include the values stored in your .env file. Make sure you don't include any double quotes to indicate strings here-they would automatically be loaded as the correct values in the python file. 
 
 Note: If you're using the conda environment and made some changes to the environment - you can update requirements.txt by running the following command in the conda environment, this allows the code to run in the Digital Ocean Interface
 ```
