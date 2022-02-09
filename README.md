@@ -11,43 +11,27 @@ The bot was developed Flask(with slack bolt API), and MongoDB for the Database. 
 
 
 ### Set up Slack Workspace
-If you're setting up a new workspace or creating a new bot, follow the steps outlined here: https://slack.dev/bolt-python/tutorial/getting-started. Make sure you've added the needed OAuth permissions. In particular, we are using the following permissions:
+If you're setting up a new workspace or creating a new bot, follow the steps outlined here: https://slack.dev/bolt-python/tutorial/getting-started. Make sure you've added the needed OAuth permissions. In particular, the Nooks Bot  requires the following permissions:
 
 ```
-bot scopes = [
-    "app_mentions:read",
-    "pins:write",
-    "channels:manage",
-    "channels:read",
-    "chat:write",
-    "commands",
-    "groups:read",
-    "groups:write",
-    "im:read",
-    "im:write",
-    "mpim:read",
-    "mpim:write",
-    "users.profile:read",
-    "users:read",
-    "files:write",
-    "files:read",
-    "channels:join",
-]
-user_scopes = [
-    "channels:read",
-    "channels:write",
-    "groups:write",
-    "chat:write",
-    "files:read",
-    "pins:write",
-    "im:write",
-    "mpim:write",
-    "groups:read",
-    "mpim:read",
-    "im:read",
-    "users:read",
-]
 ```
+Bot Token Scopes-
+app_mentions:read, pins:write, channels:manage, channels:read, chat:write, commands, groups:read, groups:write, im:read, im:write, mpim:read, mpim:write, users.profile:read, users:read, files:write, files:read, channels:join
+
+User Token Scopes-
+channels:read, channels:write, groups:write, chat:write, files:read, pins:write, im:write, mpim:write, groups:read, mpim:read, im:read, users:read
+```
+
+```
+
+In addition, subscribe to the following events in the bot workspace: 
+```
+Bot Events-
+app_home_opened, app_mention, im_history_changed, member_joined_channel, message.channels, message.groups, message.im, team_join
+
+```
+This allows the bot to 'listen' to events and take the appropriate actions. 
+
 
 ### Set up environment locally
 ```
