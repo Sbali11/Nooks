@@ -1,6 +1,6 @@
 # HumanisticManagement: Nooks
 
-The Nooks bot allows members in the Slack workspace to 'bump' into each other by sparking and joining conversations you are interested in. The bot matches members to conversations in a way that optimizes for networks that are unlikely to exist outside of this framework using a member-dependent 'heterophily' factor and 
+The Nooks bot allows members in the Slack workspace to 'bump' into each other by sparking and joining conversations they are interested in. The bot matches members to conversations in a way that optimizes for networks that are unlikely to exist outside of this framework using a member-dependent 'heterophily' factor and 
 provides pathways to develop these ephemeral networks into long lasting connections. For more information about the bot, visit https://nooks.vercel.app/. 
 
 ## Tech Stack

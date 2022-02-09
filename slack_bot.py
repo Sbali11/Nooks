@@ -170,7 +170,6 @@ def handle_new_story(ack, body, client, view, logger):
     user = body["user"]["id"]
     title = input_data["title"]["plain_text_input-action"]["value"]
     desc = input_data["desc"]["plain_text_input-action"]["value"]
-    logging.info(input_data["allow_two_members"])
     allow_two_members = (
         
             input_data["allow_two_members"]["radio_buttons-action"][
