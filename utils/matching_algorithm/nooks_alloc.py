@@ -36,34 +36,16 @@ class NooksAllocation:
 
     def _set_homophily_priority(self, member):
         top_int_members = member["top_members"]
-        weight_factor = {factor: 0 for factor in self.homophily_factors}
-        homophily_factors = self.homophily_factors
-
+        weight_factor = np.zeros(len(self.homophily_factors))
+        homophily_factors = sorted(self.homophily_factors)
         member_vector = member["member_vector"]
-        print(top_int_members)
         for interacted_member in top_int_members:
             if interacted_member not in self.member_dict:
                 continue
             interacted_member_vector = self.member_vectors[self.member_dict[interacted_member]]
             for i, homophily_factor in enumerate(homophily_factors):
-                if homophily_factor in SAME_HOMOPHILY_FACTORS:
-                    weight_factor[homophily_factor] += not (
-                        member_vector[i] == interacted_member_vector[i]
-                    )
-                else:
-                    weight_factor[homophily_factor] += abs(
-                        member_vector[i] - interacted_member_vector[i]
-                    )
-        weight_factor_tuples = [
-            (weight_factor[homophily_factor], homophily_factor)
-            for homophily_factor in homophily_factors
-        ]
-        weight_factor_tuples.sort(reverse=True)
-        member_heterophily_priority = [0] * len(self.homophily_factors)
-        for i, weight_tuple in enumerate(weight_factor_tuples):
-            _, homophily_factor = weight_tuple
-            member_heterophily_priority[self.homophily_factors_index[homophily_factor]] = FIBONACCI[i]
-        self.member_heterophily_priority[self.member_dict[member["user_id"]]]= np.array(member_heterophily_priority)
+                weight_factor[i] += (member_vector[i] == interacted_member_vector[i])
+        self.member_heterophily_priority[self.member_dict[member["user_id"]]] = (weight_factor+EPSILON)/(np.sum(weight_factor)+EPSILON)
 
     # TODO change to team specific?
     def _create_members(self):
