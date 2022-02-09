@@ -9,8 +9,8 @@ import traceback
 
 from datetime import datetime, timezone
 
-from utils.app_home import NooksHome
-from utils.nooks_alloc import NooksAllocation
+from utils.app_ui.app_home import NooksHome
+from utils.matching_algorithm.nooks_alloc import NooksAllocation
 
 from dotenv import load_dotenv
 from slack_bolt import App

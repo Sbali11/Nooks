@@ -1,5 +1,5 @@
-from utils.app_home import NooksHome
-from utils.nooks_alloc import NooksAllocation
+from utils.app_ui.app_home import NooksHome
+from utils.matching_algorithm.nooks_alloc import NooksAllocation
 from slack_bot import main, db
 
 nooks_home = NooksHome(db=db)

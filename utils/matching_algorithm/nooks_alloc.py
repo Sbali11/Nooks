@@ -5,7 +5,6 @@ import logging
 from multiprocessing import context
 import numpy as np
 import random
-from constants import *
 from utils.constants import *
 
 
