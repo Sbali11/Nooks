@@ -312,13 +312,13 @@ def create_nook_modal(ack, body, logger):
 
 
 @slack_app.action("user_select")
-def handle_some_action(ack, body, logger):
+def handle_user_selected(ack, body, logger):
     ack()
     logger.info(body)
 
 
 @slack_app.action("channel_selected")
-def handle_some_action(ack, body, logger):
+def handle_channel_selected(ack, body, logger):
     ack()
     logger.info(body)
 
@@ -531,7 +531,7 @@ def handle_save_feedback(ack, body, client, view, logger):
 
 
 @slack_app.action("send_feedback")
-def handle_some_action(ack, body, logger):
+def handle_send_feedback(ack, body, logger):
     ack()
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
@@ -963,7 +963,7 @@ def handle_signup(ack, body, client, view, logger):
 
 
 @slack_app.action("select_input-action")
-def handle_some_action(ack, body, logger):
+def handle_select_input_action(ack, body, logger):
     ack()
 
 
@@ -1580,7 +1580,7 @@ def slack_oauth():
 # TODO change this to hour for final
 @cron.task("cron", hour="9")
 def post_stories():
-    remove_past_nooks(db, slack_app, nooks_alloc)
+    remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
         nooks=current_nooks
