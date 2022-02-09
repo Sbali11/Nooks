@@ -18,7 +18,7 @@ pip install -r requirements.txt
 
 If you're setting up a new workspace or creating a new bot, follow the steps outlined here: https://slack.dev/bolt-python/tutorial/getting-started. Make sure you've added the needed OAuth permissions. In particular, we are using the following permissions:
 
-'''
+```
 bot scopes = [
     "app_mentions:read",
     "pins:write",
@@ -52,10 +52,11 @@ user_scopes = [
     "im:read",
     "users:read",
 ]
-'''
+```
 
 Next, create a .env file for the bot, and add the following variables (For more information, refer to: https://github.com/slackapi/bolt-python/tree/main/examples/flask)
-'''
+
+```
 // from the slack app workspace
 SLACK_APP_TOKEN=
 SLACK_SIGNING_SECRET=
@@ -71,7 +72,7 @@ MONGODB_LINK="mongodb+srv://Shreya:NooksDatabase100@cluster0.rw3kd.mongodb.net/m
 // replace {{host}} to wherever your slack app is hosted
 REDIRECT_URI="{{host}}/slack/oauth_redirect"
 
-'''
+```
 
 The current app is setup in order to be publicly distributed. In case you want to adapt the code for apps run on single workspaces, replace according to the instructions given under comments labelled: "# [SINGLE] Replace with ... "
 
