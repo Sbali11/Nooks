@@ -842,47 +842,6 @@ def handle_message_events(body, logger):
     logger.info(body)
 
 
-@slack_app.event("member_joined_channel")
-def handle_message_events(client, event, logger):
-
-    for member in client.conversations_members(
-        token=get_token(event["team"]), channel=event["channel"]
-    )["members"]:
-        if db.member_vectors.find_one({"team_id": event["team"], "user_id": member}):
-            continue
-        # TODO add duplicate onboarding info
-        slack_app.client.chat_postMessage(
-            token=get_token(event["team"]),
-            link_names=True,
-            channel=member,
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
-                    },
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "action_id": "onboard_info",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Tell me more!",
-                                "emoji": True,
-                            },
-                            "style": "primary",
-                            "value": "join",
-                        }
-                    ],
-                },
-            ],
-        )
-
-
 @slack_app.view("add_member")
 def handle_signup(ack, body, client, view, logger):
     success_modal_ack(
@@ -893,7 +852,6 @@ def handle_signup(ack, body, client, view, logger):
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     user = body["user"]["id"]
     new_member_info = {}
-    logging.info(input_data)
     for key in input_data:
         if "plain_text_input-action" in input_data[key]:
             new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
