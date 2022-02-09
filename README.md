@@ -11,8 +11,15 @@ The bot was developed Flask(with slack bolt API), and MongoDB for the Database. 
 
 
 ### Set up Slack Workspace
-If you're setting up a new workspace or creating a new bot, follow the steps outlined here: https://slack.dev/bolt-python/tutorial/getting-started. Make sure you've added the needed OAuth permissions. In particular, the Nooks Bot  requires the following permissions:
 
+#### Create Bot
+If you're setting up a new workspace or creating a new bot, follow the steps outlined here: https://slack.dev/bolt-python/tutorial/getting-started. 
+
+#### Enable Socket Mode
+The Nooks bot uses the socket mode to operate, so you would have to enable the socket mode in the bot workspace settings
+
+#### Add OAuth & Permissions
+The Nooks Bot  requires the following permissions:
 
 ```
 Bot Token Scopes-
@@ -22,15 +29,19 @@ User Token Scopes-
 channels:read, channels:write, groups:write, chat:write, files:read, pins:write, im:write, mpim:write, groups:read, mpim:read, im:read, users:read
 ```
 
-
-In addition, subscribe to the following events in the bot workspace: 
+#### Event Subscriptions
+Subscription to events allows the bot to 'listen' to events and take the appropriate actions. Subscribe to the following events for the app: 
 ```
 Bot Events-
 app_home_opened, app_mention, im_history_changed, member_joined_channel, message.channels, message.groups, message.im, team_join
 
 ```
-This allows the bot to 'listen' to events and take the appropriate actions. 
 
+#### [Optional] Enable Public Distribution of the App
+To enable the public distribution of the app, go to Manage Distribution in the Slack App page for the bot, follow the listed steps and "Enable Public Distribution". You *don't* need to make any changes to the code as the repository assumes public distribution
+
+#### Install to workspace
+If you're using the publicly distributed app(the default option for the github repository), just head over to the {{host}}/slack/install and click on the install button. If you've updated the code to only run on a single workspace, install to the workspace by heading over to the app settings page
 
 ### Set up environment locally
 ```
