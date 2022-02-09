@@ -78,7 +78,7 @@ SLACK_CLIENT_ID=
 
 
 // link to your mongodb database
-MONGODB_LINK="mongodb+srv://Shreya:NooksDatabase100@cluster0.rw3kd.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+MONGODB_LINK=
 
 
 // replace {{host}} to wherever your slack app is hosted
