@@ -85,12 +85,14 @@ class NooksHome:
                 ):
                     member = client.users_info(
                         token=token, user=interaction_row["user2_id"]
-                    )["user"]["name"]
-                    if not (member == NOOKS_BOT_NAME):
-                        interacted_with.append(
+                    )["user"]
+                    if member["is_bot"]:
+                        continue
+                    
+                    interacted_with.append(
                             (
                                 interaction_row["count"],
-                                member,
+                                member["name"],
                                 interaction_row["user2_id"],
                             )
                         )

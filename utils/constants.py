@@ -42,7 +42,4 @@ def get_fibonacci(n):
     return fib
 
 FIBONACCI = get_fibonacci(len(HOMOPHILY_FACTORS))
-
-
-NOOKS_BOT_NAME = "nooks-bot"
 MAX_NUM_CONNECTIONS = 10
