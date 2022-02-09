@@ -10,7 +10,7 @@ from utils.constants import *
 class NooksHome:
     def __init__(self, db):
         self.db = db
-        self.suggested_stories = collections.defaultdict(dict)
+        self.suggested_nooks = collections.defaultdict(dict)
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
 
@@ -18,8 +18,8 @@ class NooksHome:
         self.sample_nooks = self.db.sample_nooks.distinct("title")
         random.shuffle(self.sample_nooks)
 
-    def update(self, suggested_stories):
-        self.suggested_stories = suggested_stories
+    def update(self, suggested_nooks):
+        self.suggested_nooks = suggested_nooks
 
     def get_context_block(self):
         return [
@@ -185,7 +185,7 @@ class NooksHome:
                         "emoji": True,
                     },
                     "style": "primary",
-                    "action_id": "create_story",
+                    "action_id": "create_nook",
                 },
             },
             {
@@ -233,7 +233,7 @@ class NooksHome:
                         "emoji": True,
                     },
                     "value": current_sample_1,
-                    "action_id": "create_story",
+                    "action_id": "create_nook",
                 },
             },
             {
@@ -250,7 +250,7 @@ class NooksHome:
                         "emoji": True,
                     },
                     "value": current_sample_2,
-                    "action_id": "create_story",
+                    "action_id": "create_nook",
                 },
             },
             {"type": "divider"},
@@ -451,13 +451,13 @@ class NooksHome:
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
 
-        suggested_stories_current = self.suggested_stories[team_id]
-        while cur_pos < len(suggested_stories_current):
-            cur_display_card = suggested_stories_current[cur_pos]
+        suggested_nooks_current = self.suggested_nooks[team_id]
+        while cur_pos < len(suggested_nooks_current):
+            cur_display_card = suggested_nooks_current[cur_pos]
             if user_id not in cur_display_card["banned"]:
                 break
             cur_pos += 1
-        if cur_pos >= len(suggested_stories_current):
+        if cur_pos >= len(suggested_nooks_current):
             self.default_message(client, event, token=token)
             return
         if swipes_to_insert:
@@ -469,7 +469,7 @@ class NooksHome:
                 }
             )
 
-        if not suggested_stories_current or cur_pos >= len(suggested_stories_current):
+        if not suggested_nooks_current or cur_pos >= len(suggested_nooks_current):
             self.default_message(client, event, token=token)
             return
 
@@ -529,7 +529,7 @@ class NooksHome:
                                     "text": "Not for me :x:",
                                     "emoji": True,
                                 },
-                                "action_id": "story_not_interested",
+                                "action_id": "nook_not_interested",
                                 "value": str(cur_pos),
                             },
                             {
@@ -539,7 +539,7 @@ class NooksHome:
                                     "text": "Interested :heavy_check_mark:",
                                     "emoji": True,
                                 },
-                                "action_id": "story_interested",
+                                "action_id": "nook_interested",
                                 "value": str(cur_pos),
                             },
                         ],

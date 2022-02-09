@@ -6,19 +6,20 @@ import collections
 import traceback
 from utils.slack_app_backend.installation import get_token
 
-def remove_past_stories(slack_app, db, nooks_alloc):
+
+def remove_past_nooks(slack_app, db, nooks_alloc):
     active_stories = list(db.nooks.find({"status": "active"}))
 
     # archive all channels of the past day
-    for active_story in active_stories:
+    for active_nook in active_stories:
         try:
             db.nooks.update(
-                {"_id": active_story["_id"]},
+                {"_id": active_nook["_id"]},
                 {"$set": {"status": "archived"}},
             )
             all_members = slack_app.client.conversations_members(
-                token=get_token(active_story["team_id"]),
-                channel=active_story["channel_id"],
+                token=get_token(active_nook["team_id"]),
+                channel=active_nook["channel_id"],
             )["members"]
             for member_1 in all_members:
                 for member_2 in all_members:
@@ -27,7 +28,7 @@ def remove_past_stories(slack_app, db, nooks_alloc):
                         {
                             "user1_id": member_1,
                             "user2_id": member_2,
-                            "team_id": active_story["team_id"],
+                            "team_id": active_nook["team_id"],
                         }
                     ):
 
@@ -35,7 +36,7 @@ def remove_past_stories(slack_app, db, nooks_alloc):
                             {
                                 "user1_id": member_1,
                                 "user2_id": member_2,
-                                "team_id": active_story["team_id"],
+                                "team_id": active_nook["team_id"],
                                 "count": 0,
                             }
                         )
@@ -43,7 +44,7 @@ def remove_past_stories(slack_app, db, nooks_alloc):
                         {
                             "user1_id": member_1,
                             "user2_id": member_2,
-                            "team_id": active_story["team_id"],
+                            "team_id": active_nook["team_id"],
                         }
                     ):
 
@@ -51,7 +52,7 @@ def remove_past_stories(slack_app, db, nooks_alloc):
                             {
                                 "user1_id": member_1,
                                 "user2_id": member_2,
-                                "team_id": active_story["team_id"],
+                                "team_id": active_nook["team_id"],
                                 "count": 0,
                             }
                         )
@@ -60,7 +61,7 @@ def remove_past_stories(slack_app, db, nooks_alloc):
                 {
                     "user1_id": {"$in": all_members},
                     "user2_id": {"$in": all_members},
-                    "team_id": active_story["team_id"],
+                    "team_id": active_nook["team_id"],
                 },
                 {"$inc": {"count": 1}},
             )
@@ -68,36 +69,36 @@ def remove_past_stories(slack_app, db, nooks_alloc):
                 {
                     "user1_id": {"$in": all_members},
                     "user2_id": {"$in": all_members},
-                    "team_id": active_story["team_id"],
+                    "team_id": active_nook["team_id"],
                 },
                 {"$inc": {"count": 1}},
             )
 
             slack_app.client.conversations_archive(
-                token=get_token(active_story["team_id"]),
-                channel=active_story["channel_id"],
+                token=get_token(active_nook["team_id"]),
+                channel=active_nook["channel_id"],
             )
 
         except Exception as e:
             logging.error(traceback.format_exc())
         nooks_alloc.update_interactions()
 
-def create_new_channels(slack_app, db, new_stories, allocations, suggested_allocs):
+def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs):
     # create new channels for the day
 
-    for i, new_story in enumerate(new_stories):
+    for i, new_nook in enumerate(new_nooks):
         now = datetime.now()  # current date and time
         date = now.strftime("%m-%d-%Y-%H-%M-%S")
-        title = new_story["title"]
-        creator = new_story["creator"]
-        desc = new_story["description"]
-        if new_story["_id"] not in allocations:
+        title = new_nook["title"]
+        creator = new_nook["creator"]
+        desc = new_nook["description"]
+        if new_nook["_id"] not in allocations:
             continue
 
         try:
 
             channel_name = "nook-" + date + "-" + str(i)
-            token = get_token(new_story["team_id"])
+            token = get_token(new_nook["team_id"])
             response = slack_app.client.conversations_create(
                 token=token,
                 name=channel_name,
@@ -128,11 +129,11 @@ def create_new_channels(slack_app, db, new_stories, allocations, suggested_alloc
             slack_app.client.conversations_invite(
                 token=token,
                 channel=ep_channel,
-                users=allocations[new_story["_id"]],
+                users=allocations[new_nook["_id"]],
             )
 
             db.nooks.update(
-                {"_id": new_story["_id"]},
+                {"_id": new_nook["_id"]},
                 {
                     "$set": {
                         "status": "active",
@@ -141,7 +142,7 @@ def create_new_channels(slack_app, db, new_stories, allocations, suggested_alloc
                     }
                 },
             )
-            for member in suggested_allocs[new_story["_id"]]:
+            for member in suggested_allocs[new_nook["_id"]]:
 
                 slack_app.client.chat_postMessage(
                     token=token,
@@ -179,19 +180,19 @@ def create_new_channels(slack_app, db, new_stories, allocations, suggested_alloc
 
         except Exception as e:
             logging.error(traceback.format_exc())
-        return new_stories
+        return new_nooks
 
-def update_story_suggestions(slack_app, db):
+def update_nook_suggestions(slack_app, db):
     # all stories
-    suggested_stories = list(db.nooks.find({"status": "suggested"}))
+    suggested_nooks = list(db.nooks.find({"status": "suggested"}))
     db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
-    for suggested_story in suggested_stories:
+    for suggested_nook in suggested_nooks:
         try:
             # TODO don't need to do this if all are shown
             db.nooks.update(
-                {"_id": suggested_story["_id"]},
+                {"_id": suggested_nook["_id"]},
                 {
                     "$set": {
                         "status": "show",
@@ -200,7 +201,7 @@ def update_story_suggestions(slack_app, db):
             )
         except Exception as e:
             logging.error(traceback.format_exc())
-    if suggested_stories:
+    if suggested_nooks:
         # TODO
         all_users = list(db.member_vectors.find())
         for user in all_users:
@@ -214,7 +215,7 @@ def update_story_suggestions(slack_app, db):
                 )
             except Exception as e:
                 logging.error(traceback.format_exc())
-    suggested_stories_per_team = collections.defaultdict(list)
-    for story in suggested_stories:
-        suggested_stories_per_team[story["team_id"]].append(story)
-    return suggested_stories_per_team
+    suggested_nooks_per_team = collections.defaultdict(list)
+    for nook in suggested_nooks:
+        suggested_nooks_per_team[nook["team_id"]].append(nook)
+    return suggested_nooks_per_team
