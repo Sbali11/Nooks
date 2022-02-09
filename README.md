@@ -62,11 +62,13 @@ To enable the public distribution of the app, go to Manage Distribution in the S
 
 #### Install to workspace
 If you're using the publicly distributed app(the default option for the github repository), just head over to the {{host}}/slack/install and click on the install button. If you've updated the code to only run on a single workspace, install to the workspace by heading over to the app settings page
+
 -----
 
 
 ### Create a MongoDB Cluster
 Follow the steps listed here https://www.mongodb.com/basics/create-database
+
 -----
 
 
