@@ -71,7 +71,6 @@ Follow the steps listed here https://www.mongodb.com/basics/create-database
 
 -----
 
-
 ### Set up environment locally
 
 #### Install required packages
@@ -82,10 +81,7 @@ conda env create -f environment.yml
 pip install -r requirements.txt
 ```
 
-Note: if you're using the conda environment and made some changes to the environment - you can update requirements.txt by running the following command in the conda environment, this allows the code to run in the Digital Ocean Interface
-```
-pip list --format=freeze > requirements.txt
-```
+
 
 #### Set Environment Variables
 Next, create a .env file in the HumanisticManagement folder, and add the following variables here (For more information, refer to: https://github.com/slackapi/bolt-python/tree/main/examples/flask)
@@ -121,6 +117,15 @@ conda activate slackbot
 python wsgi.py
 ```
 
+-----
 
+### [Optional] Create a Digital Ocean Cluster
+The code in this repository is already structured to run on Digital Ocean. To run the code on digital ocean, create a new "App", link the app to your github repository(or upload code manually). After the app has been created, go to settings and edit the App-level environment variables to include the values stored in your .env file. Make sure you don't include any double quotes to indicate strings here-they would automatically be loaded as the correct values in the python file. 
 
+Note: If you're using the conda environment and made some changes to the environment - you can update requirements.txt by running the following command in the conda environment, this allows the code to run in the Digital Ocean Interface
+```
+pip list --format=freeze > requirements.txt
+```
+
+-----
 
