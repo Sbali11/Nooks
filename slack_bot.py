@@ -349,7 +349,7 @@ def handle_new_nook(ack, body, client, view, logger):
         channel=user,
         text="Hey! I've added your nook titled \""
         + title
-        + '" to the queue. The nook will shown to your co-workers at 5PM! ',
+        + '" to the queue. The nook will shown to your co-workers at 4PM! ',
     )
 
 
@@ -409,9 +409,11 @@ def handle_onboard_members(ack, body, client, view, logger):
 
     conversations_all = input_data["members"]["channel_selected"]["selected_options"]
     conversations_ids = [conv["value"] for conv in conversations_all]
+    conversations_names = [conv["text"]["text"] for conv in conversations_all]
     dont_include_list = input_data["dont_include"]["channel_selected"][
         "selected_options"
     ]
+    logging.info(conversations_all)
     dont_include = set(
         dont_include_opt["value"] for dont_include_opt in dont_include_list
     )
@@ -429,6 +431,12 @@ def handle_onboard_members(ack, body, client, view, logger):
             if member in dont_include or member in all_registered_users:
                 continue
             all_members.add(member)
+    client.chat_postMessage(
+        token=token,
+        link_names=True,
+        channel=body["user"]["id"],
+        text="Hey there! Thank you for initiating the onboarding-process for channels:" + ",".join(conversations_names)
+    )
     for member in all_members:
         try:
             slack_app.client.chat_postMessage(
@@ -440,7 +448,7 @@ def handle_onboard_members(ack, body, client, view, logger):
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in a exciting new ways:partying_face:, and <@\n" + body["user"]["id"] + "> wants you to sign-up!",
                         },
                     },
                     {
