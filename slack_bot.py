@@ -1623,14 +1623,14 @@ def slack_oauth():
 
 
 # TODO change this to hour for final
-@cron.task("cron", hour="9")
+@cron.task("cron", minute="5")
 def post_stories():
     remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks)
     create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs)
 
-@cron.task("cron", hour="16")
+@cron.task("cron", minute="1")
 def update_stories():
     suggested_nooks = update_nook_suggestions(slack_app, db)
     nooks_home.update(suggested_nooks=suggested_nooks)
@@ -1644,11 +1644,13 @@ def update_stories():
         )
 
 
-# TODO change this to hour for final
-@cron.task("cron", day="1")
+@cron.task("cron", day_of_week="6")
 def reset_interactions():
     nooks_alloc.reset()
 
+@slack_app.event("member_joined_channel")
+def handle_member_joined_channel_events(body, logger):
+    logger.info(body)
 
 def main(nooks_home_arg, nooks_alloc_arg):
     global nooks_home
