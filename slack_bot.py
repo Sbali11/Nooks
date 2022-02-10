@@ -21,8 +21,13 @@ import numpy as np
 from flask_apscheduler import APScheduler
 import ast
 from utils.constants import *
-from utils.slack_app_backend.daily_functions import remove_past_nooks, create_new_channels, update_nook_suggestions
+from utils.slack_app_backend.daily_functions import (
+    remove_past_nooks,
+    create_new_channels,
+    update_nook_suggestions,
+)
 from utils.slack_app_backend.ui_text import SIGNUP_QUESTIONS, CONSENT_FORM
+
 # set configuration values
 class Config:
     SCHEDULER_API_ENABLED = True
@@ -83,9 +88,6 @@ user_scopes = [
     "users:read",
 ]
 
-
-
-
 oauth_settings = OAuthSettings(
     install_path="/slack/install",
     redirect_uri_path="/slack/oauth_redirect",
@@ -119,52 +121,6 @@ def log_request(logger, body, next):
     return next()
 
 
-@slack_app.view("new_nook")
-def handle_new_nook(ack, body, client, view, logger):
-    success_modal_ack(
-        ack,
-        body,
-        view,
-        logger,
-        message="Nook added to the queue",
-        title="Create a Nook",
-    )
-    input_data = view["state"]["values"]
-    user = body["user"]["id"]
-    title = input_data["title"]["plain_text_input-action"]["value"]
-    desc = input_data["desc"]["plain_text_input-action"]["value"]
-    allow_two_members = (
-        
-            input_data["allow_two_members"]["radio_buttons-action"][
-                "selected_option"
-            ]["value"]
-        
-        == "allow_two_member"
-    )
-    banned = input_data["banned"]["user_select"]["selected_conversations"]
-
-    new_nook_info = {
-        "team_id": body["team"]["id"],
-        "title": title,
-        "creator": user,
-        "description": desc,
-        "allow_two_members": allow_two_members,
-        "banned": banned,
-        "status": "suggested",
-        "created_on": datetime.utcnow(),
-        "swiped_right": [],
-    }
-    db.nooks.insert_one(new_nook_info)
-    client.chat_postMessage(
-        token=get_token(body["team"]["id"]),
-        link_names=True,
-        channel=user,
-        text="Hey! I've added your nook titled \""
-        + title
-        + '" to the queue. The nook will shown to your co-workers in the next cycle! ',
-    )
-
-
 @slack_app.view("success_close")
 def handle_signup(ack, body, client, view, logger):
     ack()
@@ -191,6 +147,212 @@ def success_modal_ack(ack, body, view, logger, message, title="Success"):
     )
 
 
+def get_create_nook_blocks(initial_title, initial_desc=""):
+    if initial_desc:
+        desc_element = {
+            "type": "plain_text_input",
+            "multiline": True,
+            "action_id": "plain_text_input-action",
+            "initial_value": initial_desc,
+            "placeholder": {
+                "type": "plain_text",
+                "text": "Use this space to add in some initial thoughts, related links or a detailed description of the nook topic!",
+                "emoji": True,
+            },
+        }
+    else:
+        desc_element = {
+            "type": "plain_text_input",
+            "multiline": True,
+            "action_id": "plain_text_input-action",
+            "initial_value": initial_desc,
+        }
+    return [
+        {
+            "block_id": "title",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+                "initial_value": initial_title,
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "What do you want to talk about?",
+                "emoji": True,
+            },
+        },
+        {
+            "block_id": "desc",
+            "type": "input",
+            "element": desc_element,
+            "label": {
+                "type": "plain_text",
+                "text": "Add some initial thoughts",
+                "emoji": True,
+            },
+        },
+        {
+            "block_id": "channel_name",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Add a channel title for the nook(use less than less 10 characters and only letters/dashes)",
+                "emoji": True,
+            },
+        },
+        {
+            "block_id": "banned",
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Are there any members you don't want to be a part of this conversation?*",
+            },
+            "accessory": {
+                "action_id": "user_select",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "Select users you don't want included in this nook",
+                    "emoji": True,
+                },
+                "filter": {"include": ["im"], "exclude_bot_users": True},
+                "type": "multi_conversations_select",
+            },
+        },
+        {
+            "type": "input",
+            "block_id": "allow_two_members",
+            "element": {
+                "type": "radio_buttons",
+                "action_id": "radio_buttons-action",
+                "initial_option": {
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Don't create nook if there is only one additional member",
+                        "emoji": True,
+                    },
+                    "value": "dont_allow_two_member",
+                },
+                "options": [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Don't create nook if there is only one additional member",
+                            "emoji": True,
+                        },
+                        "value": "dont_allow_two_member",
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Allow nook to be created with only one additional additional member.",
+                            "emoji": True,
+                        },
+                        "value": "allow_two_member",
+                    },
+                ],
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "By default, I only create nooks with atleast 3 total members to hide the creator's identity. Nooks that don't satisfy this condition are not created. ",
+                "emoji": True,
+            },
+        },
+    ]
+
+
+@slack_app.view("new_nook")
+def handle_new_nook(ack, body, client, view, logger):
+    input_data = view["state"]["values"]
+    user = body["user"]["id"]
+    title = input_data["title"]["plain_text_input-action"]["value"]
+    desc = input_data["desc"]["plain_text_input-action"]["value"]
+
+    channel_name = input_data["channel_name"]["plain_text_input-action"]["value"]
+    invalid_channel_name = False
+    if len(channel_name)> 10:
+        invalid_channel_name = True
+    else:
+        for letter in channel_name:
+            if not (
+            ("0" <= letter <= "9")
+            or ("a" <= letter <= "z")
+            or ("A" <= letter <= "Z")
+            or letter == "-"
+            ):
+                invalid_channel_name = True
+                break
+
+    if invalid_channel_name:
+        ack(
+        response_action="update",
+        view={
+            "type": "modal",
+            "callback_id": "new_nook",
+            "private_metadata": str(view["state"]["values"]),
+            "title": {"type": "plain_text", "text": "Create a Nook"},
+            "submit": {
+                "type": "plain_text",
+                "text": "Add nook to the queue",
+                "emoji": True,
+            },            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Please enter a valid channel name* \n",
+                        },
+                    }]  
+            + get_create_nook_blocks(initial_title=title, initial_desc=desc)
+        }
+        ),
+
+        return
+
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Nook added to the queue",
+        title="Create a Nook",
+    )
+
+    allow_two_members = (
+        input_data["allow_two_members"]["radio_buttons-action"]["selected_option"][
+            "value"
+        ]
+        == "allow_two_member"
+    )
+    banned = input_data["banned"]["user_select"]["selected_conversations"]
+
+    new_nook_info = {
+        "team_id": body["team"]["id"],
+        "title": title,
+        "creator": user,
+        "channel_name": channel_name,
+        "description": desc,
+        "allow_two_members": allow_two_members,
+        "banned": banned,
+        "status": "suggested",
+        "created_on": datetime.utcnow(),
+        "swiped_right": [],
+    }
+    db.nooks.insert_one(new_nook_info)
+    client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
+        link_names=True,
+        channel=user,
+        text="Hey! I've added your nook titled \""
+        + title
+        + '" to the queue. The nook will shown to your co-workers in the next cycle! ',
+    )
+
+
 # TODO
 @slack_app.action("create_nook")
 def create_nook_modal(ack, body, logger):
@@ -200,6 +362,7 @@ def create_nook_modal(ack, body, logger):
         initial_title = body["actions"][0]["value"]
     else:
         initial_title = ""
+
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
         trigger_id=body["trigger_id"],
@@ -213,99 +376,7 @@ def create_nook_modal(ack, body, logger):
                 "text": "Add nook to the queue",
                 "emoji": True,
             },
-            "blocks": [
-                {
-                    "block_id": "title",
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "plain_text_input-action",
-                        "initial_value": initial_title,
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "What do you want to talk about?",
-                        "emoji": True,
-                    },
-                },
-                {
-                    "block_id": "desc",
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "multiline": True,
-                        "action_id": "plain_text_input-action",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Use this space to add in some initial thoughts, related links or a detailed description of the nook topic!",
-                            "emoji": True,
-                        },
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Add some initial thoughts",
-                        "emoji": True,
-                    },
-                },
-                {
-                    "block_id": "banned",
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Are there any members you don't want to be a part of this conversation?*",
-                    },
-                    "accessory": {
-                        "action_id": "user_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select users you don't want included in this nook",
-                            "emoji": True,
-                        },
-                        "filter": {"include": ["im"], "exclude_bot_users": True},
-                        "type": "multi_conversations_select",
-                    },
-                },
-                {
-                    "type": "input",
-                    "block_id": "allow_two_members",
-                    "element": {
-                        "type": "radio_buttons",
-                        "action_id": "radio_buttons-action",
-                        "initial_option":
-                                                    {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Don't create nook if there is only one additional member",
-                                    "emoji": True,
-                                },
-                                "value": "dont_allow_two_member",
-                            },
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Don't create nook if there is only one additional member",
-                                    "emoji": True,
-                                },
-                                "value": "dont_allow_two_member",
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Allow nook to be created with only one additional additional member.",
-                                    "emoji": True,
-                                },
-                                "value": "allow_two_member",
-                            }
-                        ],
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "By default, I only create nooks with atleast 3 total members to hide the creator's identity. Nooks that don't satisfy this condition are not created. ",
-                        "emoji": True,
-                    },
-                },
-            ],
+            "blocks": get_create_nook_blocks(initial_title),
         },
     )
 
@@ -338,7 +409,9 @@ def handle_onboard_members(ack, body, client, view, logger):
 
     conversations_all = input_data["members"]["channel_selected"]["selected_options"]
     conversations_ids = [conv["value"] for conv in conversations_all]
-    dont_include_list = input_data["dont_include"]["channel_selected"]["selected_options"]
+    dont_include_list = input_data["dont_include"]["channel_selected"][
+        "selected_options"
+    ]
     dont_include = set(
         dont_include_opt["value"] for dont_include_opt in dont_include_list
     )
@@ -390,6 +463,7 @@ def handle_onboard_members(ack, body, client, view, logger):
             )
         except Exception as e:
             logging.info(e)
+
 
 @slack_app.view("unselect_members_onboard")
 def handle_unselect_members(ack, body, view, logger):
@@ -447,7 +521,7 @@ def handle_unselect_members(ack, body, view, logger):
                         "action_id": "channel_selected",
                     },
                 },
-            ]
+            ],
         },
     ),
 
@@ -486,11 +560,10 @@ def handle_onboard_from_channel(ack, body, logger):
                             "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
                         },
                     },
-
                 ],
             },
         )
-        return 
+        return
 
     slack_app.client.views_open(
         token=token,
@@ -523,7 +596,6 @@ def handle_onboard_from_channel(ack, body, logger):
                         "options": channel_options,
                     },
                 },
-
             ],
         },
     )
@@ -704,6 +776,7 @@ def customize_dm_modal(ack, body, client, view, logger):
             },
         ],
     )
+
 
 @slack_app.view("send_message")
 def handle_send_message(ack, body, client, view, logger):
@@ -1540,14 +1613,13 @@ def slack_oauth():
             logging.info(e)
     return "Successfully installed"
 
+
 # TODO change this to hour for final
 @cron.task("cron", hour="9")
 def post_stories():
     remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
-    allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
-        nooks=current_nooks
-    )
+    allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks)
     create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs)
     suggested_nooks = update_nook_suggestions(slack_app, db)
     nooks_home.update(suggested_nooks=suggested_nooks)
@@ -1558,7 +1630,7 @@ def post_stories():
         nooks_home.update_home_tab(
             client=slack_app.client,
             event={"user": member, "view": {"team_id": team_id}},
-            token=get_token(team_id)
+            token=get_token(team_id),
         )
 
 

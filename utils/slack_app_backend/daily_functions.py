@@ -91,13 +91,14 @@ def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs)
         date = now.strftime("%m-%d-%Y-%H-%M-%S")
         title = new_nook["title"]
         creator = new_nook["creator"]
+        channel_name = new_nook["channel_name"]
         desc = new_nook["description"]
         if new_nook["_id"] not in allocations:
             continue
 
         try:
 
-            channel_name = "nook-" + date + "-" + str(i)
+            channel_name = "nook-" + channel_name + date + "-" + str(i)
             token = get_token(new_nook["team_id"])
             response = slack_app.client.conversations_create(
                 token=token,
