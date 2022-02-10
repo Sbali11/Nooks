@@ -435,7 +435,7 @@ def handle_onboard_members(ack, body, client, view, logger):
         token=token,
         link_names=True,
         channel=body["user"]["id"],
-        text="Hey there! Thank you for initiating the onboarding-process for channels:" + ",".join(conversations_names)
+        text="Hey there! Thank you for initiating the onboarding-process for the following channels: " + ",".join(conversations_names)
     )
     for member in all_members:
         try:
@@ -448,7 +448,7 @@ def handle_onboard_members(ack, body, client, view, logger):
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in a exciting new ways:partying_face:, and <@\n" + body["user"]["id"] + "> wants you to sign-up!",
+                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@" + body["user"]["id"] + "> wants you to sign-up!",
                         },
                     },
                     {
