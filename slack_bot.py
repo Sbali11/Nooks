@@ -349,7 +349,7 @@ def handle_new_nook(ack, body, client, view, logger):
         channel=user,
         text="Hey! I've added your nook titled \""
         + title
-        + '" to the queue. The nook will shown to your co-workers in the next cycle! ',
+        + '" to the queue. The nook will shown to your co-workers at 5PM! ',
     )
 
 
