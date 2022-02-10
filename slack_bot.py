@@ -201,7 +201,7 @@ def get_create_nook_blocks(initial_title, initial_desc=""):
             },
             "label": {
                 "type": "plain_text",
-                "text": "Add a channel title for the nook(use less than less 10 characters and only letters/dashes)",
+                "text": "Add a channel title for the nook(use less than less 60 characters and only letters/dashes)",
                 "emoji": True,
             },
         },
@@ -274,7 +274,7 @@ def handle_new_nook(ack, body, client, view, logger):
 
     channel_name = input_data["channel_name"]["plain_text_input-action"]["value"]
     invalid_channel_name = False
-    if len(channel_name)> 10:
+    if len(channel_name)> 60:
         invalid_channel_name = True
     else:
         for letter in channel_name:
@@ -1615,7 +1615,7 @@ def slack_oauth():
 
 
 # TODO change this to hour for final
-@cron.task("cron", hour="9")
+@cron.task("cron", second="9")
 def post_stories():
     remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
