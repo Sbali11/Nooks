@@ -20,7 +20,6 @@ def get_token(team_id):
 
 class InstallationDB:
     def save(self, installation):
-        # logging.info(vars(installation))
         self.db.tokens_2.update(
             {
                 "team_id": installation.team_id,

@@ -167,7 +167,6 @@ def handle_new_nook(ack, body, client, view, logger):
 
 @slack_app.view("success_close")
 def handle_signup(ack, body, client, view, logger):
-    logging.info("FQKEMEK")
     ack()
 
 
@@ -420,7 +419,6 @@ def handle_unselect_members(ack, body, view, logger):
         }
         for member, member_name in all_members
     ]
-    logging.info(channel_options)
     ack(
         response_action="update",
         view={
@@ -470,6 +468,29 @@ def handle_onboard_from_channel(ack, body, logger):
             token=token, types="public_channel,private_channel"
         )["channels"]
     ]
+    if not len(channel_options):
+        slack_app.client.views_open(
+            token=token,
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "callback_id": "unselect_members_onboard",
+                "title": {"type": "plain_text", "text": "Onboard Members"},
+                "close": {"type": "plain_text", "text": "Close"},
+                "blocks": [
+                    {
+                        "block_id": "members",
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
+                        },
+                    },
+
+                ],
+            },
+        )
+        return 
 
     slack_app.client.views_open(
         token=token,
@@ -512,7 +533,6 @@ def handle_onboard_from_channel(ack, body, logger):
 def handle_save_feedback(ack, body, client, view, logger):
 
     input_data = view["state"]["values"]
-    # logging.info(input_data)
     feedback = input_data["feedback"]["plain_text_input-action"]["value"]
     feedback = {
         "team_id": body["team"]["id"],
@@ -592,27 +612,6 @@ def nook_int(ack, body, logger):
     )
 
 
-@slack_app.action("new_sample_nook")
-def update_random_nook(ack, body, logger):
-    ack()
-
-    user_id = body["user"]["id"]
-    vals = body["actions"][0]["value"].split("/")
-    team_id = body["team"]["id"]
-    cur_pos = int(vals[0])
-    total_len = int(vals[1])
-    db.sample_nook_pos.update_one(
-        {"user_id": user_id, "team_id": body["team"]["id"]},
-        {"$set": {"cur_nook_pos": (cur_pos + 2) % total_len}},
-    )
-
-    nooks_home.update_home_tab(
-        slack_app.client,
-        {"user": user_id, "view": {"team_id": body["team"]["id"]}},
-        token=get_token(team_id),
-    )
-
-
 @slack_app.action("nook_not_interested")
 def nook_not_int(ack, body, logger):
     ack()
@@ -632,6 +631,27 @@ def nook_not_int(ack, body, logger):
         slack_app.client,
         {"user": user_id, "view": {"team_id": body["team"]["id"]}},
         token=get_token(body["team"]["id"]),
+    )
+
+
+@slack_app.action("new_sample_nook")
+def update_random_nook(ack, body, logger):
+    ack()
+
+    user_id = body["user"]["id"]
+    vals = body["actions"][0]["value"].split("/")
+    team_id = body["team"]["id"]
+    cur_pos = int(vals[0])
+    total_len = int(vals[1])
+    db.sample_nook_pos.update_one(
+        {"user_id": user_id, "team_id": body["team"]["id"]},
+        {"$set": {"cur_nook_pos": (cur_pos + 2) % total_len}},
+    )
+
+    nooks_home.update_home_tab(
+        slack_app.client,
+        {"user": user_id, "view": {"team_id": body["team"]["id"]}},
+        token=get_token(team_id),
     )
 
 
@@ -692,9 +712,6 @@ def handle_send_message(ack, body, client, view, logger):
     )
     input_data = view["state"]["values"]
     from_user = body["user"]["id"]
-
-    # logging.info("BZZZZ")
-    # logging.info(view)
 
     to_user = view["private_metadata"]
     message = input_data["message"]["plain_text_input-action"]["value"]
@@ -819,8 +836,6 @@ def update_message(ack, body, client, view, logger):
 
 @slack_app.event("team_join")
 def team_joined(client, event, logger):
-    logging.info("TEAM JOINED")
-    logging.info(event)
     if "user" in event:
         nooks_home.update_home_tab(
             client,
@@ -864,7 +879,6 @@ def handle_signup(ack, body, client, view, logger):
                 "selected_conversations"
             ]
         else:
-            logging.info("WFIOEWFN")
             logging.info(input_data[key])
 
     new_member_info["user_id"] = user
@@ -1195,11 +1209,7 @@ def signup_modal_step_2(ack, body, view, logger):
 
 @slack_app.view("signup_step_1")
 def signup_modal_step_1(ack, body, view, logger):
-    logging.info("VFEKWN")
     input_data = view["state"]["values"]
-    logging.info(input_data)
-    # logging.info("BZZZZ")
-    # logging.info(view)
 
     if len(input_data["consent"]["checkboxes_input-action"]["selected_options"]) < 3:
         ack(
@@ -1285,7 +1295,6 @@ def signup_modal_step_1(ack, body, view, logger):
             + question_blocks,
         },
     )
-    # logging.info(res)
 
 
 @slack_app.view("signup_step_0")
@@ -1303,7 +1312,6 @@ def signup_modal_step_0(ack, body, view, logger):
             "blocks": get_consent_blocks(),
         },
     )
-    # logging.info(res)
 
 
 @slack_app.action("signup")
@@ -1322,7 +1330,6 @@ def signup_modal(ack, body, logger):
             "blocks": get_consent_blocks(),
         },
     )
-    # logging.info(res)
 
 
 @slack_app.action("join_without_interest")
@@ -1459,8 +1466,6 @@ handler.connect()
 
 @app.route("/slack/install")
 def slack_install():
-    logging.info("REVFRV")
-    logging.info(",".join(scopes))
     return (
         "<a href='https://slack.com/oauth/v2/authorize?client_id="
         + CLIENT_ID
