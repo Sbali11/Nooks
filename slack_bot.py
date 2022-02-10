@@ -1615,17 +1615,19 @@ def slack_oauth():
 
 
 # TODO change this to hour for final
-@cron.task("cron", second="9")
+@cron.task("cron", hour="9")
 def post_stories():
     remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks)
     create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs)
+
+@cron.task("cron", hour="16")
+def update_stories():
     suggested_nooks = update_nook_suggestions(slack_app, db)
     nooks_home.update(suggested_nooks=suggested_nooks)
 
     for member in nooks_alloc.member_dict:
-        # TODO change this in case there are overlaps in user ids
         team_id = db.member_vectors.find_one({"user_id": member})["team_id"]
         nooks_home.update_home_tab(
             client=slack_app.client,
