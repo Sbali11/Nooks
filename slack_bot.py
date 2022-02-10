@@ -304,7 +304,7 @@ def handle_new_nook(ack, body, client, view, logger):
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "*Please enter a valid channel name* \n",
+                            "text": "*Oops! That is not a valid channel name* \n",
                         },
                     }]  
             + get_create_nook_blocks(initial_title=title, initial_desc=desc)

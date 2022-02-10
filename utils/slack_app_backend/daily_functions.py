@@ -98,7 +98,7 @@ def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs)
 
         try:
 
-            channel_name = "nook-" + channel_name + date + "-" + str(i)
+            channel_name = "nook-" + channel_name + "-" + date + "-" + str(i)
             token = get_token(new_nook["team_id"])
             response = slack_app.client.conversations_create(
                 token=token,
