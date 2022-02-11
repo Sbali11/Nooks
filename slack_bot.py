@@ -71,20 +71,16 @@ scopes = [
     "users:read",
     "files:write",
     "files:read",
-    "channels:join",
 ]
 user_scopes = [
     "channels:read",
     "channels:write",
-    "groups:write",
     "chat:write",
     "files:read",
+    "groups:write",
     "pins:write",
     "im:write",
     "mpim:write",
-    "groups:read",
-    "mpim:read",
-    "im:read",
     "users:read",
 ]
 
