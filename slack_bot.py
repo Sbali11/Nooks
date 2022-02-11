@@ -270,41 +270,44 @@ def handle_new_nook(ack, body, client, view, logger):
 
     channel_name = input_data["channel_name"]["plain_text_input-action"]["value"]
     invalid_channel_name = False
-    if len(channel_name)> 60:
+    if len(channel_name) > 60:
         invalid_channel_name = True
     else:
         for letter in channel_name:
             if not (
-            ("0" <= letter <= "9")
-            or ("a" <= letter <= "z")
-            or ("A" <= letter <= "Z")
-            or letter == "-"
+                ("0" <= letter <= "9")
+                or ("a" <= letter <= "z")
+                or ("A" <= letter <= "Z")
+                or letter == "-"
             ):
                 invalid_channel_name = True
                 break
 
     if invalid_channel_name:
         ack(
-        response_action="update",
-        view={
-            "type": "modal",
-            "callback_id": "new_nook",
-            "private_metadata": str(view["state"]["values"]),
-            "title": {"type": "plain_text", "text": "Create a Nook"},
-            "submit": {
-                "type": "plain_text",
-                "text": "Add nook to the queue",
-                "emoji": True,
-            },            "close": {"type": "plain_text", "text": "Close"},
-            "blocks": [                    {
+            response_action="update",
+            view={
+                "type": "modal",
+                "callback_id": "new_nook",
+                "private_metadata": str(view["state"]["values"]),
+                "title": {"type": "plain_text", "text": "Create a Nook"},
+                "submit": {
+                    "type": "plain_text",
+                    "text": "Add nook to the queue",
+                    "emoji": True,
+                },
+                "close": {"type": "plain_text", "text": "Close"},
+                "blocks": [
+                    {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
                             "text": "*Oops! That is not a valid channel name* \n",
                         },
-                    }]  
-            + get_create_nook_blocks(initial_title=title, initial_desc=desc)
-        }
+                    }
+                ]
+                + get_create_nook_blocks(initial_title=title, initial_desc=desc),
+            },
         ),
 
         return
@@ -392,8 +395,8 @@ def handle_channel_selected(ack, body, logger):
 @slack_app.view("onboard_members")
 def handle_onboard_members(ack, body, client, view, logger):
     input_data = view["state"]["values"]
-    input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
-
+    #input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
+    logging.info(input_data)
     success_modal_ack(
         ack,
         body,
@@ -407,11 +410,10 @@ def handle_onboard_members(ack, body, client, view, logger):
     conversations_ids = [conv["value"] for conv in conversations_all]
     conversations_names = [conv["text"]["text"] for conv in conversations_all]
     dont_include_list = input_data["dont_include"]["channel_selected"][
-        "selected_options"
+        "selected_conversations"
     ]
-    logging.info(conversations_all)
     dont_include = set(
-        dont_include_opt["value"] for dont_include_opt in dont_include_list
+        dont_include_list
     )
     token = get_token(body["team"]["id"])
     all_members = set([])
@@ -431,7 +433,8 @@ def handle_onboard_members(ack, body, client, view, logger):
         token=token,
         link_names=True,
         channel=body["user"]["id"],
-        text="Hey there! Thank you for initiating the onboarding-process for the following channels: " + ",".join(conversations_names)
+        text="Hey there! Thank you for initiating the onboarding-process for the following channels: "
+        + ",".join(conversations_names),
     )
     for member in all_members:
         try:
@@ -444,7 +447,9 @@ def handle_onboard_members(ack, body, client, view, logger):
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@" + body["user"]["id"] + "> wants you to sign-up!",
+                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@"
+                            + body["user"]["id"]
+                            + "> wants you to sign-up!",
                         },
                     },
                     {
@@ -515,13 +520,13 @@ def handle_unselect_members(ack, body, view, logger):
                         "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
                     },
                     "accessory": {
-                        "type": "multi_static_select",
+                        "filter": {"include": ["im"], "exclude_bot_users": True},
+                        "type": "multi_conversations_select",
                         "placeholder": {
                             "type": "plain_text",
                             "text": "Select members not to include in onboarding",
                             "emoji": True,
                         },
-                        "options": channel_options,
                         "action_id": "channel_selected",
                     },
                 },
@@ -552,7 +557,7 @@ def handle_onboard_from_channel(ack, body, logger):
             trigger_id=body["trigger_id"],
             view={
                 "type": "modal",
-                "callback_id": "unselect_members_onboard",
+                "callback_id": "onboard_members",
                 "title": {"type": "plain_text", "text": "Onboard Members"},
                 "close": {"type": "plain_text", "text": "Close"},
                 "blocks": [
@@ -563,6 +568,8 @@ def handle_onboard_from_channel(ack, body, logger):
                             "type": "mrkdwn",
                             "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
                         },
+                    
+     
                     },
                 ],
             },
@@ -574,12 +581,12 @@ def handle_onboard_from_channel(ack, body, logger):
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "unselect_members_onboard",
+            "callback_id": "onboard_members",
             "title": {"type": "plain_text", "text": "Onboard Members"},
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {
                 "type": "plain_text",
-                "text": "Next",
+                "text": "Initiate Onboarding",
                 "emoji": True,
             },
             "blocks": [
@@ -600,6 +607,24 @@ def handle_onboard_from_channel(ack, body, logger):
                         "options": channel_options,
                     },
                 },
+                {
+                        "block_id": "dont_include",
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
+                        },
+                        "accessory": {
+                            "filter": {"include": ["im"], "exclude_bot_users": True},
+                            "type": "multi_conversations_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "Select members not to include in onboarding",
+                                "emoji": True,
+                            },
+                            "action_id": "channel_selected",
+                        },
+                }
             ],
         },
     )
@@ -1488,47 +1513,6 @@ def show_nooks_info(ack, body, logger):
     )
 
 
-@slack_app.command("/onboard")
-def onboarding_modal(ack, body, logger):
-    ack()
-    for member in slack_app.client.users_list(token=get_token(body["team_id"]))[
-        "members"
-    ]:
-        try:
-            slack_app.client.chat_postMessage(
-                token=get_token(body["team_id"]),
-                link_names=True,
-                channel=member["id"],
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "Hey there:wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_ Nooks allow you to do exactly that but over slack!\n\n Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
-                        },
-                    },
-                    {
-                        "type": "actions",
-                        "elements": [
-                            {
-                                "type": "button",
-                                "action_id": "onboard_info",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Tell me more!",
-                                    "emoji": True,
-                                },
-                                "style": "primary",
-                                "value": "join",
-                            }
-                        ],
-                    },
-                ],
-            )
-        except Exception as e:
-            logging.info(e)
-
-
 # Add functionality here
 from flask import Flask, request, redirect
 import requests
@@ -1630,12 +1614,13 @@ def post_stories():
         team_id = team_row["team_id"]
         token = get_token(team_id)
         for member in nooks_alloc.member_dict[team_id]:
-        
+
             nooks_home.update_home_tab(
-            client=slack_app.client,
-            event={"user": member, "view": {"team_id": team_id}},
-            token=token,
+                client=slack_app.client,
+                event={"user": member, "view": {"team_id": team_id}},
+                token=token,
             )
+
 
 @cron.task("cron", hour="16")
 def update_stories():
@@ -1645,11 +1630,11 @@ def update_stories():
         team_id = team_row["team_id"]
         token = get_token(team_id)
         for member in nooks_alloc.member_dict[team_id]:
-        
+
             nooks_home.update_home_tab(
-            client=slack_app.client,
-            event={"user": member, "view": {"team_id": team_id}},
-            token=token,
+                client=slack_app.client,
+                event={"user": member, "view": {"team_id": team_id}},
+                token=token,
             )
 
 
@@ -1657,9 +1642,11 @@ def update_stories():
 def reset_interactions():
     nooks_alloc.reset()
 
+
 @slack_app.event("member_joined_channel")
 def handle_member_joined_channel_events(body, logger):
     pass
+
 
 def main(nooks_home_arg, nooks_alloc_arg):
     global nooks_home
