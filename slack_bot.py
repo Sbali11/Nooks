@@ -1629,6 +1629,17 @@ def post_stories():
     current_nooks = list(db.nooks.find({"status": "show"}))
     allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks)
     create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs)
+    nooks_home.update(suggested_nooks=collections.defaultdict(dict))
+    for team_row in list(db.tokens_2.find()):
+        team_id = team_row["team_id"]
+        token = get_token(team_id)
+        for member in nooks_alloc.member_dict[team_id]:
+        
+            nooks_home.update_home_tab(
+            client=slack_app.client,
+            event={"user": member, "view": {"team_id": team_id}},
+            token=token,
+            )
 
 @cron.task("cron", hour="16")
 def update_stories():
