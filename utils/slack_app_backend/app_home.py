@@ -338,7 +338,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 9AM and get an updated list of cards at 4PM! ",
+                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 9AM and get an updated list of cards at 5PM! ",
                             },
                         },
                         {"type": "divider"},
@@ -450,7 +450,7 @@ class NooksHome:
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
-
+        
         suggested_nooks_current = self.suggested_nooks[team_id]
         while cur_pos < len(suggested_nooks_current):
             cur_display_card = suggested_nooks_current[cur_pos]

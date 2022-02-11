@@ -348,7 +348,7 @@ def handle_new_nook(ack, body, client, view, logger):
         channel=user,
         text="Hey! I've added your nook titled \""
         + title
-        + '" to the queue. The nook will shown to your co-workers at 4PM! ',
+        + '" to the queue. The nook will shown to your co-workers at 5PM! ',
     )
 
 
@@ -1603,7 +1603,7 @@ def slack_oauth():
 
 
 # TODO change this to hour for final
-@cron.task("cron", hour="9")
+@cron.task("cron", hour="8")
 def post_stories():
     remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
