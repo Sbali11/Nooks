@@ -176,7 +176,7 @@ class NooksAllocation:
                 swipes = nook_swipes[team_id][member]
                 selected_nook = -1
                 for nook in range(num_nooks):
-                    if not swipes[team_id][nook] or self.members_not_together[team_id][nooks_allocs[nook]==1].sum(axis=0)[member]:
+                    if not swipes[nook] or self.members_not_together[team_id][nooks_allocs[nook]==1].sum(axis=0)[member]:
                         continue
                     selected_nook = nook
                     break
