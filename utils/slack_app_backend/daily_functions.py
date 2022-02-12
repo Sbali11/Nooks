@@ -13,14 +13,15 @@ def remove_past_nooks(slack_app, db, nooks_alloc):
     # archive all channels of the past day
     for active_nook in active_stories:
         try:
-            db.nooks.update(
-                {"_id": active_nook["_id"]},
-                {"$set": {"status": "archived"}},
-            )
             all_members = slack_app.client.conversations_members(
                 token=get_token(active_nook["team_id"]),
                 channel=active_nook["channel_id"],
             )["members"]
+            db.nooks.update(
+                {"_id": active_nook["_id"]},
+                {"$set": {"status": "archived", "members": all_members}},
+            )
+
             for member_1 in all_members:
                 for member_2 in all_members:
 
@@ -82,6 +83,7 @@ def remove_past_nooks(slack_app, db, nooks_alloc):
         except Exception as e:
             logging.error(traceback.format_exc())
         nooks_alloc.update_interactions()
+
 
 def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs):
     # create new channels for the day
@@ -189,6 +191,7 @@ def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs)
         except Exception as e:
             logging.error(traceback.format_exc())
         return new_nooks
+
 
 def update_nook_suggestions(slack_app, db):
     # all stories
