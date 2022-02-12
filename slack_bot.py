@@ -970,18 +970,22 @@ def handle_signup(ack, body, client, view, logger):
     user = body["user"]["id"]
     new_member_info = {}
     for key in input_data:
-        if "plain_text_input-action" in input_data[key]:
-            new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
-        elif "select_input-action" in input_data[key]:
-            new_member_info[key] = input_data[key]["select_input-action"][
+        try: 
+            if "plain_text_input-action" in input_data[key]:
+                new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
+            elif "select_input-action" in input_data[key]:
+                new_member_info[key] = input_data[key]["select_input-action"][
                 "selected_option"
-            ]["value"]
-        elif "user_select" in input_data[key]:
-            new_member_info[key] = input_data[key]["user_select"][
-                "selected_conversations"
-            ]
-        else:
-            logging.info(input_data[key])
+                ]["value"]
+            elif "user_select" in input_data[key]:
+                new_member_info[key] = input_data[key]["user_select"][
+                    "selected_conversations"
+                ]
+            else:
+                logging.info(input_data[key])
+        except Exception as e:
+            new_member_info[key] = []
+            logging.error(traceback.format_exc())
 
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
