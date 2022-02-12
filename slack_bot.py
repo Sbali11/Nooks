@@ -1603,7 +1603,7 @@ def slack_oauth():
 
 
 # TODO change this to hour for final
-@cron.task("cron", hour="14")
+@cron.task("cron", hour="15")
 def post_stories():
     remove_past_nooks(slack_app, db, nooks_alloc)
     current_nooks = list(db.nooks.find({"status": "show"}))
@@ -1622,7 +1622,7 @@ def post_stories():
             )
 
 
-@cron.task("cron", hour="23")
+@cron.task("cron", hour="22")
 def update_stories():
     suggested_nooks = update_nook_suggestions(slack_app, db)
     nooks_home.update(suggested_nooks=suggested_nooks)

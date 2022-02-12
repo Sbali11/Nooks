@@ -175,7 +175,7 @@ class NooksAllocation:
                     continue
                 swipes = nook_swipes[team_id][member]
                 selected_nook = -1
-                for nook in np.random.permutation(num_nooks):
+                for nook in range(num_nooks):
                     if not swipes[team_id][nook] or self.members_not_together[team_id][nooks_allocs[nook]==1].sum(axis=0)[member]:
                         continue
                     selected_nook = nook
@@ -183,8 +183,6 @@ class NooksAllocation:
                 if selected_nook==-1:
                     continue
 
-
-                selected_nook = np.random.choice(num_nooks, p=swipes / np.sum(swipes))
                 nooks_allocs[team_id][selected_nook][member] = 1
                 member_allocs[team_id][member] = selected_nook
                 nooks_mem_cnt[team_id][selected_nook] += 1
