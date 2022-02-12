@@ -85,22 +85,26 @@ def remove_past_nooks(slack_app, db, nooks_alloc):
 
 def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs):
     # create new channels for the day
-    logging.info(new_nooks)
-    logging.info(allocations)
-    logging.info("_________________________")
+
     for i, new_nook in enumerate(new_nooks):
         now = datetime.now()  # current date and time
         date = now.strftime("%m-%d-%Y-%H-%M-%S")
         title = new_nook["title"]
         channel_name = new_nook["channel_name"]
         desc = new_nook["description"]
-        if new_nook["_id"] not in allocations:
+        if new_nook["_id"] not in allocations or not allocations[new_nook["_id"]]:
+            db.nooks.update(
+                {"_id": new_nook["_id"]},
+                {
+                    "$set": {
+                        "status": "not_selected",
+                    }
+                },
+            )
             continue
 
         try:
-            logging.info("KMKQFNK")
-            logging.info(new_nook)
-            channel_name = "nook-" + channel_name + "-" + date + "-" + str(i)
+            channel_name = "nook-" + channel_name.lower() + "-" + date + "-" + str(i)
             token = get_token(new_nook["team_id"])
             response = slack_app.client.conversations_create(
                 token=token,

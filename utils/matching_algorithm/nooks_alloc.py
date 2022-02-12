@@ -165,29 +165,41 @@ class NooksAllocation:
                 for member in nook["swiped_right"]:
                     nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
                 creators[team_id].add(creator_key)
+                nook_swipes[team_id][creator_key][i] = 1
+            nook_swipe_nums = nook_swipes[team_id].sum(axis=0)
+            right_swiped_nums = [(nook_swipe_nums[i], i) for i in range(len(nook_swipe_nums))]
+            right_swiped_nums.sort(reverse=True)
 
             # iteratively add members to nooks
             for member in range(self.total_members[team_id]):
-                if member in member_allocs[team_id]:
-                    continue
                 if not (np.sum(nook_swipes[team_id][member])) :
                     members_no_swipes[team_id].add(self.member_ids[team_id][member])
                     continue
                 swipes = nook_swipes[team_id][member]
                 selected_nook = -1
-                for nook in range(num_nooks):
-                    if not swipes[nook] or self.members_not_together[team_id][nooks_allocs[nook]==1].sum(axis=0)[member]:
+                for _, nook in right_swiped_nums:
+                    logging.info("NEW")
+                    logging.info(member)
+                    logging.info(nook)
+                    if not swipes[nook] or (self.members_not_together[team_id][nooks_allocs[team_id][nook]==1]).sum(axis=0)[member]:
                         continue
+                    
                     selected_nook = nook
+                    logging.info(member)
+                    logging.info(selected_nook)
+                    
                     break
+                
                 if selected_nook==-1:
                     continue
 
                 nooks_allocs[team_id][selected_nook][member] = 1
                 member_allocs[team_id][member] = selected_nook
                 nooks_mem_cnt[team_id][selected_nook] += 1
-                nooks_mem_int_cnt[team_id] += self.temporal_interacted[member] >= 1
-
+                nooks_mem_int_cnt[team_id] += self.temporal_interacted[team_id][member] >= 1
+            logging.info("F")
+            logging.info(member_allocs[team_id])
+            logging.info( right_swiped_nums)
             for i in range(self.num_iters):
                 all_members_permute = np.random.permutation(self.total_members[team_id])
 
@@ -202,30 +214,30 @@ class NooksAllocation:
                     og_nook = member_allocs[team_id][member]
                     if nooks_mem_cnt[team_id][og_nook] <= 2:
                         continue
-                    elif nooks_mem_cnt[team_id][og_nook] == 3 and not nooks[team_id][og_nook]["allow_two_members"]:
+                    elif nooks_mem_cnt[team_id][og_nook] == 3 and not team_wise_nooks[team_id][og_nook]["allow_two_members"]:
                         continue
 
                     for nook in range(num_nooks):
                         if not nook_swipes[team_id][member][nook]:
                             heterophily_nook.append(0)  # this value will be ignored
                             continue
-                        same_nook_members = self.member_vectors[team_id][nooks_allocs[nook] == 1]
+                        same_nook_members = self.member_vectors[team_id][nooks_allocs[team_id][nook] == 1]
                         member_diff = np.linalg.norm(
                             self.member_vectors[team_id][member] - same_nook_members
                         )
-                        priority = self.member_heterophily_priority[team_id][nooks_allocs[nook] == 1] + (self.member_heterophily_priority[team_id][member].reshape(1, -1))
+                        priority = self.member_heterophily_priority[team_id][nooks_allocs[team_id][nook] == 1] + (self.member_heterophily_priority[team_id][member].reshape(1, -1))
                         heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
-                        interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[team_id][member] > 0)).sum())
+                        interacted_nook.append(((nooks_allocs[team_id][nook]) * (self.temporal_interacted[team_id][member] > 0)).sum())
                     interacted_by = np.array(interacted_nook)          
                     heterophily = np.array(heterophily_nook)     
                     interacted_by = nooks_mem_int_cnt[team_id][:, member]
-                    wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
+                    wts = ((EPSILON + interacted_by) / nooks_mem_cnt[team_id]) * (
                         1 + (self.alpha * heterophily)
                     )
 
                     sel_wts = wts * nook_swipes[team_id][member]
                     for nook in range(num_nooks):
-                        if self.members_not_together[team_id][nooks_allocs[nook]==1].sum(axis=0)[member]:
+                        if self.members_not_together[team_id][nooks_allocs[team_id][nook]==1].sum(axis=0)[member]:
                             sel_wts[nook] = 0
 
                     total_sel_wts = np.sum(sel_wts)
@@ -239,19 +251,19 @@ class NooksAllocation:
 
                     nooks_allocs[team_id][selected_nook][member] = 1
                     nooks_allocs[team_id][og_nook][member] = 0
-
-                    nooks_mem_cnt[team_id][selected_nook] += 1
-                    nooks_mem_cnt[team_id][og_nook] -= 1
+                    if not nooks_creators[team_id][selected_nook] == member:
+                        nooks_mem_cnt[team_id][selected_nook] += 1
+                    if not nooks_creators[team_id][og_nook] == member:
+                        nooks_mem_cnt[team_id][og_nook] -= 1
 
                     member_allocs[team_id][member] = selected_nook
                     nooks_mem_int_cnt[team_id][selected_nook] += (
                         self.temporal_interacted[team_id][member] >= 1
                     )
                     nooks_mem_int_cnt[team_id][og_nook] -= self.temporal_interacted[team_id][member] >= 1
-            
+
             for nook_id in range(len(nooks_allocs[team_id])):
-                if nooks_mem_cnt[team_id][nook_id] <= 3 and not nooks[nook_id]["allow_two_members"]:
-                    continue
+
                 allocated_mems = nooks_allocs[team_id][nook_id].nonzero()[0].tolist()
                 allocated_mems = list(
                     set(
@@ -259,6 +271,11 @@ class NooksAllocation:
                     + [self.member_ids[team_id][nooks_creators[team_id][nook_id]]]
                     )
                 )
+
+
+                if len(allocated_mems) < 3 and not nooks[nook_id]["allow_two_members"]:
+                    allocations[team_wise_nooks[team_id][nook_id]["_id"]] = ""
+                    continue
                 allocations[team_wise_nooks[team_id][nook_id]["_id"]] = ",".join(allocated_mems)
                 self.db.nooks.update_one(
                     {"_id": team_wise_nooks[team_id][nook_id]["_id"]},
@@ -291,7 +308,7 @@ class NooksAllocation:
                 )
                 priority = self.member_heterophily_priority[team_id][nooks_allocs[nook] == 1] + (self.member_heterophily_priority[team_id][member_pos].reshape(1, -1))
                 heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
-                interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[member_pos] > 0)).sum())
+                interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[team_id][member_pos] > 0)).sum())
             interacted_by = np.array(interacted_nook)          
             heterophily = np.array(heterophily_nook)           
             wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
