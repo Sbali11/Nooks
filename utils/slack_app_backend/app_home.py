@@ -18,10 +18,25 @@ class NooksHome:
         self.sample_nooks = self.db.sample_nooks.distinct("title")
         random.shuffle(self.sample_nooks)
 
-    def update(self, suggested_nooks):
-        self.suggested_nooks = suggested_nooks
+    def update(self, suggested_nooks, team_id):
+        self.suggested_nooks[team_id] = suggested_nooks
 
-    def get_context_block(self):
+    def get_context_block(self, user_id, team_id):
+        user_id_installer = self.db.tokens_2.find_one({"team_id": team_id})["user_id"]
+        set_timezone_block = []
+        if user_id_installer == user_id:
+            set_timezone_block = [
+                {
+                    "type": "button",
+                    "action_id": "set_timezone",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Set Time-Zone",
+                        "emoji": True,
+                    },
+                    "value": "set_timezone",
+                },
+            ]
         return [
             {
                 "type": "section",
@@ -43,7 +58,10 @@ class NooksHome:
                         },
                         "style": "primary",
                         "value": "onboard",
-                    },
+                    }
+                ]
+                + set_timezone_block
+                + [
                     {
                         "type": "button",
                         "action_id": "send_feedback",
@@ -88,14 +106,14 @@ class NooksHome:
                     )["user"]
                     if member["is_bot"]:
                         continue
-                    
+
                     interacted_with.append(
-                            (
-                                interaction_row["count"],
-                                member["name"],
-                                interaction_row["user2_id"],
-                            )
+                        (
+                            interaction_row["count"],
+                            member["name"],
+                            interaction_row["user2_id"],
                         )
+                    )
             interacted_with.sort(reverse=True)
             interacted_with = interacted_with[:MAX_NUM_CONNECTIONS]
             if interacted_with:
@@ -309,7 +327,9 @@ class NooksHome:
         before_cards_block_items = self.get_blocks_before_cards(
             client, event, token=token
         )
-        context_block_items = self.get_context_block()
+        context_block_items = self.get_context_block(
+            user_id=event["user"], team_id=event["view"]["team_id"]
+        )
         create_a_nook_block = self.get_create_a_nook_block(client, event, token=token)
 
         client.views_publish(
@@ -338,7 +358,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 9AM and get an updated list of cards at 5PM! ",
+                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 9AM and get an updated list of cards at 4PM! ",
                             },
                         },
                         {"type": "divider"},
@@ -416,7 +436,9 @@ class NooksHome:
         interaction_block_items = self.get_interaction_blocks(
             client, user_id, team_id=event["view"]["team_id"], token=token
         )
-        context_block_items = self.get_context_block()
+        context_block_items = self.get_context_block(
+            user_id=user_id, team_id=event["view"]["team_id"]
+        )
         if not member:
             self.initial_message(client, event, token=token)
             return
@@ -450,7 +472,7 @@ class NooksHome:
         cur_sample = self.sample_nooks[cur_nook_pos]
         found_pos = cur_pos
         team_id = event["view"]["team_id"]
-        
+
         suggested_nooks_current = self.suggested_nooks[team_id]
         while cur_pos < len(suggested_nooks_current):
             cur_display_card = suggested_nooks_current[cur_pos]

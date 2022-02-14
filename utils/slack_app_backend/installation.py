@@ -28,6 +28,7 @@ class InstallationDB:
             {
                 "team_id": installation.team_id,
                 "user_id": installation.user_id,
+                "time_zone": "EST",
                 "installation": vars(installation),
             },
             upsert=True,

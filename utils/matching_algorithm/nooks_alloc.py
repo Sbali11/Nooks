@@ -33,7 +33,16 @@ class NooksAllocation:
             self.homophily_factors[i]: i
             for i in range(len(self.homophily_factors))
         }
-        self._create_members()
+        self.member_vectors = {}
+        self.member_dict = {}
+        self.member_ids = {}
+        self.members_not_together = {}
+        self.total_members = {}
+        self.member_heterophily_priority = {}
+        self.temporal_interacted = {}
+        self.all_interacted = {}
+        for team_row in list(self.db.tokens_2.find()):
+            self._create_members(team_row["team_id"])
 
     def _set_homophily_priority(self, team_id, member):
         top_int_members = member["top_members"]
@@ -49,63 +58,54 @@ class NooksAllocation:
         self.member_heterophily_priority[team_id][self.member_dict[team_id][member["user_id"]]] = (weight_factor+EPSILON)/(np.sum(weight_factor)+EPSILON)
 
     # TODO change to team specific?
-    def _create_members(self):
-        self.member_vectors = {}
-        self.member_dict = {}
-        self.member_ids = {}
-        self.members_not_together = {}
-        self.total_members = {}
-        self.member_heterophily_priority = {}
-        self.temporal_interacted = {}
-        self.all_interacted = {}
+    def _create_members(self, team_id):
+
 
         #np.zeros((len(all_members), len(all_members)))
-        for team_row in list(self.db.tokens_2.find()):
-            team_id = team_row["team_id"]
-            all_members = list(self.db.member_vectors.find({"team_id": team_id}))
-
-            
-            self.member_vectors[team_id] = np.array(
+        all_members = list(self.db.member_vectors.find({"team_id": team_id}))
+    
+        self.member_vectors[team_id] = np.array(
             [
                 np.array(member["member_vector"]) for member in all_members]
             )
-            self.members_not_together[team_id] = np.zeros((len(all_members), len(all_members)))
 
-            self.member_dict[team_id] = {}
-            self.member_ids[team_id] = {}
+        self.members_not_together[team_id] = np.zeros((len(all_members), len(all_members)))
+
+        self.member_dict[team_id] = {}
+        self.member_ids[team_id] = {}
         
-            for i, member_row in enumerate(all_members):
-                member = member_row["user_id"]
-                self.member_dict[team_id][member] = i
-                self.member_ids[team_id][i] = member
+        for i, member_row in enumerate(all_members):
+            member = member_row["user_id"]
+            self.member_dict[team_id][member] = i
+            self.member_ids[team_id][i] = member
 
-            for blacklist_row in all_members:
-                member_pos = self.member_dict[team_id][blacklist_row["user_id"]]
-                if "blacklisted_from" in blacklist_row:
-                    for b_from in blacklist_row["blacklisted_from"]:
-                        if b_from not in self.member_dict[team_id]:
-                            continue
-                        self.members_not_together[team_id][member_pos][self.member_dict[b_from]] = 1
-                        self.members_not_together[team_id][self.member_dict[b_from]][member_pos] = 1
-                if "black_list" in blacklist_row:
-                    for b in blacklist_row["black_list"]:
-                        if b not in self.member_dict[team_id]:
-                            continue
-                        self.members_not_together[team_id][member_pos][self.member_dict[team_id][b]] = 1
-                        self.members_not_together[team_id][self.member_dict[team_id][b]][member_pos] = 1
+        for blacklist_row in all_members:
+            member_pos = self.member_dict[team_id][blacklist_row["user_id"]]
+            if "blacklisted_from" in blacklist_row:
+                for b_from in blacklist_row["blacklisted_from"]:
+                    if b_from not in self.member_dict[team_id]:
+                        continue
+                    self.members_not_together[team_id][member_pos][self.member_dict[b_from]] = 1
+                    self.members_not_together[team_id][self.member_dict[b_from]][member_pos] = 1
+            if "black_list" in blacklist_row:
+                for b in blacklist_row["black_list"]:
+                    if b not in self.member_dict[team_id]:
+                        continue
+                    self.members_not_together[team_id][member_pos][self.member_dict[team_id][b]] = 1
+                    self.members_not_together[team_id][self.member_dict[team_id][b]][member_pos] = 1
 
-            self.total_members[team_id] = len(self.member_vectors[team_id])
-            self.member_heterophily_priority[team_id] = np.zeros((self.total_members[team_id], len(self.homophily_factors)))
-            for member_row in all_members:
-                self._set_homophily_priority(team_id, member_row)
+        self.total_members[team_id] = len(self.member_vectors[team_id])
+        self.member_heterophily_priority[team_id] = np.zeros((self.total_members[team_id], len(self.homophily_factors)))
+        for member_row in all_members:
+            self._set_homophily_priority(team_id, member_row)
 
         
-            self.temporal_interacted[team_id]= self._create_interactions_np(team_id, 
-                self.db.temporal_interacted.find({"team_id": team_id})
-            )
-            self.all_interacted[team_id] = self._create_interactions_np(team_id, 
-                self.db.all_interacted.find({"team_id": team_id})
-            )
+        self.temporal_interacted[team_id]= self._create_interactions_np(team_id, 
+            self.db.temporal_interacted.find({"team_id": team_id})
+        )
+        self.all_interacted[team_id] = self._create_interactions_np(team_id, 
+            self.db.all_interacted.find({"team_id": team_id})
+        )
 
     def update_interactions(self):
         for team_row in list(self.db.tokens_2.find()):
@@ -125,11 +125,10 @@ class NooksAllocation:
 
     def reset(self):
         self.db.temporal_interacted.remove()
-        self.db.create_collection("temporal_interacted")
+        #self.db.create_collection("temporal_interacted")
 
-    # TODO see if running median is needed; space & time
-    def create_nook_allocs(self, nooks):
-        self._create_members()
+    def create_nook_allocs(self, nooks, team_id):
+        self._create_members(team_id)
         team_wise_nooks = collections.defaultdict(list)
         member_allocs = {}
         nooks_creators = {}
@@ -143,147 +142,134 @@ class NooksAllocation:
         nooks_allocs = {}
         for nook in nooks:
             team_wise_nooks[nook["team_id"]].append(nook)
-        for team_row in list(self.db.tokens_2.find()):
-            team_id = team_row["team_id"]
-            num_nooks = len(team_wise_nooks[team_id])
-            nooks_allocs[team_id] = np.zeros((num_nooks, self.total_members[team_id]))
-            member_allocs[team_id] = {}
-            nooks_creators[team_id] = {}
-            creators[team_id] = set([])
-            members_no_swipes[team_id] = set([])
-            nooks_mem_cnt[team_id] = np.ones((num_nooks))
-            nooks_mem_int_cnt[team_id] = np.zeros((num_nooks, self.total_members[team_id]))
-            nook_swipes[team_id] = np.zeros((self.total_members[team_id], num_nooks))
-            # allocates the creator to their respective nooks
-            for i, nook in enumerate(team_wise_nooks[team_id]):
-                creator_key = self.member_dict[team_id][nook["creator"]]
-                nooks_allocs[team_id][i][creator_key] = 1
-                member_allocs[team_id][creator_key] = i
-                nooks_creators[team_id][i] = creator_key
-                if "swiped_right" not in nook:
-                    continue
-                for member in nook["swiped_right"]:
-                    nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
-                creators[team_id].add(creator_key)
-                nook_swipes[team_id][creator_key][i] = 1
-            nook_swipe_nums = nook_swipes[team_id].sum(axis=0)
-            right_swiped_nums = [(nook_swipe_nums[i], i) for i in range(len(nook_swipe_nums))]
-            right_swiped_nums.sort(reverse=True)
 
-            # iteratively add members to nooks
-            for member in range(self.total_members[team_id]):
-                if not (np.sum(nook_swipes[team_id][member])) :
-                    members_no_swipes[team_id].add(self.member_ids[team_id][member])
+        num_nooks = len(nooks)
+        nooks_allocs[team_id] = np.zeros((num_nooks, self.total_members[team_id]))
+        member_allocs[team_id] = {}
+        nooks_creators[team_id] = {}
+        creators[team_id] = set([])
+        members_no_swipes[team_id] = set([])
+        nooks_mem_cnt[team_id] = np.ones((num_nooks))
+        nooks_mem_int_cnt[team_id] = np.zeros((num_nooks, self.total_members[team_id]))
+        nook_swipes[team_id] = np.zeros((self.total_members[team_id], num_nooks))
+        # allocates the creator to their respective nooks
+        for i, nook in enumerate(team_wise_nooks[team_id]):
+            creator_key = self.member_dict[team_id][nook["creator"]]
+            nooks_allocs[team_id][i][creator_key] = 1
+            member_allocs[team_id][creator_key] = i
+            nooks_creators[team_id][i] = creator_key
+            if "swiped_right" not in nook:
+                continue
+            for member in nook["swiped_right"]:
+                nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
+            creators[team_id].add(creator_key)
+            nook_swipes[team_id][creator_key][i] = 1
+        nook_swipe_nums = nook_swipes[team_id].sum(axis=0)
+        right_swiped_nums = [(nook_swipe_nums[i], i) for i in range(len(nook_swipe_nums))]
+        right_swiped_nums.sort(reverse=True)
+        # iteratively add members to nooks
+        for member in range(self.total_members[team_id]):
+            if not (np.sum(nook_swipes[team_id][member])) :
+                members_no_swipes[team_id].add(self.member_ids[team_id][member])
+                continue
+            swipes = nook_swipes[team_id][member]
+            selected_nook = -1
+            for _, nook in right_swiped_nums:
+                logging.info("NEW")
+                logging.info(member)
+                logging.info(nook)
+                if not swipes[nook] or (self.members_not_together[team_id][nooks_allocs[team_id][nook]==1]).sum(axis=0)[member]:
+                    continue
+                
+                selected_nook = nook
+                logging.info(member)
+                logging.info(selected_nook)
+                
+                break
+            
+            if selected_nook==-1:
+                continue
+            nooks_allocs[team_id][selected_nook][member] = 1
+            member_allocs[team_id][member] = selected_nook
+            nooks_mem_cnt[team_id][selected_nook] += 1
+            nooks_mem_int_cnt[team_id] += self.temporal_interacted[team_id][member] >= 1
+        logging.info("F")
+        logging.info(member_allocs[team_id])
+        logging.info( right_swiped_nums)
+        for i in range(self.num_iters):
+            all_members_permute = np.random.permutation(self.total_members[team_id])
+            for member in all_members_permute:
+                if not (np.sum(nook_swipes[team_id][member])):
                     continue
                 swipes = nook_swipes[team_id][member]
-                selected_nook = -1
-                for _, nook in right_swiped_nums:
-                    logging.info("NEW")
-                    logging.info(member)
-                    logging.info(nook)
-                    if not swipes[nook] or (self.members_not_together[team_id][nooks_allocs[team_id][nook]==1]).sum(axis=0)[member]:
-                        continue
-                    
-                    selected_nook = nook
-                    logging.info(member)
-                    logging.info(selected_nook)
-                    
-                    break
-                
-                if selected_nook==-1:
+                heterophily_nook = []
+                interacted_nook = []
+                if member not in member_allocs[team_id]:
                     continue
+                og_nook = member_allocs[team_id][member]
+                if nooks_mem_cnt[team_id][og_nook] <= 2:
+                    continue
+                elif nooks_mem_cnt[team_id][og_nook] == 3 and not team_wise_nooks[team_id][og_nook]["allow_two_members"]:
+                    continue
+                for nook in range(num_nooks):
+                    if not nook_swipes[team_id][member][nook]:
+                        heterophily_nook.append(0)  # this value will be ignored
+                        continue
+                    same_nook_members = self.member_vectors[team_id][nooks_allocs[team_id][nook] == 1]
+                    member_diff = np.linalg.norm(
+                        self.member_vectors[team_id][member] - same_nook_members
+                    )
+                    priority = self.member_heterophily_priority[team_id][nooks_allocs[team_id][nook] == 1] + (self.member_heterophily_priority[team_id][member].reshape(1, -1))
+                    heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
+                    interacted_nook.append(((nooks_allocs[team_id][nook]) * (self.temporal_interacted[team_id][member] > 0)).sum())
+                interacted_by = np.array(interacted_nook)          
+                heterophily = np.array(heterophily_nook)     
+                interacted_by = nooks_mem_int_cnt[team_id][:, member]
+                wts = ((EPSILON + interacted_by) / nooks_mem_cnt[team_id]) * (
+                    1 + (self.alpha * heterophily)
+                )
 
+                sel_wts = wts * nook_swipes[team_id][member]
+                for nook in range(num_nooks):
+                    if self.members_not_together[team_id][nooks_allocs[team_id][nook]==1].sum(axis=0)[member]:
+                        sel_wts[nook] = 0
+                total_sel_wts = np.sum(sel_wts)
+                if total_sel_wts == 0:
+                    continue
+                selected_nook = np.argmax(sel_wts / total_sel_wts)
+                if selected_nook == og_nook:
+                    continue
                 nooks_allocs[team_id][selected_nook][member] = 1
+                nooks_allocs[team_id][og_nook][member] = 0
+                if not nooks_creators[team_id][selected_nook] == member:
+                    nooks_mem_cnt[team_id][selected_nook] += 1
+                if not nooks_creators[team_id][og_nook] == member:
+                    nooks_mem_cnt[team_id][og_nook] -= 1
                 member_allocs[team_id][member] = selected_nook
-                nooks_mem_cnt[team_id][selected_nook] += 1
-                nooks_mem_int_cnt[team_id] += self.temporal_interacted[team_id][member] >= 1
-            logging.info("F")
-            logging.info(member_allocs[team_id])
-            logging.info( right_swiped_nums)
-            for i in range(self.num_iters):
-                all_members_permute = np.random.permutation(self.total_members[team_id])
-
-                for member in all_members_permute:
-                    if not (np.sum(nook_swipes[team_id][member])):
-                        continue
-                    swipes = nook_swipes[team_id][member]
-                    heterophily_nook = []
-                    interacted_nook = []
-                    if member not in member_allocs[team_id]:
-                        continue
-                    og_nook = member_allocs[team_id][member]
-                    if nooks_mem_cnt[team_id][og_nook] <= 2:
-                        continue
-                    elif nooks_mem_cnt[team_id][og_nook] == 3 and not team_wise_nooks[team_id][og_nook]["allow_two_members"]:
-                        continue
-
-                    for nook in range(num_nooks):
-                        if not nook_swipes[team_id][member][nook]:
-                            heterophily_nook.append(0)  # this value will be ignored
-                            continue
-                        same_nook_members = self.member_vectors[team_id][nooks_allocs[team_id][nook] == 1]
-                        member_diff = np.linalg.norm(
-                            self.member_vectors[team_id][member] - same_nook_members
-                        )
-                        priority = self.member_heterophily_priority[team_id][nooks_allocs[team_id][nook] == 1] + (self.member_heterophily_priority[team_id][member].reshape(1, -1))
-                        heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
-                        interacted_nook.append(((nooks_allocs[team_id][nook]) * (self.temporal_interacted[team_id][member] > 0)).sum())
-                    interacted_by = np.array(interacted_nook)          
-                    heterophily = np.array(heterophily_nook)     
-                    interacted_by = nooks_mem_int_cnt[team_id][:, member]
-                    wts = ((EPSILON + interacted_by) / nooks_mem_cnt[team_id]) * (
-                        1 + (self.alpha * heterophily)
-                    )
-
-                    sel_wts = wts * nook_swipes[team_id][member]
-                    for nook in range(num_nooks):
-                        if self.members_not_together[team_id][nooks_allocs[team_id][nook]==1].sum(axis=0)[member]:
-                            sel_wts[nook] = 0
-
-                    total_sel_wts = np.sum(sel_wts)
-                    if total_sel_wts == 0:
-                        continue
-
-                    selected_nook = np.argmax(sel_wts / total_sel_wts)
-
-                    if selected_nook == og_nook:
-                        continue
-
-                    nooks_allocs[team_id][selected_nook][member] = 1
-                    nooks_allocs[team_id][og_nook][member] = 0
-                    if not nooks_creators[team_id][selected_nook] == member:
-                        nooks_mem_cnt[team_id][selected_nook] += 1
-                    if not nooks_creators[team_id][og_nook] == member:
-                        nooks_mem_cnt[team_id][og_nook] -= 1
-
-                    member_allocs[team_id][member] = selected_nook
-                    nooks_mem_int_cnt[team_id][selected_nook] += (
-                        self.temporal_interacted[team_id][member] >= 1
-                    )
-                    nooks_mem_int_cnt[team_id][og_nook] -= self.temporal_interacted[team_id][member] >= 1
-
-            for nook_id in range(len(nooks_allocs[team_id])):
-
-                allocated_mems = nooks_allocs[team_id][nook_id].nonzero()[0].tolist()
-                allocated_mems = list(
-                    set(
-                    [self.member_ids[team_id][member] for member in allocated_mems]
-                    + [self.member_ids[team_id][nooks_creators[team_id][nook_id]]]
-                    )
+                nooks_mem_int_cnt[team_id][selected_nook] += (
+                    self.temporal_interacted[team_id][member] >= 1
                 )
+                nooks_mem_int_cnt[team_id][og_nook] -= self.temporal_interacted[team_id][member] >= 1
 
-
-                if len(allocated_mems) < 3 and not nooks[nook_id]["allow_two_members"]:
-                    allocations[team_wise_nooks[team_id][nook_id]["_id"]] = ""
-                    continue
-                allocations[team_wise_nooks[team_id][nook_id]["_id"]] = ",".join(allocated_mems)
-                self.db.nooks.update_one(
-                    {"_id": team_wise_nooks[team_id][nook_id]["_id"]},
-                    {"$set": {"members": allocated_mems}},
+        for nook_id in range(len(nooks_allocs[team_id])):
+            allocated_mems = nooks_allocs[team_id][nook_id].nonzero()[0].tolist()
+            allocated_mems = list(
+                set(
+                [self.member_ids[team_id][member] for member in allocated_mems]
+                + [self.member_ids[team_id][nooks_creators[team_id][nook_id]]]
                 )
+            )        
+            if len(allocated_mems) < 3 and not nooks[nook_id]["allow_two_members"]:
+                allocations[team_wise_nooks[team_id][nook_id]["_id"]] = ""
+                continue
+            allocations[team_wise_nooks[team_id][nook_id]["_id"]] = ",".join(allocated_mems)
+            self.db.nooks.update_one(
+                {"_id": team_wise_nooks[team_id][nook_id]["_id"]},
+                {"$set": {"members": allocated_mems}},
+            )
             # self._update_interacted(member_allocs, nooks_allocs)
             suggested_allocs.update(self._create_alloc_suggestions(
-                team_id, team_wise_nooks[team_id], members_no_swipes[team_id], nooks_allocs[team_id], nooks_mem_cnt[team_id]
+            team_id, team_wise_nooks[team_id], members_no_swipes[team_id], nooks_allocs[team_id], nooks_mem_cnt[team_id]
             ))
         return allocations, suggested_allocs
 

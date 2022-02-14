@@ -7,14 +7,14 @@ import traceback
 from utils.slack_app_backend.installation import get_token
 
 
-def remove_past_nooks(slack_app, db, nooks_alloc):
-    active_stories = list(db.nooks.find({"status": "active"}))
-
+def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
+    active_stories = list(db.nooks.find({"status": "active", "team_id": team_id}))
+    token = get_token(team_id)
     # archive all channels of the past day
     for active_nook in active_stories:
         try:
             all_members = slack_app.client.conversations_members(
-                token=get_token(active_nook["team_id"]),
+                token=token,
                 channel=active_nook["channel_id"],
             )["members"]
             db.nooks.update(
@@ -85,7 +85,7 @@ def remove_past_nooks(slack_app, db, nooks_alloc):
         nooks_alloc.update_interactions()
 
 
-def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs):
+def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs, team_id):
     # create new channels for the day
 
     for i, new_nook in enumerate(new_nooks):
@@ -193,10 +193,10 @@ def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs)
         return new_nooks
 
 
-def update_nook_suggestions(slack_app, db):
+def update_nook_suggestions(slack_app, db, team_id):
     # all stories
-    suggested_nooks = list(db.nooks.find({"status": "suggested"}))
-    db.user_swipes.remove()
+    suggested_nooks = list(db.nooks.find({"status": "suggested", "team_id": team_id}))
+    db.user_swipes.remove({"team_id": team_id})
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
     for suggested_nook in suggested_nooks:
@@ -212,13 +212,14 @@ def update_nook_suggestions(slack_app, db):
             )
         except Exception as e:
             logging.error(traceback.format_exc())
+    token = get_token(team_id)
     if suggested_nooks:
         # TODO
-        all_users = list(db.member_vectors.find())
+        all_users = list(db.member_vectors.find({"team_id": team_id}))
         for user in all_users:
             try:
                 slack_app.client.chat_postMessage(
-                    token=get_token(user["team_id"]),
+                    token=token,
                     link_names=True,
                     channel=user["user_id"],
                     text="Hello! I've updated your Nook Cards List for today!",
@@ -228,4 +229,4 @@ def update_nook_suggestions(slack_app, db):
     suggested_nooks_per_team = collections.defaultdict(list)
     for nook in suggested_nooks:
         suggested_nooks_per_team[nook["team_id"]].append(nook)
-    return suggested_nooks_per_team
+    return suggested_nooks_per_team[team_id]

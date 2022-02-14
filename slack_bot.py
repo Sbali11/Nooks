@@ -8,6 +8,8 @@ import collections
 import traceback
 
 from datetime import datetime, timezone
+import pytz
+
 
 from utils.slack_app_backend.app_home import NooksHome
 from utils.matching_algorithm.nooks_alloc import NooksAllocation
@@ -348,7 +350,7 @@ def handle_new_nook(ack, body, client, view, logger):
         channel=user,
         text="Hey! I've added your nook titled \""
         + title
-        + '" to the queue. The nook will shown to your co-workers at 5PM! ',
+        + '" to the queue. The nook will be shown to your co-workers at 4PM! ',
     )
 
 
@@ -395,7 +397,7 @@ def handle_channel_selected(ack, body, logger):
 @slack_app.view("onboard_members")
 def handle_onboard_members(ack, body, client, view, logger):
     input_data = view["state"]["values"]
-    #input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
+    # input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
     logging.info(input_data)
     success_modal_ack(
         ack,
@@ -412,9 +414,7 @@ def handle_onboard_members(ack, body, client, view, logger):
     dont_include_list = input_data["dont_include"]["channel_selected"][
         "selected_conversations"
     ]
-    dont_include = set(
-        dont_include_list
-    )
+    dont_include = set(dont_include_list)
     token = get_token(body["team"]["id"])
     all_members = set([])
     all_registered_users = {
@@ -568,8 +568,6 @@ def handle_onboard_from_channel(ack, body, logger):
                             "type": "mrkdwn",
                             "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
                         },
-                    
-     
                     },
                 ],
             },
@@ -608,23 +606,23 @@ def handle_onboard_from_channel(ack, body, logger):
                     },
                 },
                 {
-                        "block_id": "dont_include",
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
+                    "block_id": "dont_include",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Select members you don't want to include in the onboarding*\nBy default, I'll send a onboarding message to everyone in the channels selected. Let me know if you would like to exclude some members",
+                    },
+                    "accessory": {
+                        "filter": {"include": ["im"], "exclude_bot_users": True},
+                        "type": "multi_conversations_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select members not to include in onboarding",
+                            "emoji": True,
                         },
-                        "accessory": {
-                            "filter": {"include": ["im"], "exclude_bot_users": True},
-                            "type": "multi_conversations_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Select members not to include in onboarding",
-                                "emoji": True,
-                            },
-                            "action_id": "channel_selected",
-                        },
-                }
+                        "action_id": "channel_selected",
+                    },
+                },
             ],
         },
     )
@@ -970,12 +968,14 @@ def handle_signup(ack, body, client, view, logger):
     user = body["user"]["id"]
     new_member_info = {}
     for key in input_data:
-        try: 
+        try:
             if "plain_text_input-action" in input_data[key]:
-                new_member_info[key] = input_data[key]["plain_text_input-action"]["value"]
+                new_member_info[key] = input_data[key]["plain_text_input-action"][
+                    "value"
+                ]
             elif "select_input-action" in input_data[key]:
                 new_member_info[key] = input_data[key]["select_input-action"][
-                "selected_option"
+                    "selected_option"
                 ]["value"]
             elif "user_select" in input_data[key]:
                 new_member_info[key] = input_data[key]["user_select"][
@@ -1517,6 +1517,94 @@ def show_nooks_info(ack, body, logger):
     )
 
 
+@slack_app.view("update_timezone")
+def handle_signup(ack, body, client, view, logger):
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Time Zone for the workspace updated",
+        title="Set Time-Zone",
+    )
+    # TODO create a new name if taken?
+    input_data = view["state"]["values"]
+    user_id = body["user"]["id"]
+    team_id = body["team"]["id"]
+    time_zone = input_data["timezone_id"]["select_input-action"]["selected_option"][
+        "value"
+    ]
+    db.tokens_2.update(
+        {
+            "team_id": team_id,
+        },
+        {
+            "$set": {
+                "time_zone": time_zone,
+            }
+        },
+    )
+
+
+@slack_app.action("set_timezone")
+def set_timezone_modal(ack, body, logger):
+    ack()
+    common_timezones = set([])
+    
+    for timezone_name in pytz.country_timezones['US']:
+        valid_name = True
+        for n in timezone_name:
+            if not (
+                ("A" <= n <= "Z")
+                or ("a" <= n <= "z")
+                or ("0" <= n <= "9")
+                or n == "/"
+                or n == "+"
+                or n == "-"
+                or n == "_"
+            ):
+                valid_name = False
+        if valid_name:
+            common_timezones.add(timezone_name)
+        else:
+            print(timezone_name)
+
+    timezone_options = [
+        {
+            "value": timezone,
+            "text": {"type": "plain_text", "text": timezone},
+        }
+        for timezone in common_timezones
+    ]
+
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "update_timezone",
+            "title": {"type": "plain_text", "text": "Set Time-Zone"},
+            "submit": {"type": "plain_text", "text": "Set Time-Zone"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "block_id": "timezone_id",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Select a timezone for the workspace*",
+                    },
+                    "accessory": {
+                        "type": "static_select",
+                        "action_id": "select_input-action",
+                        "options": timezone_options,
+                    },
+                },
+            ],
+        },
+    )
+
+
 # Add functionality here
 from flask import Flask, request, redirect
 import requests
@@ -1606,40 +1694,84 @@ def slack_oauth():
     return "Successfully installed"
 
 
+def post_stories_periodic(all_team_rows):
+
+    for team_row in all_team_rows:
+        team_id = team_row["team_id"]
+        remove_past_nooks(slack_app, db, nooks_alloc, team_id=team_id)
+        current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
+        allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks, team_id=team_id)
+        create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id)
+        nooks_home.update(suggested_nooks=[], team_id=team_id)
+        
+        token = get_token(team_id)
+        for member in nooks_alloc.member_dict[team_id]:
+
+            nooks_home.update_home_tab(
+                client=slack_app.client,
+                event={"user": member, "view": {"team_id": team_id}},
+                token=token,
+            )
+
+
+def update_stories_periodic(all_team_rows):
+    for team_row in all_team_rows:
+        team_id = team_row["team_id"]
+        suggested_nooks = update_nook_suggestions(slack_app, db, team_id)
+        nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
+        token = get_token(team_id)
+        logging.info(suggested_nooks)
+        for member in nooks_alloc.member_dict[team_id]:
+            nooks_home.update_home_tab(
+                client=slack_app.client,
+                event={"user": member, "view": {"team_id": team_id}},
+                token=token,
+            )
+
+
+def get_team_rows_timezone(time):
+    all_team_rows = []
+    all_time_zones = set([])
+    for time_zone in pytz.country_timezones['US']:
+        tz = pytz.timezone(time_zone)
+        timezone_time = datetime.now(tz).strftime("%H:%M")
+        if timezone_time == time and (datetime.now(tz).weekday() not in [5, 6]):
+            all_time_zones.add(time_zone)
+
+    for time_zone in all_time_zones:
+        all_team_rows += list(db.tokens_2.find({"time_zone": time_zone}))
+    return all_team_rows
+
+
 # TODO change this to hour for final
-@cron.task("cron", hour="15")
-def post_stories():
-    remove_past_nooks(slack_app, db, nooks_alloc)
-    current_nooks = list(db.nooks.find({"status": "show"}))
-    allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks)
-    create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs)
-    nooks_home.update(suggested_nooks=collections.defaultdict(dict))
-    for team_row in list(db.tokens_2.find()):
-        team_id = team_row["team_id"]
-        token = get_token(team_id)
-        for member in nooks_alloc.member_dict[team_id]:
-
-            nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={"user": member, "view": {"team_id": team_id}},
-                token=token,
-            )
+@cron.task("cron", minute="0")
+def post_stories_0():
+    post_stories_periodic(get_team_rows_timezone("09:00"))
 
 
-@cron.task("cron", hour="22")
-def update_stories():
-    suggested_nooks = update_nook_suggestions(slack_app, db)
-    nooks_home.update(suggested_nooks=suggested_nooks)
-    for team_row in list(db.tokens_2.find()):
-        team_id = team_row["team_id"]
-        token = get_token(team_id)
-        for member in nooks_alloc.member_dict[team_id]:
+@cron.task("cron", minute="30")
+def post_stories_30():
+    post_stories_periodic(get_team_rows_timezone("09:00"))
 
-            nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={"user": member, "view": {"team_id": team_id}},
-                token=token,
-            )
+
+@cron.task("cron", minute="45")
+def post_stories_45():
+    post_stories_periodic(get_team_rows_timezone("09:00"))
+
+
+@cron.task("cron", minute="0")
+def update_stories_0():
+    update_stories_periodic(get_team_rows_timezone("16:00"))
+
+
+@cron.task("cron", minute="30")
+def update_stories_30():
+    update_stories_periodic(get_team_rows_timezone("16:00"))
+
+
+@cron.task("cron", minute="45")
+def update_stories_45():
+    update_stories_periodic(get_team_rows_timezone("16:00"))
 
 
 @cron.task("cron", day_of_week="6")
