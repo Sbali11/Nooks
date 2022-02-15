@@ -53,7 +53,7 @@ class NooksHome:
                         "action_id": "initiate_onboarding_modal",
                         "text": {
                             "type": "plain_text",
-                            "text": "Onboard Members 2",
+                            "text": "Onboard Members",
                             "emoji": True,
                         },
                         "style": "primary",
