@@ -567,7 +567,7 @@ def get_onboard_members_blocks(token):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "*Select members you want to onboarding*",
+                "text": "*Select members you want to onboard*",
             },
             "accessory": {
                 "filter": {"include": ["im"], "exclude_bot_users": True},
