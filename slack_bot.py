@@ -648,7 +648,7 @@ def get_onboard_channels_blocks(token):
         for channel in slack_app.client.users_conversations(
             token=token, types="public_channel,private_channel"
         )["channels"]
-    ]
+    ][:100]
     if not len(channel_options):
         blocks = (
             [
@@ -1851,17 +1851,17 @@ def get_team_rows_timezone(time):
 # TODO change this to hour for final
 @cron.task("cron", minute="0")
 def post_stories_0():
-    post_stories_periodic(get_team_rows_timezone("09:00"))
+    post_stories_periodic(get_team_rows_timezone("12:00"))
 
 
 @cron.task("cron", minute="30")
 def post_stories_30():
-    post_stories_periodic(get_team_rows_timezone("09:00"))
+    post_stories_periodic(get_team_rows_timezone("12:00"))
 
 
 @cron.task("cron", minute="45")
 def post_stories_45():
-    post_stories_periodic(get_team_rows_timezone("09:00"))
+    post_stories_periodic(get_team_rows_timezone("12:00"))
 
 
 @cron.task("cron", minute="0")

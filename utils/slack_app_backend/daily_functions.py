@@ -129,7 +129,7 @@ def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs,
                 + ">"
                 + desc
                 + "\n"
-                + "Remember this chat will be automatically archived at 9AM tomorrow :clock1: ",
+                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: ",
             )
             slack_app.client.pins_add(
                 token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"]
