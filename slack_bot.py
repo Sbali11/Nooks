@@ -421,8 +421,13 @@ def handle_onboard_members(ack, body, client, view, logger):
         row["user_id"]
         for row in list(db.member_vectors.find({"team_id": body["team"]["id"]}))
     }
-
+    all_members_workspace = set(member["id"] for member in slack_app.client.users_list(token=token)["members"])
     for conversation in conversations_ids:
+        if conversation in all_members_workspace:
+            member = conversation
+            if member in dont_include or member in all_registered_users:
+                all_members.add(member)
+            continue
         for member in slack_app.client.conversations_members(
             token=token, channel=conversation
         )["members"]:
@@ -551,6 +556,18 @@ def handle_onboard_from_channel(ack, body, logger):
             token=token, types="public_channel,private_channel"
         )["channels"]
     ]
+    channel_options += [
+        {
+            "text": {
+                "type": "plain_text",
+                "text": channel["name"],
+            },
+            "value": channel["id"],
+        }
+        for channel in slack_app.client.users_list(
+            token=token
+        )["members"]
+    ]
     if not len(channel_options):
         slack_app.client.views_open(
             token=token,
@@ -593,7 +610,7 @@ def handle_onboard_from_channel(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*Select channels whose members you want to onboard!*\n To add more channels to this list, just add me to the channel",
+                        "text": "*Select channels whose members you want to onboard or simply enter the names of individual members*\n To add more channels to this list, just add me to the channel",
                     },
                     "accessory": {
                         "action_id": "channel_selected",
@@ -1550,8 +1567,8 @@ def handle_signup(ack, body, client, view, logger):
 def set_timezone_modal(ack, body, logger):
     ack()
     common_timezones = set([])
-    
-    for timezone_name in pytz.country_timezones['US']:
+
+    for timezone_name in pytz.country_timezones["US"]:
         valid_name = True
         for n in timezone_name:
             if not (
@@ -1700,10 +1717,14 @@ def post_stories_periodic(all_team_rows):
         team_id = team_row["team_id"]
         remove_past_nooks(slack_app, db, nooks_alloc, team_id=team_id)
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
-        allocations, suggested_allocs = nooks_alloc.create_nook_allocs(nooks=current_nooks, team_id=team_id)
-        create_new_channels(slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id)
+        allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
+            nooks=current_nooks, team_id=team_id
+        )
+        create_new_channels(
+            slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
+        )
         nooks_home.update(suggested_nooks=[], team_id=team_id)
-        
+
         token = get_token(team_id)
         for member in nooks_alloc.member_dict[team_id]:
 
@@ -1732,7 +1753,7 @@ def update_stories_periodic(all_team_rows):
 def get_team_rows_timezone(time):
     all_team_rows = []
     all_time_zones = set([])
-    for time_zone in pytz.country_timezones['US']:
+    for time_zone in pytz.country_timezones["US"]:
         tz = pytz.timezone(time_zone)
         timezone_time = datetime.now(tz).strftime("%H:%M")
         if timezone_time == time and (datetime.now(tz).weekday() not in [5, 6]):
