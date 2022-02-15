@@ -50,10 +50,10 @@ class NooksHome:
                 "elements": [
                     {
                         "type": "button",
-                        "action_id": "onboard_from_channel",
+                        "action_id": "initiate_onboarding_modal",
                         "text": {
                             "type": "plain_text",
-                            "text": "Onboard Members",
+                            "text": "Onboard Members 2",
                             "emoji": True,
                         },
                         "style": "primary",
