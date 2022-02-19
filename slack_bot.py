@@ -1794,12 +1794,15 @@ def slack_oauth():
             logging.info(e)
     return "Successfully installed"
 
+def remove_stories_periodic(all_team_rows):
+    for team_row in all_team_rows:
+        team_id = team_row["team_id"]
+        remove_past_nooks(slack_app, db, nooks_alloc, team_id=team_id)
 
 def post_stories_periodic(all_team_rows):
 
     for team_row in all_team_rows:
         team_id = team_row["team_id"]
-        remove_past_nooks(slack_app, db, nooks_alloc, team_id=team_id)
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
             nooks=current_nooks, team_id=team_id
@@ -1825,7 +1828,6 @@ def update_stories_periodic(all_team_rows):
         suggested_nooks = update_nook_suggestions(slack_app, db, team_id)
         nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
         token = get_token(team_id)
-        logging.info(suggested_nooks)
         for member in nooks_alloc.member_dict[team_id]:
             nooks_home.update_home_tab(
                 client=slack_app.client,
@@ -1834,13 +1836,13 @@ def update_stories_periodic(all_team_rows):
             )
 
 
-def get_team_rows_timezone(time):
+def get_team_rows_timezone(time, skip_weekends=True):
     all_team_rows = []
     all_time_zones = set([])
     for time_zone in pytz.country_timezones["US"]:
         tz = pytz.timezone(time_zone)
         timezone_time = datetime.now(tz).strftime("%H:%M")
-        if timezone_time == time and (datetime.now(tz).weekday() not in [5, 6]):
+        if timezone_time == time and ((not skip_weekends) or datetime.now(tz).weekday() not in [5, 6]):
             all_time_zones.add(time_zone)
 
     for time_zone in all_time_zones:
@@ -1851,16 +1853,19 @@ def get_team_rows_timezone(time):
 # TODO change this to hour for final
 @cron.task("cron", minute="0")
 def post_stories_0():
+    remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     post_stories_periodic(get_team_rows_timezone("12:00"))
 
 
 @cron.task("cron", minute="30")
 def post_stories_30():
+    remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     post_stories_periodic(get_team_rows_timezone("12:00"))
 
 
 @cron.task("cron", minute="45")
 def post_stories_45():
+    remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     post_stories_periodic(get_team_rows_timezone("12:00"))
 
 
