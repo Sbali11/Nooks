@@ -5,7 +5,7 @@ from pymongo import MongoClient
 import os 
 from functools import lru_cache
 from dotenv import load_dotenv
-
+import logging
 load_dotenv()
 
 MONGODB_LINK = os.environ["MONGODB_LINK"]
@@ -14,8 +14,11 @@ db = MongoClient(MONGODB_LINK).nooks_db
 
 @lru_cache(maxsize=None)
 def get_token(team_id):
-    # return "xoxb-2614289134036-2605490949174-dJLZ9jgZKSNEd96SjcdTtDAM"
-    return db.tokens_2.find_one({"team_id": team_id})["installation"]["bot_token"]
+    installation = db.tokens_2.find_one({"team_id": team_id})["installation"]
+    if not installation:
+        logging.error("Installation not found for " + team_id)
+        return 0
+    return installation["bot_token"]
 
 
 class InstallationDB:
