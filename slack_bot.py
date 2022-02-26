@@ -27,6 +27,7 @@ from utils.constants import *
 from utils.slack_app_backend.daily_functions import (
     remove_past_nooks,
     create_new_channels,
+    post_reminders,
     update_nook_suggestions,
 )
 from utils.slack_app_backend.ui_text import SIGNUP_QUESTIONS, CONSENT_FORM
@@ -1819,6 +1820,11 @@ def update_stories_periodic(all_team_rows):
                 token=token,
             )
 
+def post_reminder_periodic(all_team_rows):
+    for team_row in all_team_rows:
+        team_id = team_row["team_id"]
+        post_reminders(slack_app, db, team_id)
+
 
 def get_team_rows_timezone(time, skip_weekends=True):
     all_team_rows = []
@@ -1851,6 +1857,21 @@ def post_stories_30():
 def post_stories_45():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     post_stories_periodic(get_team_rows_timezone("12:00"))
+
+
+@cron.task("cron", minute="0")
+def post_reminder_message_0():
+    post_reminder_periodic(get_team_rows_timezone("10:00"))
+
+
+@cron.task("cron", minute="30")
+def post_reminder_message_30():
+    post_reminder_periodic(get_team_rows_timezone("10:00"))
+
+
+@cron.task("cron", minute="45")
+def post_reminder_message_45():
+    post_reminder_periodic(get_team_rows_timezone("10:00"))
 
 
 @cron.task("cron", minute="0")

@@ -85,6 +85,23 @@ def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
         nooks_alloc.update_interactions()
 
 
+def post_reminders(slack_app, db, nooks_alloc, team_id):
+    active_stories = list(db.nooks.find({"status": "active", "team_id": team_id}))
+    token = get_token(team_id)
+    # post reminder messages
+    for active_nook in active_stories:
+        try:
+            slack_app.client.chat_postMessage(
+                token=token,
+                link_names=True,
+                channel=active_nook["channel_id"],
+                text="Pssst don't forget to post your final thoughts before this chat is archived in 2 hours!"
+            )
+
+        except Exception as e:
+            logging.error(traceback.format_exc())
+
+
 def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs, team_id):
     # create new channels for the day
 
