@@ -1,18 +1,9 @@
 EPSILON = 0.001
 
-SAME_HOMOPHILY_FACTORS = {
-    "Gender"
-}
-RANGE_HOMOPHILY_FACTORS = {
-    "Age", "Role", "Number of years in the organization"
-}
+SAME_HOMOPHILY_FACTORS = {"Gender"}
+RANGE_HOMOPHILY_FACTORS = {"Age", "Role", "Number of years in the organization"}
 HOMOPHILY_FACTORS = {
-    "Age": {
-        "18-25": 0,
-        "26-35": 1,
-        "35-50": 2,
-        ">50": 3
-    },
+    "Age": {"18-25": 0, "26-35": 1, "35-50": 2, ">50": 3},
     "Role": {
         "Professor": 0,
         "PhD Student": 1,
@@ -28,18 +19,121 @@ HOMOPHILY_FACTORS = {
     },
 }
 
+
 def get_fibonacci(n):
-    # calculate fibonacci series 
+    # calculate fibonacci series
     i = 0
     j = 1
     fib = []
     fib.append(j)
-    for i in range(n-1):
+    for i in range(n - 1):
         new_i = j
         j = i + j
-        i = new_i 
+        i = new_i
         fib.append(j)
     return fib
 
+
 FIBONACCI = get_fibonacci(len(HOMOPHILY_FACTORS))
 MAX_NUM_CONNECTIONS = 10
+ALL_TIMEZONES = [
+    "ACDT",
+    "ACST",
+    "ADDT",
+    "ADT",
+    "AEDT",
+    "AEST",
+    "AHDT",
+    "AHST",
+    "AKDT",
+    "AKST",
+    "AMT",
+    "APT",
+    "AST",
+    "AWDT",
+    "AWST",
+    "AWT",
+    "BDST",
+    "BDT",
+    "BMT",
+    "BST",
+    "CAST",
+    "CAT",
+    "CDT",
+    "CEMT",
+    "CEST",
+    "CET",
+    "CMT",
+    "CPT",
+    "CST",
+    "CWT",
+    "ChST",
+    "DMT",
+    "EAT",
+    "EDT",
+    "EEST",
+    "EET",
+    "EMT",
+    "EPT",
+    "EST",
+    "EWT",
+    "FFMT",
+    "FMT",
+    "GDT",
+    "GMT",
+    "GST",
+    "HDT",
+    "HKT",
+    "HMT",
+    "HPT",
+    "HST",
+    "HWT",
+    "IDT",
+    "IST",
+    "JDT",
+    "JMT",
+    "JST",
+    "KDT",
+    "KMT",
+    "KST",
+    "LMT",
+    "LST",
+    "MDT",
+    "MMT",
+    "MSD",
+    "MSK",
+    "MST",
+    "NDT",
+    "NPT",
+    "NST",
+    "NWT",
+    "NZDT",
+    "NZMT",
+    "NZST",
+    "PDDT",
+    "PDT",
+    "PKT",
+    "PMT",
+    "PPT",
+    "PST",
+    "PWT",
+    "QMT",
+    "RMT",
+    "SAST",
+    "SDMT",
+    "SJMT",
+    "SMT",
+    "SST",
+    "TMT",
+    "UTC",
+    "WAST",
+    "WAT",
+    "WEST",
+    "WET",
+    "WIB",
+    "WIT",
+    "WITA",
+    "WMT",
+    "YPT",
+    "YST",
+]

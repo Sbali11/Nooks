@@ -1619,22 +1619,23 @@ def show_nooks_info(ack, body, logger):
 
 
 @slack_app.view("update_timezone")
-def handle_signup(ack, body, client, view, logger):
-    success_modal_ack(
-        ack,
-        body,
-        view,
-        logger,
-        message="Time Zone for the workspace updated",
-        title="Set Time-Zone",
-    )
-    # TODO create a new name if taken?
+def handle_update_timezone(ack, body, client, view, logger):
     input_data = view["state"]["values"]
     user_id = body["user"]["id"]
     team_id = body["team"]["id"]
     time_zone = input_data["timezone_id"]["select_input-action"]["selected_option"][
         "value"
     ]
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Time Zone for the workspace updated to " +  time_zone,
+        title="Set Time-Zone",
+    )
+    # TODO create a new name if taken?
+
     db.tokens_2.update(
         {
             "team_id": team_id,
@@ -1652,31 +1653,14 @@ def set_timezone_modal(ack, body, logger):
     ack()
     common_timezones = set([])
 
-    for timezone_name in pytz.country_timezones["US"]:
-        valid_name = True
-        for n in timezone_name:
-            if not (
-                ("A" <= n <= "Z")
-                or ("a" <= n <= "z")
-                or ("0" <= n <= "9")
-                or n == "/"
-                or n == "+"
-                or n == "-"
-                or n == "_"
-            ):
-                valid_name = False
-        if valid_name:
-            common_timezones.add(timezone_name)
-        else:
-            print(timezone_name)
-
     timezone_options = [
         {
             "value": timezone,
             "text": {"type": "plain_text", "text": timezone},
         }
-        for timezone in common_timezones
+        for timezone in ALL_TIMEZONES
     ]
+    
 
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
@@ -1839,7 +1823,7 @@ def update_stories_periodic(all_team_rows):
 def get_team_rows_timezone(time, skip_weekends=True):
     all_team_rows = []
     all_time_zones = set([])
-    for time_zone in pytz.country_timezones["US"]:
+    for time_zone in ALL_TIMEZONES:
         tz = pytz.timezone(time_zone)
         timezone_time = datetime.now(tz).strftime("%H:%M")
         if timezone_time == time and ((not skip_weekends) or datetime.now(tz).weekday() not in [5, 6]):
