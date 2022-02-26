@@ -646,7 +646,7 @@ def get_onboard_channels_blocks(token):
             "value": channel["id"],
         }
         for channel in slack_app.client.users_conversations(
-            token=token, types="public_channel,private_channel"
+            token=token, types="public_channel,private_channel", exclude_archived=True
         )["channels"]
     ][:100]
     if not len(channel_options):
