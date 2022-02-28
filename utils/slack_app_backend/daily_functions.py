@@ -85,7 +85,7 @@ def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
         nooks_alloc.update_interactions()
 
 
-def post_reminders(slack_app, db, nooks_alloc, team_id):
+def post_reminders(slack_app, db, team_id):
     active_stories = list(db.nooks.find({"status": "active", "team_id": team_id}))
     token = get_token(team_id)
     # post reminder messages
@@ -146,7 +146,7 @@ def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs,
                 + ">"
                 + desc
                 + "\n"
-                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: ",
+                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: \n P.S type in /get_random_word for your task of the day!",
             )
             slack_app.client.pins_add(
                 token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"]

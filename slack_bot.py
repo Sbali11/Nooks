@@ -132,6 +132,20 @@ def handle_some_action(ack, body, logger):
     ack()
 
 
+@slack_app.command("/get_random_word")
+def command(ack, body, respond):
+    ack()
+    user_id = body["user_id"]
+    team_id = body["team_id"]
+    allocated_row = db.allocated_random_words.find_one({"team_id": team_id, "user_id": user_id})
+    if not allocated_row:
+        word = list(db.random_words.aggregate([{"$sample":{"size":1}}]))[0]["word"]
+        db.allocated_random_words.insert_one({"user_id": user_id, "team_id": team_id, "word":word})
+    else:
+        word = allocated_row["word"]
+    slack_app.client.chat_postEphemeral(user=body["user_id"], token=get_token(body["team_id"]), channel=body["channel_id"], text="Hey! Your random word for today is " + word + ". Try to make members in your nook say this word in their chats!")
+
+
 def success_modal_ack(ack, body, view, logger, message, title="Success"):
     ack(
         response_action="update",
@@ -1820,6 +1834,10 @@ def remove_stories_periodic(all_team_rows):
 def post_stories_periodic(all_team_rows):
 
     for team_row in all_team_rows:
+        words = list(db.random_words.aggregate([{"$sample":{"size":len(nooks_alloc.member_dict[team_id])}}]))
+        for i, member in enumerate(nooks_alloc.member_dict[team_id]):
+            db.allocated_random_words.update({"team_id": team_id, "user_id": member}, {"team_id": team_id, "user_id": member, "word": words[i]["word"]})
+
         team_id = team_row["team_id"]
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
@@ -1831,8 +1849,8 @@ def post_stories_periodic(all_team_rows):
         nooks_home.update(suggested_nooks=[], team_id=team_id)
 
         token = get_token(team_id)
-        for member in nooks_alloc.member_dict[team_id]:
-
+       
+        for i, member in enumerate(nooks_alloc.member_dict[team_id]):
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": team_id}},

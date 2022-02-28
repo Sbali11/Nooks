@@ -36,6 +36,27 @@ def get_fibonacci(n):
 
 FIBONACCI = get_fibonacci(len(HOMOPHILY_FACTORS))
 MAX_NUM_CONNECTIONS = 10
+ALL_REACTIONS = [
+    "eyes",
+    "tiger",
+    "speech_balloon",
+    "though_balloon",
+    "ear",
+    "hatching_chick",
+    "dolphin",
+    "butterfly",
+    "pig",
+    "cherry_blossom",
+    "tulip",
+    "candy",
+
+
+
+
+
+
+
+]
 ALL_TIMEZONES = {
     "LMT": "W-SU",
     "GMT": "Iceland",
