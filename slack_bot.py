@@ -352,17 +352,50 @@ def handle_new_nook(ack, body, client, view, logger):
         "swiped_right": [],
     }
     db.nooks.insert_one(new_nook_info)
-    client.chat_postMessage(
+    token = get_token(body["team"]["id"])
+    tz = pytz.timezone(ALL_TIMEZONES[db.tokens_2.find_one({"team_id": body["team"]["id"]})["time_zone"]])
+    team_time = datetime.now(tz).strftime("%H:%M")
+    day = datetime.now(tz).weekday() 
+    if (day in [5, 6]) or ((day == 4) and team_time > "16:00"):
+        client.chat_postMessage(
         token=get_token(body["team"]["id"]),
         link_names=True,
         channel=user,
         text="Hey! I've added your nook titled \""
         + title
-        + '" to the queue. The nook will be shown to your co-workers at 4PM! ',
-    )
+        + '" to the queue! The nook will be shown to your teammates on Monday(at 12PM)!',
+        )
+    elif (team_time > "16:00"):
+        client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
+        link_names=True,
+        channel=user,
+        text="Hey! I've added your nook titled \""
+        + title
+        + '" to the queue! The nook will be shown to your teammates tomorrow at 12PM!',
+        )
+    else:
+        client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
+        link_names=True,
+        channel=user,
+        text="Hey! I've added your nook titled \""
+        + title
+        + '" to the queue! ',
+        )
+
+        nooks_home.add_nook(nook=new_nook_info, team_id=body["team"]["id"])
+
+        for member in nooks_alloc.member_dict[body["team"]["id"]]:
+            nooks_home.update_home_tab(
+                client=slack_app.client,
+                event={"user": member, "view": {"team_id": body["team"]["id"]}},
+                token=token,
+            )
 
 
-# TODO
+
+
 @slack_app.action("create_nook")
 def create_nook_modal(ack, body, logger):
     ack()
@@ -1830,7 +1863,7 @@ def get_team_rows_timezone(time, skip_weekends=True):
     all_team_rows = []
     all_time_zones = set([])
     for time_zone in ALL_TIMEZONES:
-        tz = pytz.timezone(time_zone)
+        tz = pytz.timezone(ALL_TIMEZONES[time_zone])
         timezone_time = datetime.now(tz).strftime("%H:%M")
         if timezone_time == time and ((not skip_weekends) or datetime.now(tz).weekday() not in [5, 6]):
             all_time_zones.add(time_zone)
@@ -1844,19 +1877,25 @@ def get_team_rows_timezone(time, skip_weekends=True):
 @cron.task("cron", minute="0")
 def post_stories_0():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
-    post_stories_periodic(get_team_rows_timezone("12:00"))
-
+    all_team_rows_no_weekend = get_team_rows_timezone("12:00")
+    post_stories_periodic(all_team_rows_no_weekend)
+    update_stories_periodic(all_team_rows_no_weekend)
 
 @cron.task("cron", minute="30")
 def post_stories_30():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
-    post_stories_periodic(get_team_rows_timezone("12:00"))
-
+    all_team_rows_no_weekend = get_team_rows_timezone("12:00")
+    post_stories_periodic(all_team_rows_no_weekend)
+    update_stories_periodic(all_team_rows_no_weekend)
 
 @cron.task("cron", minute="45")
 def post_stories_45():
+    
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
-    post_stories_periodic(get_team_rows_timezone("12:00"))
+    all_team_rows_no_weekend = get_team_rows_timezone("12:00")
+    post_stories_periodic(all_team_rows_no_weekend)
+    update_stories_periodic(all_team_rows_no_weekend)
+
 
 
 @cron.task("cron", minute="0")

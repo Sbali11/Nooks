@@ -10,7 +10,7 @@ from utils.constants import *
 class NooksHome:
     def __init__(self, db):
         self.db = db
-        self.suggested_nooks = collections.defaultdict(dict)
+        self.suggested_nooks = collections.defaultdict(list)
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
 
@@ -20,6 +20,9 @@ class NooksHome:
 
     def update(self, suggested_nooks, team_id):
         self.suggested_nooks[team_id] = suggested_nooks
+    
+    def add_nook(self, nook, team_id):
+        self.suggested_nooks[team_id].append(nook)
 
     def get_context_block(self, user_id, team_id):
         user_id_installer = self.db.tokens_2.find_one({"team_id": team_id})["user_id"]
@@ -358,7 +361,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 12PM and get an updated list of cards at 4PM! ",
+                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 12PM and get a final list of updated cards at 4PM! ",
                             },
                         },
                         {"type": "divider"},
