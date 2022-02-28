@@ -14,11 +14,11 @@ db = MongoClient(MONGODB_LINK).nooks_db
 
 @lru_cache(maxsize=None)
 def get_token(team_id):
-    installation = db.tokens_2.find_one({"team_id": team_id})["installation"]
+    installation = db.tokens_2.find_one({"team_id": team_id})
     if not installation:
         logging.error("Installation not found for " + team_id)
         return 0
-    return installation["bot_token"]
+    return installation["installation"]["bot_token"]
 
 
 class InstallationDB:
