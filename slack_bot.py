@@ -8,7 +8,7 @@ import random
 import collections
 import traceback
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import pytz
 
 
@@ -132,18 +132,67 @@ def handle_some_action(ack, body, logger):
     ack()
 
 
-@slack_app.command("/get_random_word")
+@slack_app.command("/get_role")
 def command(ack, body, respond):
     ack()
     user_id = body["user_id"]
     team_id = body["team_id"]
-    allocated_row = db.allocated_random_words.find_one({"team_id": team_id, "user_id": user_id})
-    if not allocated_row:
-        word = list(db.random_words.aggregate([{"$sample":{"size":1}}]))[0]["word"]
-        db.allocated_random_words.insert_one({"user_id": user_id, "team_id": team_id, "word":word})
+    channel_id = body["channel_id"]
+    token = get_token(body["team_id"])
+    nook_row = db.nooks.find_one({"channel_id": channel_id})
+    if not nook_row:
+        slack_app.client.chat_postEphemeral(
+            user=body["user_id"],
+            token=token,
+            channel=channel_id,
+            text="Oops! You can only call this command from a nook channel. ",
+        )
+        return
+    allocated_roles = db.allocated_roles.find_one(
+        {"team_id": team_id, "channel_id": channel_id}
+    )
+
+    if not allocated_roles:
+        all_users = slack_app.client.conversations_members(
+            token=token, channel=channel_id
+        )["members"]
+        selected_user_word, selected_user_continue = random.sample(all_users, n=2)
+
+        word = list(db.random_words.aggregate([{"$sample": {"size": 1}}]))[0]["word"]
+        db.allocated_roles.insert_one(
+            {
+                "team_id": team_id,
+                "word": word,
+                "channel_id": channel_id,
+                "selected_user_word": selected_user_word,
+                "selected_user_continue": selected_user_continue,
+            }
+        )
     else:
-        word = allocated_row["word"]
-    slack_app.client.chat_postEphemeral(user=body["user_id"], token=get_token(body["team_id"]), channel=body["channel_id"], text="Hey! Your random word for today is " + word + ". Try to make members in your nook say this word in their chats!")
+        word = allocated_roles["word"]
+        selected_user_word = allocated_roles["selected_user_word"]
+        selected_user_continue = allocated_roles["selected_user_continue"]
+    if selected_user_word == user_id:
+        slack_app.client.chat_postEphemeral(
+            user=body["user_id"],
+            token=token,
+            channel=body["channel_id"],
+            text="Hey! You have a secret mission for today! Try to make members in your nook say "
+            + word
+            + " in their chats!")
+    elif selected_user_continue == user_id:
+        slack_app.client.chat_postEphemeral(
+            user=body["user_id"],
+            token=token,
+            channel=body["channel_id"],
+            text="Hey! Your task for today is to not let this chat die.")
+    else:
+        slack_app.client.chat_postEphemeral(
+            user=body["user_id"],
+            token=token,
+            channel=body["channel_id"],
+            text="Looks like you don't have a secret mission today! ",
+        )
 
 
 def success_modal_ack(ack, body, view, logger, message, title="Success"):
@@ -367,35 +416,37 @@ def handle_new_nook(ack, body, client, view, logger):
     }
     db.nooks.insert_one(new_nook_info)
     token = get_token(body["team"]["id"])
-    tz = pytz.timezone(ALL_TIMEZONES[db.tokens_2.find_one({"team_id": body["team"]["id"]})["time_zone"]])
+    tz = pytz.timezone(
+        ALL_TIMEZONES[
+            db.tokens_2.find_one({"team_id": body["team"]["id"]})["time_zone"]
+        ]
+    )
     team_time = datetime.now(tz).strftime("%H:%M")
-    day = datetime.now(tz).weekday() 
+    day = datetime.now(tz).weekday()
     if (day in [5, 6]) or ((day == 4) and team_time > "16:00"):
         client.chat_postMessage(
-        token=get_token(body["team"]["id"]),
-        link_names=True,
-        channel=user,
-        text="Hey! I've added your nook titled \""
-        + title
-        + '" to the queue! The nook will be shown to your teammates on Monday(at 12PM)!',
+            token=get_token(body["team"]["id"]),
+            link_names=True,
+            channel=user,
+            text="Hey! I've added your nook titled \""
+            + title
+            + '" to the queue! The nook will be shown to your teammates on Monday(at 12PM)!',
         )
-    elif (team_time > "16:00"):
+    elif team_time > "16:00":
         client.chat_postMessage(
-        token=get_token(body["team"]["id"]),
-        link_names=True,
-        channel=user,
-        text="Hey! I've added your nook titled \""
-        + title
-        + '" to the queue! The nook will be shown to your teammates tomorrow at 12PM!',
+            token=get_token(body["team"]["id"]),
+            link_names=True,
+            channel=user,
+            text="Hey! I've added your nook titled \""
+            + title
+            + '" to the queue! The nook will be shown to your teammates tomorrow at 12PM!',
         )
     else:
         client.chat_postMessage(
-        token=get_token(body["team"]["id"]),
-        link_names=True,
-        channel=user,
-        text="Hey! I've added your nook titled \""
-        + title
-        + '" to the queue! ',
+            token=get_token(body["team"]["id"]),
+            link_names=True,
+            channel=user,
+            text="Hey! I've added your nook titled \"" + title + '" to the queue! ',
         )
 
         nooks_home.add_nook(nook=new_nook_info, team_id=body["team"]["id"])
@@ -406,8 +457,6 @@ def handle_new_nook(ack, body, client, view, logger):
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
                 token=token,
             )
-
-
 
 
 @slack_app.action("create_nook")
@@ -490,7 +539,9 @@ def handle_onboard_members(ack, body, client, view, logger):
                 all_members.add(member)
         message_text = "Hey there! Thank you for initiating the onboarding-process for the following channels: "
         if dont_include:
-            dont_include_text = " but I didn't sent the message to " + ",".join([str("<@" + member + ">") for member in dont_include])
+            dont_include_text = " but I didn't sent the message to " + ",".join(
+                [str("<@" + member + ">") for member in dont_include]
+            )
 
     else:
         all_members = set(
@@ -504,9 +555,7 @@ def handle_onboard_members(ack, body, client, view, logger):
         token=token,
         link_names=True,
         channel=body["user"]["id"],
-        text= message_text
-        + ",".join(conversations_names)
-        + dont_include_text
+        text=message_text + ",".join(conversations_names) + dont_include_text,
     )
     for member in all_members:
         try:
@@ -1679,7 +1728,7 @@ def handle_update_timezone(ack, body, client, view, logger):
         body,
         view,
         logger,
-        message="Time Zone for the workspace updated to " +  time_zone,
+        message="Time Zone for the workspace updated to " + time_zone,
         title="Set Time-Zone",
     )
     # TODO create a new name if taken?
@@ -1708,7 +1757,6 @@ def set_timezone_modal(ack, body, logger):
         }
         for timezone in ALL_TIMEZONES
     ]
-    
 
     slack_app.client.views_open(
         token=get_token(body["team"]["id"]),
@@ -1826,17 +1874,26 @@ def slack_oauth():
             logging.info(e)
     return "Successfully installed"
 
+
 def remove_stories_periodic(all_team_rows):
     for team_row in all_team_rows:
         team_id = team_row["team_id"]
         remove_past_nooks(slack_app, db, nooks_alloc, team_id=team_id)
 
+
 def post_stories_periodic(all_team_rows):
 
     for team_row in all_team_rows:
-        words = list(db.random_words.aggregate([{"$sample":{"size":len(nooks_alloc.member_dict[team_id])}}]))
+        words = list(
+            db.random_words.aggregate(
+                [{"$sample": {"size": len(nooks_alloc.member_dict[team_id])}}]
+            )
+        )
         for i, member in enumerate(nooks_alloc.member_dict[team_id]):
-            db.allocated_random_words.update({"team_id": team_id, "user_id": member}, {"team_id": team_id, "user_id": member, "word": words[i]["word"]})
+            db.allocated_random_words.update(
+                {"team_id": team_id, "user_id": member},
+                {"team_id": team_id, "user_id": member, "word": words[i]["word"]},
+            )
 
         team_id = team_row["team_id"]
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
@@ -1849,7 +1906,7 @@ def post_stories_periodic(all_team_rows):
         nooks_home.update(suggested_nooks=[], team_id=team_id)
 
         token = get_token(team_id)
-       
+
         for i, member in enumerate(nooks_alloc.member_dict[team_id]):
             nooks_home.update_home_tab(
                 client=slack_app.client,
@@ -1871,6 +1928,7 @@ def update_stories_periodic(all_team_rows):
                 token=token,
             )
 
+
 def post_reminder_periodic(all_team_rows):
     for team_row in all_team_rows:
         team_id = team_row["team_id"]
@@ -1883,7 +1941,9 @@ def get_team_rows_timezone(time, skip_weekends=True):
     for time_zone in ALL_TIMEZONES:
         tz = pytz.timezone(ALL_TIMEZONES[time_zone])
         timezone_time = datetime.now(tz).strftime("%H:%M")
-        if timezone_time == time and ((not skip_weekends) or datetime.now(tz).weekday() not in [5, 6]):
+        if timezone_time == time and (
+            (not skip_weekends) or datetime.now(tz).weekday() not in [5, 6]
+        ):
             all_time_zones.add(time_zone)
 
     for time_zone in all_time_zones:
@@ -1899,6 +1959,7 @@ def post_stories_0():
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 
+
 @cron.task("cron", minute="30")
 def post_stories_30():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
@@ -1906,14 +1967,14 @@ def post_stories_30():
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 
+
 @cron.task("cron", minute="45")
 def post_stories_45():
-    
+
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     all_team_rows_no_weekend = get_team_rows_timezone("12:00")
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
-
 
 
 @cron.task("cron", minute="0")

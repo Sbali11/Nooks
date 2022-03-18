@@ -8,10 +8,10 @@ from utils.slack_app_backend.installation import get_token
 
 
 def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
-    active_stories = list(db.nooks.find({"status": "active", "team_id": team_id}))
+    active_nooks = list(db.nooks.find({"status": "active", "team_id": team_id}))
     token = get_token(team_id)
     # archive all channels of the past day
-    for active_nook in active_stories:
+    for active_nook in active_nooks:
         try:
             all_members = slack_app.client.conversations_members(
                 token=token,
@@ -86,11 +86,20 @@ def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
 
 
 def post_reminders(slack_app, db, team_id):
-    active_stories = list(db.nooks.find({"status": "active", "team_id": team_id}))
+    active_nooks = list(db.nooks.find({"status": "active", "team_id": team_id}))
     token = get_token(team_id)
     # post reminder messages
-    for active_nook in active_stories:
+    for active_nook in active_nooks:
         try:
+            db.allocated_roles.find_one(
+                        {
+                            "team_id": active_nook["team_id"],
+                            "channel_id": active_nook["channel_id"],
+                        }
+                    )
+            game_text = ""
+            
+            text = "Pssst don't forget to post your final thoughts before this chat is archived in 2 hours!"
             slack_app.client.chat_postMessage(
                 token=token,
                 link_names=True,

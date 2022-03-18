@@ -193,7 +193,6 @@ class NooksAllocation:
             member_allocs[team_id][member] = selected_nook
             nooks_mem_cnt[team_id][selected_nook] += 1
             nooks_mem_int_cnt[team_id] += self.temporal_interacted[team_id][member] >= 1
-        logging.info("F")
         logging.info(member_allocs[team_id])
         logging.info( right_swiped_nums)
         for i in range(self.num_iters):
