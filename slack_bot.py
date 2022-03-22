@@ -158,7 +158,7 @@ def command(ack, body, respond):
         )["members"]
         selected_user_word, selected_user_continue = random.sample(all_users, n=2)
 
-        word = list(db.random_words.aggregate([{"$sample": {"size": 1}}]))[0]["word"]
+        word = list(db.random_words_collaborative.aggregate([{"$sample": {"size": 1}}]))[0]["word"]
         db.allocated_roles.insert_one(
             {
                 "team_id": team_id,
@@ -497,6 +497,19 @@ def handle_channel_selected(ack, body, logger):
     ack()
     logger.info(body)
 
+@slack_app.action("word_said")
+def handle_channel_selected(ack, body, logger):
+    ack()
+    
+    value = (body["actions"][0]["value"]).split(":")
+    slack_app.client.chat_postMessage(
+                    token=get_token(body["team"]["id"]),
+                    link_names=True,
+                    channel=value[0],
+                    text="Yay, you did it <@"+value[1]+"> !",
+                )
+
+    logger.info(body)
 
 @slack_app.view("onboard_members")
 def handle_onboard_members(ack, body, client, view, logger):
@@ -1884,16 +1897,6 @@ def remove_stories_periodic(all_team_rows):
 def post_stories_periodic(all_team_rows):
 
     for team_row in all_team_rows:
-        words = list(
-            db.random_words.aggregate(
-                [{"$sample": {"size": len(nooks_alloc.member_dict[team_id])}}]
-            )
-        )
-        for i, member in enumerate(nooks_alloc.member_dict[team_id]):
-            db.allocated_random_words.update(
-                {"team_id": team_id, "user_id": member},
-                {"team_id": team_id, "user_id": member, "word": words[i]["word"]},
-            )
 
         team_id = team_row["team_id"]
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))

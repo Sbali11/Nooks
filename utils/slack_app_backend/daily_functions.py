@@ -91,27 +91,60 @@ def post_reminders(slack_app, db, team_id):
     # post reminder messages
     for active_nook in active_nooks:
         try:
-            db.allocated_roles.find_one(
-                        {
-                            "team_id": active_nook["team_id"],
-                            "channel_id": active_nook["channel_id"],
-                        }
-                    )
-            game_text = ""
-            
-            text = "Pssst don't forget to post your final thoughts before this chat is archived in 2 hours!"
-            slack_app.client.chat_postMessage(
-                token=token,
-                link_names=True,
-                channel=active_nook["channel_id"],
-                text="Pssst don't forget to post your final thoughts before this chat is archived in 2 hours!"
+            nook_allocated_roles = db.allocated_roles.find_one(
+                {
+                    "team_id": active_nook["team_id"],
+                    "channel_id": active_nook["channel_id"],
+                }
             )
 
+            if nook_allocated_roles:
+                slack_app.client.chat_postMessage(
+                    token=token,
+                    link_names=True,
+                    channel=active_nook["channel_id"],
+                    blocks=[
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Only two hours left before this chat is archived! Thanks <@" + nook_allocated_roles["selected_user_continue"] +"> for keeping the conversation going! I can't read any of the chats :/ so can anyone tell me if they said the word "
+                                + nook_allocated_roles["word"]
+                                + "?",
+                            },
+                        },
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "word_said",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Yes!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                    "value": active_nook["channel_id"] + ":" + active_nook["selected_user_word"]
+                                }
+                            ],
+                        },
+                    ],
+                )
+            else:
+                slack_app.client.chat_postMessage(
+                    token=token,
+                    link_names=True,
+                    channel=active_nook["channel_id"],
+                    text="Pssst don't forget to post your final thoughts before this chat is archived in 2 hours!",
+                )
         except Exception as e:
             logging.error(traceback.format_exc())
 
 
-def create_new_channels(slack_app, db, new_nooks, allocations, suggested_allocs, team_id):
+def create_new_channels(
+    slack_app, db, new_nooks, allocations, suggested_allocs, team_id
+):
     # create new channels for the day
 
     for i, new_nook in enumerate(new_nooks):
