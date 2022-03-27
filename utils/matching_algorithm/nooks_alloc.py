@@ -11,6 +11,8 @@ from utils.constants import *
 
 class NooksAllocation:
     def _create_interactions_np(self, team_id, interactions):
+        if team_id not in self.total_members:
+            self.total_members[team_id] = 0
         interaction_np = np.zeros((self.total_members[team_id], self.total_members[team_id]))
         for interaction_row in interactions:
             member_1 = interaction_row["user1_id"]

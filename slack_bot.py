@@ -132,6 +132,20 @@ def handle_some_action(ack, body, logger):
     ack()
 
 
+@slack_app.command("/reload_home")
+def command(ack, body, respond):
+    ack()
+    user_id = body["user_id"]
+    team_id = body["team_id"]
+    channel_id = body["channel_id"]
+    token = get_token(body["team_id"])
+    nooks_home.update_home_tab(
+                client=slack_app.client,
+                event={
+                    "user": user_id,
+                    "view": {"team_id": team_id},
+                },
+                token=token)
 @slack_app.command("/get_role")
 def command(ack, body, respond):
     ack()
@@ -456,7 +470,8 @@ def handle_new_nook(ack, body, client, view, logger):
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
                 token=token,
-            )
+                )
+            
 
 
 @slack_app.action("create_nook")
@@ -709,7 +724,7 @@ def handle_onboard_request(ack, body, logger):
             "close": {"type": "plain_text", "text": "Close"},
             "submit": {
                 "type": "plain_text",
-                "text": "Initiate Onboarding",
+                "text": "Next",
                 "emoji": True,
             },
             "blocks": [
@@ -747,6 +762,7 @@ def handle_onboard_request(ack, body, logger):
 
 
 def get_onboard_channels_blocks(token):
+
     channel_options = [
         {
             "text": {
@@ -760,8 +776,7 @@ def get_onboard_channels_blocks(token):
         )["channels"]
     ][:100]
     if not len(channel_options):
-        blocks = (
-            [
+        blocks = [
                 {
                     "block_id": "members",
                     "type": "section",
@@ -770,8 +785,7 @@ def get_onboard_channels_blocks(token):
                         "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
                     },
                 },
-            ],
-        )
+            ]
 
     else:
         blocks = [
@@ -1884,7 +1898,7 @@ def slack_oauth():
                 token=get_token(installed_team.get("id")),
             )
         except Exception as e:
-            logging.info(e)
+            logging.error(e)
     return "Successfully installed"
 
 
