@@ -547,7 +547,7 @@ def handle_word_guessed(ack, body, client, view, logger):
 
 
 @slack_app.action("word_said")
-def handle_channel_selected(ack, body, logger):
+def handle_word_said(ack, body, logger):
     ack()
     token = get_token(body["team"]["id"])
     channel_id = int(body["actions"][0]["value"])
