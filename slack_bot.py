@@ -140,12 +140,15 @@ def command(ack, body, respond):
     channel_id = body["channel_id"]
     token = get_token(body["team_id"])
     nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={
-                    "user": user_id,
-                    "view": {"team_id": team_id},
-                },
-                token=token)
+        client=slack_app.client,
+        event={
+            "user": user_id,
+            "view": {"team_id": team_id},
+        },
+        token=token,
+    )
+
+
 @slack_app.command("/get_role")
 def command(ack, body, respond):
     ack()
@@ -162,51 +165,33 @@ def command(ack, body, respond):
             text="Oops! You can only call this command from a nook channel. ",
         )
         return
-    allocated_roles = db.allocated_roles.find_one(
-        {"team_id": team_id, "channel_id": channel_id}
+    allocated_row = db.allocated_roles_words.find_one(
+        {"team_id": team_id, "channel_id": channel_id, "user_id": user_id}
     )
 
-    if not allocated_roles:
-        all_users = slack_app.client.conversations_members(
-            token=token, channel=channel_id
-        )["members"]
-        selected_user_word, selected_user_continue = random.sample(all_users, n=2)
+    if not allocated_row:
 
-        word = list(db.random_words_collaborative.aggregate([{"$sample": {"size": 1}}]))[0]["word"]
+        word = list(
+            db.random_words_collaborative.aggregate([{"$sample": {"size": 1}}])
+        )[0]["word"]
         db.allocated_roles.insert_one(
             {
                 "team_id": team_id,
+                "user_id": user_id,
                 "word": word,
                 "channel_id": channel_id,
-                "selected_user_word": selected_user_word,
-                "selected_user_continue": selected_user_continue,
             }
         )
     else:
-        word = allocated_roles["word"]
-        selected_user_word = allocated_roles["selected_user_word"]
-        selected_user_continue = allocated_roles["selected_user_continue"]
-    if selected_user_word == user_id:
-        slack_app.client.chat_postEphemeral(
-            user=body["user_id"],
-            token=token,
-            channel=body["channel_id"],
-            text="Hey! You have a secret mission for today! Try to make members in your nook say "
-            + word
-            + " in their chats!")
-    elif selected_user_continue == user_id:
-        slack_app.client.chat_postEphemeral(
-            user=body["user_id"],
-            token=token,
-            channel=body["channel_id"],
-            text="Hey! Your task for today is to not let this chat die.")
-    else:
-        slack_app.client.chat_postEphemeral(
-            user=body["user_id"],
-            token=token,
-            channel=body["channel_id"],
-            text="Looks like you don't have a secret mission today! ",
-        )
+        word = allocated_row["word"]
+
+    slack_app.client.chat_postEphemeral(
+        user=body["user_id"],
+        token=token,
+        channel=body["channel_id"],
+        text="Hey! You have a secret mission for today! Try to make use this word in one of your messages: "
+        + word,
+    )
 
 
 def success_modal_ack(ack, body, view, logger, message, title="Success"):
@@ -470,8 +455,7 @@ def handle_new_nook(ack, body, client, view, logger):
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
                 token=token,
-                )
-            
+            )
 
 
 @slack_app.action("create_nook")
@@ -512,19 +496,116 @@ def handle_channel_selected(ack, body, logger):
     ack()
     logger.info(body)
 
+@slack_app.view("word_guessed")
+def handle_word_guessed(ack, body, client, view, logger):
+    ack()
+    
+    all_members = set([])
+    token = get_token(body["team"]["id"])
+    team_id = body["team"]["id"]
+    channel_id = view["private_metadata"]
+    input_data = view["state"]["values"]
+    member_id = input_data["member"]["channel_selected"][
+            "selected_options"
+        ]
+    word = input_data["word"]["plain_text_input-action"]["value"]
+    allocated_row = db.allocated_roles_words.find_one(
+        {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
+    )
+
+    if word == allocated_row["word"]:
+        slack_app.client.chat_postMessage(
+                token=token,
+                link_names=True,
+                channel=channel_id,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Yay! Looks like <@"+body["user"]["id"]+"> correctly guessed " + "<@"+ member_id+">'s word. It was " + word + "!"
+                        },
+                    },
+                ]
+            )
+    else:
+        slack_app.client.chat_postMessage(
+                token=token,
+                link_names=True,
+                channel=channel_id,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Oops! Looks like <@"+body["user"]["id"]+"> incorrectly guessed " + "<@"+ member_id+">'s word as " + word,
+                        },
+                    },
+                ],
+            )
+
+
+
 @slack_app.action("word_said")
 def handle_channel_selected(ack, body, logger):
     ack()
+    token = get_token(body["team"]["id"])
+    channel_id = int(body["actions"][0]["value"])
+    channel_members_list =  list(db.allocated_roles_words.find(
+        {"team_id": body["team"]["id"], "channel_id": channel_id}
+    ))
+    channel_members = [obj["user_id"] for obj in channel_members_list]
+    slack_app.client.views_open(
+        token=token,
+        trigger_id=body["trigger_id"],
     
-    value = (body["actions"][0]["value"]).split(":")
-    slack_app.client.chat_postMessage(
-                    token=get_token(body["team"]["id"]),
-                    link_names=True,
-                    channel=value[0],
-                    text="Yay, you did it <@"+value[1]+"> !",
-                )
+        view={
+            "type": "modal",
+            "callback_id": "word_guessed",
+            "private_metadata": channel_id,
+            "title": {"type": "plain_text", "text": "Guess Secret Word"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "submit": {
+                "type": "plain_text",
+                "text": "Submit Guess",
+                "emoji": True,
+            },
+            "blocks": [
+                {
+                    "block_id": "members",
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Select member(only members allocated a role are shown here!)"
+                    },
+                    "accessory": {
+                        "action_id": "channel_selected",
+                        "type": "multi_static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select channels",
+                        },
+                        "options": channel_members,
+                    },
+                },
+                {
+                    "block_id": "word",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                        "multiline": True,
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "What word do you think they sneaked in?",
+                        "emoji": True,
+                    },
+                },
+            ],
+        },
+    )
 
-    logger.info(body)
 
 @slack_app.view("onboard_members")
 def handle_onboard_members(ack, body, client, view, logger):
@@ -777,15 +858,15 @@ def get_onboard_channels_blocks(token):
     ][:100]
     if not len(channel_options):
         blocks = [
-                {
-                    "block_id": "members",
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
-                    },
+            {
+                "block_id": "members",
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Select channels whose members you want to onboard!*\n\n The Nooks bot isn't added to any channel right now. Add the bot to a channel to get started",
                 },
-            ]
+            },
+        ]
 
     else:
         blocks = [

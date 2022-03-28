@@ -91,7 +91,7 @@ def post_reminders(slack_app, db, team_id):
     # post reminder messages
     for active_nook in active_nooks:
         try:
-            nook_allocated_roles = db.allocated_roles.find_one(
+            nook_allocated_roles = db.allocated_roles.find(
                 {
                     "team_id": active_nook["team_id"],
                     "channel_id": active_nook["channel_id"],
@@ -108,9 +108,7 @@ def post_reminders(slack_app, db, team_id):
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": "Only two hours left before this chat is archived! Thanks <@" + nook_allocated_roles["selected_user_continue"] +"> for keeping the conversation going! I can't read any of the chats :/ so can anyone tell me if they said the word "
-                                + nook_allocated_roles["word"]
-                                + "?",
+                                "text": "Only two hours left before this chat is archived! Can you guess any of the member's secret words they were asked to add in their chats"
                             },
                         },
                         {
@@ -121,11 +119,11 @@ def post_reminders(slack_app, db, team_id):
                                     "action_id": "word_said",
                                     "text": {
                                         "type": "plain_text",
-                                        "text": "Yes!",
+                                        "text": "I'm ready to guess!",
                                         "emoji": True,
                                     },
                                     "style": "primary",
-                                    "value": active_nook["channel_id"] + ":" + active_nook["selected_user_word"]
+                                    "value": active_nook["channel_id"]
                                 }
                             ],
                         },
