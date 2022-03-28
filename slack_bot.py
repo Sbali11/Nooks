@@ -174,7 +174,7 @@ def command(ack, body, respond):
         word = list(
             db.random_words_collaborative.aggregate([{"$sample": {"size": 1}}])
         )[0]["word"]
-        db.allocated_roles.insert_one(
+        db.allocated_roles_words.insert_one(
             {
                 "team_id": team_id,
                 "user_id": user_id,
@@ -496,16 +496,15 @@ def handle_channel_selected(ack, body, logger):
     ack()
     logger.info(body)
 
+
 @slack_app.view("word_guessed")
 def handle_word_guessed(ack, body, client, view, logger):
-    ack()    
+    ack()
     token = get_token(body["team"]["id"])
     team_id = body["team"]["id"]
     channel_id = view["private_metadata"]
     input_data = view["state"]["values"]
-    member_id = input_data["member"]["channel_selected"][
-            "selected_options"
-        ]
+    member_id = input_data["member"]["channel_selected"]["selected_options"]
     word = input_data["word"]["plain_text_input-action"]["value"]
     allocated_row = db.allocated_roles_words.find_one(
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
@@ -513,50 +512,72 @@ def handle_word_guessed(ack, body, client, view, logger):
 
     if word == allocated_row["word"]:
         slack_app.client.chat_postMessage(
-                token=token,
-                link_names=True,
-                channel=channel_id,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "Yay! Looks like <@"+body["user"]["id"]+"> correctly guessed " + "<@"+ member_id+">'s word. It was " + word + "!"
-                        },
+            token=token,
+            link_names=True,
+            channel=channel_id,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Yay! Looks like <@"
+                        + body["user"]["id"]
+                        + "> correctly guessed "
+                        + "<@"
+                        + member_id
+                        + ">'s word. It was "
+                        + word
+                        + "!",
                     },
-                ]
-            )
+                },
+            ],
+        )
     else:
         slack_app.client.chat_postMessage(
-                token=token,
-                link_names=True,
-                channel=channel_id,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "Oops! Looks like <@"+body["user"]["id"]+"> incorrectly guessed " + "<@"+ member_id+">'s word as " + word,
-                        },
+            token=token,
+            link_names=True,
+            channel=channel_id,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Oops! Looks like <@"
+                        + body["user"]["id"]
+                        + "> incorrectly guessed "
+                        + "<@"
+                        + member_id
+                        + ">'s word as "
+                        + word,
                     },
-                ],
-            )
-
+                },
+            ],
+        )
 
 
 @slack_app.action("word_said")
 def handle_word_said(ack, body, logger):
     ack()
     token = get_token(body["team"]["id"])
-    channel_id = (body["actions"][0]["value"])
-    channel_members_list =  list(db.allocated_roles_words.find(
-        {"team_id": body["team"]["id"], "channel_id": channel_id}
-    ))
-    channel_members = [obj["user_id"] for obj in channel_members_list]
+    channel_id = body["actions"][0]["value"]
+    channel_members_list = list(
+        db.allocated_roles_words.find(
+            {"team_id": body["team"]["id"], "channel_id": channel_id}
+        )
+    )
+    channel_members = [
+        {
+            "text": {
+                "type": "plain_text",
+                "text": obj["user_id"],
+            },
+            "value": obj["user_id"],
+        }
+        for obj in channel_members_list
+    ]
     slack_app.client.views_open(
         token=token,
         trigger_id=body["trigger_id"],
-    
         view={
             "type": "modal",
             "callback_id": "word_guessed",
@@ -574,7 +595,7 @@ def handle_word_said(ack, body, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Select member(only members allocated a role are shown here!)"
+                        "text": "Select member(only members allocated a role are shown here!)",
                     },
                     "accessory": {
                         "action_id": "channel_selected",
