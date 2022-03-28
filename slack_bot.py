@@ -498,9 +498,7 @@ def handle_channel_selected(ack, body, logger):
 
 @slack_app.view("word_guessed")
 def handle_word_guessed(ack, body, client, view, logger):
-    ack()
-    
-    all_members = set([])
+    ack()    
     token = get_token(body["team"]["id"])
     team_id = body["team"]["id"]
     channel_id = view["private_metadata"]
@@ -550,7 +548,7 @@ def handle_word_guessed(ack, body, client, view, logger):
 def handle_word_said(ack, body, logger):
     ack()
     token = get_token(body["team"]["id"])
-    channel_id = int(body["actions"][0]["value"])
+    channel_id = (body["actions"][0]["value"])
     channel_members_list =  list(db.allocated_roles_words.find(
         {"team_id": body["team"]["id"], "channel_id": channel_id}
     ))
