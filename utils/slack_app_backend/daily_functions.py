@@ -144,6 +144,9 @@ def create_new_channels(
     slack_app, db, new_nooks, allocations, suggested_allocs, team_id
 ):
     # create new channels for the day
+    db.user_swipes.remove({"team_id": team_id})
+    if "user_swipes" not in db.list_collection_names():
+        db.create_collection("user_swipes")
 
     for i, new_nook in enumerate(new_nooks):
         now = datetime.now()  # current date and time
@@ -186,7 +189,7 @@ def create_new_channels(
                 + ">"
                 + desc
                 + "\n"
-                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: \n P.S type in /get_random_word for your task of the day!",
+                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: \n P.S type in */get_role* for your task of the day!",
             )
             slack_app.client.pins_add(
                 token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"]
@@ -253,9 +256,7 @@ def create_new_channels(
 def update_nook_suggestions(slack_app, db, team_id):
     # all stories
     suggested_nooks = list(db.nooks.find({"status": "suggested", "team_id": team_id}))
-    db.user_swipes.remove({"team_id": team_id})
-    if "user_swipes" not in db.list_collection_names():
-        db.create_collection("user_swipes")
+    token = get_token(team_id)
     for suggested_nook in suggested_nooks:
         try:
             # TODO don't need to do this if all are shown
@@ -269,8 +270,8 @@ def update_nook_suggestions(slack_app, db, team_id):
             )
         except Exception as e:
             logging.error(traceback.format_exc())
-    token = get_token(team_id)
-    if suggested_nooks:
+    suggested_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
+    if suggested_nooks :
         # TODO
         all_users = list(db.member_vectors.find({"team_id": team_id}))
         for user in all_users:

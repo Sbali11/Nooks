@@ -409,11 +409,11 @@ def handle_new_nook(ack, body, client, view, logger):
         "description": desc,
         "allow_two_members": allow_two_members,
         "banned": banned,
-        "status": "suggested",
+        
         "created_on": datetime.utcnow(),
         "swiped_right": [],
     }
-    db.nooks.insert_one(new_nook_info)
+    
     token = get_token(body["team"]["id"])
     tz = pytz.timezone(
         ALL_TIMEZONES[
@@ -431,6 +431,7 @@ def handle_new_nook(ack, body, client, view, logger):
             + title
             + '" to the queue! The nook will be shown to your teammates on Monday(at 12PM)!',
         )
+        new_nook_info["status"] = "suggested"
     elif team_time > "16:00":
         client.chat_postMessage(
             token=get_token(body["team"]["id"]),
@@ -440,6 +441,7 @@ def handle_new_nook(ack, body, client, view, logger):
             + title
             + '" to the queue! The nook will be shown to your teammates tomorrow at 12PM!',
         )
+        new_nook_info["status"] = "suggested"
     else:
         client.chat_postMessage(
             token=get_token(body["team"]["id"]),
@@ -456,7 +458,9 @@ def handle_new_nook(ack, body, client, view, logger):
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
                 token=token,
             )
+        new_nook_info["status"] = "show"
 
+    db.nooks.insert_one(new_nook_info)
 
 @slack_app.action("create_nook")
 def create_nook_modal(ack, body, logger):
@@ -2020,7 +2024,7 @@ def post_stories_periodic(all_team_rows):
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
         )
-        nooks_home.update(suggested_nooks=[], team_id=team_id)
+        nooks_home.reset(team_id=team_id)
 
         token = get_token(team_id)
 
@@ -2068,7 +2072,6 @@ def get_team_rows_timezone(time, skip_weekends=True):
     return all_team_rows
 
 
-# TODO change this to hour for final
 @cron.task("cron", minute="0")
 def post_stories_0():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))

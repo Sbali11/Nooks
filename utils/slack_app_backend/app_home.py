@@ -18,8 +18,11 @@ class NooksHome:
         self.sample_nooks = self.db.sample_nooks.distinct("title")
         random.shuffle(self.sample_nooks)
 
+    def reset(self, team_id):
+        self.suggested_nooks[team_id] = []
+
     def update(self, suggested_nooks, team_id):
-        self.suggested_nooks[team_id] = suggested_nooks
+        self.suggested_nooks[team_id] += suggested_nooks
     
     def add_nook(self, nook, team_id):
         self.suggested_nooks[team_id].append(nook)
