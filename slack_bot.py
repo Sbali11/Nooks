@@ -488,13 +488,11 @@ def create_nook_modal(ack, body, logger):
 @slack_app.action("user_select")
 def handle_user_selected(ack, body, logger):
     ack()
-    logger.info(body)
 
 
 @slack_app.action("channel_selected")
 def handle_channel_selected(ack, body, logger):
     ack()
-    logger.info(body)
 
 
 @slack_app.view("word_guessed")
@@ -504,12 +502,14 @@ def handle_word_guessed(ack, body, client, view, logger):
     team_id = body["team"]["id"]
     channel_id = view["private_metadata"]
     input_data = view["state"]["values"]
-    member_id = input_data["member"]["channel_selected"]["selected_options"]
+    print(input_data)
+    member_id = input_data["member"]["member_selected"]["selected_option"]["value"]
     word = input_data["word"]["plain_text_input-action"]["value"]
     allocated_row = db.allocated_roles_words.find_one(
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
     )
-
+    print(allocated_row)
+    print(channel_id, team_id, input_data)
     if word == allocated_row["word"]:
         slack_app.client.chat_postMessage(
             token=token,
@@ -525,9 +525,9 @@ def handle_word_guessed(ack, body, client, view, logger):
                         + "> correctly guessed "
                         + "<@"
                         + member_id
-                        + ">'s word. It was "
+                        + ">'s word( "
                         + word
-                        + "!",
+                        + ")",
                     },
                 },
             ],
@@ -542,13 +542,13 @@ def handle_word_guessed(ack, body, client, view, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Oops! Looks like <@"
+                        "text": "Oops! <@"
                         + body["user"]["id"]
                         + "> incorrectly guessed "
                         + "<@"
                         + member_id
                         + ">'s word as "
-                        + word,
+                        + word + ". Does anyone else want to give a shot?",
                     },
                 },
             ],
@@ -569,8 +569,9 @@ def handle_word_said(ack, body, logger):
         {
             "text": {
                 "type": "plain_text",
-                "text": obj["user_id"],
+                "text": slack_app.client.users_info(token=token, user=obj["user_id"])["user"]["name"] ,
             },
+
             "value": obj["user_id"],
         }
         for obj in channel_members_list
@@ -591,18 +592,18 @@ def handle_word_said(ack, body, logger):
             },
             "blocks": [
                 {
-                    "block_id": "members",
+                    "block_id": "member",
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
                         "text": "Select member(only members allocated a role are shown here!)",
                     },
                     "accessory": {
-                        "action_id": "channel_selected",
-                        "type": "multi_static_select",
+                        "action_id": "member_selected",
+                        "type": "static_select",
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "Select channels",
+                            "text": "Select member",
                         },
                         "options": channel_members,
                     },
@@ -613,7 +614,6 @@ def handle_word_said(ack, body, logger):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
-                        "multiline": True,
                     },
                     "label": {
                         "type": "plain_text",
