@@ -190,7 +190,7 @@ def command(ack, body, respond):
         user=body["user_id"],
         token=token,
         channel=body["channel_id"],
-        text="Hey! You have a secret mission for today! Try to make use this word in one of your messages: "
+        text="Hey! You have a secret mission for today! Try to make use of this word in one of your messages: "
         + word,
     )
 
