@@ -11,6 +11,7 @@ import traceback
 from datetime import datetime, timezone, date
 import pytz
 
+import threading
 
 from utils.slack_app_backend.app_home import NooksHome
 from utils.matching_algorithm.nooks_alloc import NooksAllocation
@@ -1944,7 +1945,20 @@ def slack_install():
         + "'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
-
+def update_home_tab_all(token, installed_team):
+    for member in slack_app.client.users_list(token=token)["members"]:
+        try:
+            nooks_home.update_home_tab(
+                client=slack_app.client,
+                event={
+                    "user": member["id"],
+                    "view": {"team_id": installed_team.get("id")},
+                },
+                token=get_token(installed_team.get("id")),
+            )
+        except Exception as e:
+            logging.error(e)
+        
 @app.route("/slack/oauth_redirect", methods=["POST", "GET"])
 def slack_oauth():
     code = request.args.get("code")
@@ -1991,18 +2005,10 @@ def slack_oauth():
     # Store the installation
     installation_store.save(installation)
     team_id = installed_team.get("id")
-    for member in slack_app.client.users_list(token=get_token(team_id))["members"]:
-        try:
-            nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={
-                    "user": member["id"],
-                    "view": {"team_id": installed_team.get("id")},
-                },
-                token=get_token(installed_team.get("id")),
-            )
-        except Exception as e:
-            logging.error(e)
+    thread = threading.Thread(target=update_home_tab_all, kwargs={
+                    'token': get_token(team_id), 'installation_store': installation_store})
+    thread.start()
+
     return "Successfully installed"
 
 
