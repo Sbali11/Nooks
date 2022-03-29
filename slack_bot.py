@@ -2006,7 +2006,7 @@ def slack_oauth():
     installation_store.save(installation)
     team_id = installed_team.get("id")
     thread = threading.Thread(target=update_home_tab_all, kwargs={
-                    'token': get_token(team_id), 'installation_store': installation_store})
+                    'token': get_token(team_id), 'installed_team': installed_team})
     thread.start()
 
     return "Successfully installed"
