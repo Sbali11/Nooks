@@ -1673,22 +1673,25 @@ def signup_modal_step_1(ack, body, view, logger):
     all_questions = SIGNUP_QUESTIONS["Step 1"]
 
     question_blocks = [
-        {
+		{
+		    "type": "input",
             "block_id": question,
-            "type": "section",
-            "text": {
+           "label": {
                 "type": "plain_text",
                 "text": question,
             },
-            "accessory": {
+            "optional": False,
+			"element": {
+                "optional": False, 
                 "type": "static_select",
                 "action_id": "select_input-action",
                 "options": [
                     {"value": value, "text": {"type": "plain_text", "text": value}}
                     for value in all_questions[question]
                 ],
-            },
+            }
         }
+
         for question in all_questions
     ]
     # TODO change to only channel members
