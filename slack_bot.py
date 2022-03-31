@@ -675,6 +675,9 @@ def handle_onboard_members(ack, body, client, view, logger):
             dont_include_text = " but I didn't sent the message to " + ",".join(
                 [str("<@" + member + ">") for member in dont_include]
             )
+        else:
+            dont_include_text = ""
+        
 
     else:
         all_members = set(
@@ -689,7 +692,7 @@ def handle_onboard_members(ack, body, client, view, logger):
         link_names=True,
         channel=body["user"]["id"],
         text=message_text + ",".join(conversations_names) + dont_include_text,
-    )
+        )
     for member in all_members:
         try:
             slack_app.client.chat_postMessage(
