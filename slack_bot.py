@@ -1684,7 +1684,6 @@ def signup_modal_step_1(ack, body, view, logger):
             },
             "optional": False,
             "element": {
-                "optional": False,
                 "type": "static_select",
                 "action_id": "select_input-action",
                 "options": [
