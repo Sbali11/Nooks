@@ -410,11 +410,10 @@ def handle_new_nook(ack, body, client, view, logger):
         "description": desc,
         "allow_two_members": allow_two_members,
         "banned": banned,
-        
         "created_on": datetime.utcnow(),
         "swiped_right": [],
     }
-    
+
     token = get_token(body["team"]["id"])
     tz = pytz.timezone(
         ALL_TIMEZONES[
@@ -462,6 +461,7 @@ def handle_new_nook(ack, body, client, view, logger):
         new_nook_info["status"] = "show"
 
     db.nooks.insert_one(new_nook_info)
+
 
 @slack_app.action("create_nook")
 def create_nook_modal(ack, body, logger):
@@ -553,7 +553,8 @@ def handle_word_guessed(ack, body, client, view, logger):
                         + "<@"
                         + member_id
                         + ">'s word as "
-                        + word + ". Does anyone else want to give a shot?",
+                        + word
+                        + ". Does anyone else want to give a shot?",
                     },
                 },
             ],
@@ -574,9 +575,10 @@ def handle_word_said(ack, body, logger):
         {
             "text": {
                 "type": "plain_text",
-                "text": slack_app.client.users_info(token=token, user=obj["user_id"])["user"]["name"] ,
+                "text": slack_app.client.users_info(token=token, user=obj["user_id"])[
+                    "user"
+                ]["name"],
             },
-
             "value": obj["user_id"],
         }
         for obj in channel_members_list
@@ -677,7 +679,6 @@ def handle_onboard_members(ack, body, client, view, logger):
             )
         else:
             dont_include_text = ""
-        
 
     else:
         all_members = set(
@@ -692,7 +693,7 @@ def handle_onboard_members(ack, body, client, view, logger):
         link_names=True,
         channel=body["user"]["id"],
         text=message_text + ",".join(conversations_names) + dont_include_text,
-        )
+    )
     for member in all_members:
         try:
             slack_app.client.chat_postMessage(
@@ -1596,13 +1597,14 @@ def signup_modal_step_2(ack, body, view, logger):
     question_blocks = [
         {
             "block_id": question,
-            "type": "section",
-            "text": {
+            "type": "input",
+            "label": {
                 "type": "plain_text",
                 "text": question,
                 "emoji": True,
             },
-            "accessory": {
+            "optional": False,
+            "element": {
                 "type": "static_select",
                 "action_id": "select_input-action",
                 "options": [
@@ -1673,36 +1675,36 @@ def signup_modal_step_1(ack, body, view, logger):
     all_questions = SIGNUP_QUESTIONS["Step 1"]
 
     question_blocks = [
-		{
-		    "type": "input",
+        {
+            "type": "input",
             "block_id": question,
-           "label": {
+            "label": {
                 "type": "plain_text",
                 "text": question,
             },
             "optional": False,
-			"element": {
-                "optional": False, 
+            "element": {
+                "optional": False,
                 "type": "static_select",
                 "action_id": "select_input-action",
                 "options": [
                     {"value": value, "text": {"type": "plain_text", "text": value}}
                     for value in all_questions[question]
                 ],
-            }
+            },
         }
-
         for question in all_questions
     ]
     # TODO change to only channel members
     top_interacted_block = {
         "block_id": "top_members",
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
+        "type": "input",
+        "label": {
+            "type": "plain_text",
             "text": "Who are the top 5 people you talk the most with?",
         },
-        "accessory": {
+        "optional": False,
+        "element": {
             "action_id": "user_select",
             "placeholder": {
                 "type": "plain_text",
@@ -1951,6 +1953,7 @@ def slack_install():
         + "'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
+
 def update_home_tab_all(token, installed_team):
     for member in slack_app.client.users_list(token=token)["members"]:
         try:
@@ -1964,7 +1967,8 @@ def update_home_tab_all(token, installed_team):
             )
         except Exception as e:
             logging.error(e)
-        
+
+
 @app.route("/slack/oauth_redirect", methods=["POST", "GET"])
 def slack_oauth():
     code = request.args.get("code")
@@ -2011,8 +2015,10 @@ def slack_oauth():
     # Store the installation
     installation_store.save(installation)
     team_id = installed_team.get("id")
-    thread = threading.Thread(target=update_home_tab_all, kwargs={
-                    'token': get_token(team_id), 'installed_team': installed_team})
+    thread = threading.Thread(
+        target=update_home_tab_all,
+        kwargs={"token": get_token(team_id), "installed_team": installed_team},
+    )
     thread.start()
 
     return "Successfully installed"
