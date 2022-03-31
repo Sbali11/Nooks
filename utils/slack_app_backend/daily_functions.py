@@ -270,6 +270,7 @@ def update_nook_suggestions(slack_app, db, team_id):
             )
         except Exception as e:
             logging.error(traceback.format_exc())
+    new_suggested = suggested_nooks
     suggested_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
     if suggested_nooks :
         # TODO
@@ -287,4 +288,4 @@ def update_nook_suggestions(slack_app, db, team_id):
     suggested_nooks_per_team = collections.defaultdict(list)
     for nook in suggested_nooks:
         suggested_nooks_per_team[nook["team_id"]].append(nook)
-    return suggested_nooks_per_team[team_id]
+    return new_suggested
