@@ -26,7 +26,6 @@ class InstallationDB:
         self.db.tokens_2.update(
             {
                 "team_id": installation.team_id,
-                "user_id": installation.user_id,
             },
             {
                 "team_id": installation.team_id,

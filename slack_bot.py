@@ -2023,17 +2023,14 @@ def slack_oauth():
     return "Successfully installed"
 
 
-def remove_stories_periodic(all_team_rows):
-    for team_row in all_team_rows:
-        team_id = team_row["team_id"]
+def remove_stories_periodic(all_team_ids):
+    for team_id in all_team_ids:
         remove_past_nooks(slack_app, db, nooks_alloc, team_id=team_id)
 
 
-def post_stories_periodic(all_team_rows):
+def post_stories_periodic(all_team_ids):
 
-    for team_row in all_team_rows:
-
-        team_id = team_row["team_id"]
+    for team_id in all_team_ids:
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
             nooks=current_nooks, team_id=team_id
@@ -2053,9 +2050,8 @@ def post_stories_periodic(all_team_rows):
             )
 
 
-def update_stories_periodic(all_team_rows):
-    for team_row in all_team_rows:
-        team_id = team_row["team_id"]
+def update_stories_periodic(all_team_ids):
+    for team_id in all_team_ids:
         suggested_nooks = update_nook_suggestions(slack_app, db, team_id)
         nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
         token = get_token(team_id)
@@ -2067,9 +2063,8 @@ def update_stories_periodic(all_team_rows):
             )
 
 
-def post_reminder_periodic(all_team_rows):
-    for team_row in all_team_rows:
-        team_id = team_row["team_id"]
+def post_reminder_periodic(all_team_ids):
+    for team_id in all_team_ids:
         post_reminders(slack_app, db, team_id)
 
 
@@ -2086,7 +2081,11 @@ def get_team_rows_timezone(time, skip_weekends=True):
 
     for time_zone in all_time_zones:
         all_team_rows += list(db.tokens_2.find({"time_zone": time_zone}))
-    return all_team_rows
+    team_ids = set([])
+    for team_row in all_team_rows:
+        team_ids.add(team_row["team_id"])
+
+    return team_ids
 
 
 @cron.task("cron", minute="0")
