@@ -442,6 +442,16 @@ def handle_new_nook(ack, body, client, view, logger):
             + '" to the queue! The nook will be shown to your teammates tomorrow at 12PM!',
         )
         new_nook_info["status"] = "suggested"
+    elif team_time < "12:00":
+        client.chat_postMessage(
+            token=get_token(body["team"]["id"]),
+            link_names=True,
+            channel=user,
+            text="Hey! I've added your nook titled \""
+            + title
+            + '" to the queue! The nook will be shown to your teammates today at 12PM!',
+        )
+        new_nook_info["status"] = "suggested"
     else:
         client.chat_postMessage(
             token=get_token(body["team"]["id"]),

@@ -281,7 +281,7 @@ def update_nook_suggestions(slack_app, db, team_id):
                     token=token,
                     link_names=True,
                     channel=user["user_id"],
-                    text="Hello! I've updated your Nook Cards List for today!",
+                    text="Hello! I've updated your Nook Cards List for today. Head over to the Nooks Home Tab to see the cards for today!",
                 )
             except Exception as e:
                 logging.error(traceback.format_exc())
