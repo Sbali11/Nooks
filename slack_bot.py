@@ -987,6 +987,7 @@ def handle_save_feedback(ack, body, client, view, logger):
         "team_id": body["team"]["id"],
         "user_id": body["user"]["id"],
         "feedback": feedback,
+        "created_on": datetime.utcnow()
     }
     success_modal_ack(
         ack,
@@ -1171,6 +1172,7 @@ def handle_send_message(ack, body, client, view, logger):
         "from_user": from_user,
         "to_user": to_user,
         "team_id": body["team"]["id"],
+        "created_on": datetime.utcnow(),
     }
     db.personal_message.insert_one(personal_message_info)
     slack_app.client.chat_postMessage(
@@ -1340,6 +1342,7 @@ def handle_signup(ack, body, client, view, logger):
     new_member_info["user_id"] = user
     new_member_info["member_vector"] = get_member_vector(new_member_info)
     new_member_info["team_id"] = body["team"]["id"]
+    new_member_info["created_on"] = datetime.utcnow()
     db.member_vectors.insert_one(new_member_info)
     db.blacklisted.update_one(
         {"user_id": user, "team_id": body["team"]["id"]},
