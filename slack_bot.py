@@ -32,7 +32,10 @@ from utils.slack_app_backend.daily_functions import (
     update_nook_suggestions,
 )
 from utils.slack_app_backend.ui_text import SIGNUP_QUESTIONS, CONSENT_FORM
-
+from nltk.stem import PorterStemmer
+from nltk.tokenize import word_tokenize
+  
+ps = PorterStemmer()
 # set configuration values
 class Config:
     SCHEDULER_API_ENABLED = True
@@ -509,6 +512,9 @@ def handle_user_selected(ack, body, logger):
 def handle_channel_selected(ack, body, logger):
     ack()
 
+@slack_app.action("member_selected")
+def handle_some_action(ack, body, logger):
+    ack()
 
 @slack_app.view("word_guessed")
 def handle_word_guessed(ack, body, client, view, logger):
@@ -517,15 +523,13 @@ def handle_word_guessed(ack, body, client, view, logger):
     team_id = body["team"]["id"]
     channel_id = view["private_metadata"]
     input_data = view["state"]["values"]
-    print(input_data)
     member_id = input_data["member"]["member_selected"]["selected_option"]["value"]
     word = input_data["word"]["plain_text_input-action"]["value"]
     allocated_row = db.allocated_roles_words.find_one(
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
     )
-    print(allocated_row)
-    print(channel_id, team_id, input_data)
-    if word == allocated_row["word"]:
+    print("HERE")
+    if ps.stem(word) == ps.stem(allocated_row["word"]):
         slack_app.client.chat_postMessage(
             token=token,
             link_names=True,
@@ -540,7 +544,7 @@ def handle_word_guessed(ack, body, client, view, logger):
                         + "> correctly guessed "
                         + "<@"
                         + member_id
-                        + ">'s word( "
+                        + ">'s word ("
                         + word
                         + ")",
                     },
@@ -610,12 +614,13 @@ def handle_word_said(ack, body, logger):
             "blocks": [
                 {
                     "block_id": "member",
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
+                    "type": "input",
+                    "label": {
+                        "type": "plain_text",
                         "text": "Select member(only members allocated a role are shown here!)",
                     },
-                    "accessory": {
+                    "optional": False,
+                    "element": {
                         "action_id": "member_selected",
                         "type": "static_select",
                         "placeholder": {
@@ -632,6 +637,7 @@ def handle_word_said(ack, body, logger):
                         "type": "plain_text_input",
                         "action_id": "plain_text_input-action",
                     },
+                    "optional": False,
                     "label": {
                         "type": "plain_text",
                         "text": "What word do you think they sneaked in?",
