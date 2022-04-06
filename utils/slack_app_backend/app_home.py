@@ -10,7 +10,14 @@ from utils.constants import *
 class NooksHome:
     def __init__(self, db):
         self.db = db
+
         self.suggested_nooks = collections.defaultdict(list)
+        
+        suggested_nooks = list(db.nooks.find({"status": "show"}))
+        for suggested_nook in suggested_nooks:
+            self.suggested_nooks[suggested_nook["team_id"]].append(suggested_nook)
+        print(self.suggested_nooks)
+            
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
 
@@ -25,6 +32,7 @@ class NooksHome:
         self.suggested_nooks[team_id] += suggested_nooks
     
     def add_nook(self, nook, team_id):
+        print("ADDED")
         self.suggested_nooks[team_id].append(nook)
 
     def get_context_block(self, user_id, team_id):
