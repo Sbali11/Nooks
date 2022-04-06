@@ -91,7 +91,7 @@ def post_reminders(slack_app, db, team_id):
     # post reminder messages
     for active_nook in active_nooks:
         try:
-            nook_allocated_roles = db.allocated_roles_words.find(
+            nook_allocated_roles = db.allocated_roles_words.find_one(
                 {
                     "team_id": active_nook["team_id"],
                     "channel_id": active_nook["channel_id"],
