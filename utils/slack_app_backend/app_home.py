@@ -13,7 +13,7 @@ class NooksHome:
 
         self.suggested_nooks = collections.defaultdict(list)
         
-        suggested_nooks = list(db.nooks.find({"status": "show"}))
+        suggested_nooks = list(db.nooks.find({"status": "show"}).sort( "created_on" ))
         for suggested_nook in suggested_nooks:
             self.suggested_nooks[suggested_nook["team_id"]].append(suggested_nook)
         print(self.suggested_nooks)
