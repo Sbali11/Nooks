@@ -62,18 +62,7 @@ class NooksHome:
                     + "".join(
                         ["> - " + location + "\n" for location in current_locations]
                     ),
-                },
-                "accessory": {
-                    "type": "button",
-                    "action_id": "initiate_onboarding_modal",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Onboard Members",
-                        "emoji": True,
-                    },
-                    "style": "primary",
-                    "value": "onboard",
-                },
+                }
             }
 
         else:
