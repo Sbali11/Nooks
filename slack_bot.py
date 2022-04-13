@@ -34,7 +34,7 @@ from utils.slack_app_backend.daily_functions import (
 from utils.slack_app_backend.ui_text import SIGNUP_QUESTIONS, CONSENT_FORM
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
-  
+
 ps = PorterStemmer()
 # set configuration values
 class Config:
@@ -512,9 +512,11 @@ def handle_user_selected(ack, body, logger):
 def handle_channel_selected(ack, body, logger):
     ack()
 
+
 @slack_app.action("member_selected")
 def handle_some_action(ack, body, logger):
     ack()
+
 
 @slack_app.view("word_guessed")
 def handle_word_guessed(ack, body, client, view, logger):
@@ -987,7 +989,7 @@ def handle_save_feedback(ack, body, client, view, logger):
         "team_id": body["team"]["id"],
         "user_id": body["user"]["id"],
         "feedback": feedback,
-        "created_on": datetime.utcnow()
+        "created_on": datetime.utcnow(),
     }
     success_modal_ack(
         ack,
@@ -1334,7 +1336,7 @@ def handle_signup(ack, body, client, view, logger):
                     "selected_conversations"
                 ]
             else:
-                logging.info(input_data[key])
+                new_member_info[key] = input_data[key]
         except Exception as e:
             new_member_info[key] = []
             logging.error(traceback.format_exc())
@@ -1509,12 +1511,32 @@ def handle_learn_more(ack, body, logger):
 def signup_modal_step_3(ack, body, view, logger):
     input_data = view["state"]["values"]
     input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
+    new_member_info = {}
+    for key in input_data:
+        try:
+            if "plain_text_input-action" in input_data[key]:
+                new_member_info[key] = input_data[key]["plain_text_input-action"][
+                    "value"
+                ]
+            elif "select_input-action" in input_data[key]:
+                new_member_info[key] = input_data[key]["select_input-action"][
+                    "selected_option"
+                ]["value"]
+            elif "user_select" in input_data[key]:
+                new_member_info[key] = input_data[key]["user_select"][
+                    "selected_conversations"
+                ]
+            else:
+                logging.info(input_data[key])
+        except Exception as e:
+            new_member_info[key] = []
+            logging.error(traceback.format_exc())
     ack(
         response_action="update",
         view={
             "type": "modal",
             "callback_id": "add_member",
-            "private_metadata": str(input_data),
+            "private_metadata": str(new_member_info),
             "title": {"type": "plain_text", "text": "Sign Up!"},
             "submit": {"type": "plain_text", "text": "Submit"},
             "close": {"type": "plain_text", "text": "Close"},
@@ -1692,7 +1714,11 @@ def signup_modal_step_1(ack, body, view, logger):
         return
 
     all_questions = SIGNUP_QUESTIONS["Step 1"]
-
+    team_row = db.tokens_2.find_one({"team_id": body["team"]["id"]})
+    if "locations" not in team_row:
+        current_locations = []
+    else:
+        current_locations = team_row["locations"]
     question_blocks = [
         {
             "type": "input",
@@ -1734,7 +1760,31 @@ def signup_modal_step_1(ack, body, view, logger):
             "type": "multi_conversations_select",
         },
     }
+
+    if current_locations:
+        current_location_block = {
+            "type": "input",
+            "block_id": "location_block",
+            "label": {
+                "type": "plain_text",
+                "text": "Select your location(if you can't see your location, ask the user who installed the Nooks Bot to add it in!: this should be mentioned on your home page)",
+            },
+            "optional": False,
+            "element": {
+                "type": "static_select",
+                "action_id": "select_input-action",
+                "options": [
+                    {
+                        "value": location,
+                        "text": {"type": "plain_text", "text": location},
+                    }
+                    for location in current_locations
+                ],
+            },
+        }
+        question_blocks.append(current_location_block)
     question_blocks.append(top_interacted_block)
+    print(question_blocks)
 
     # TODO check if member is already in database?
     ack(
@@ -1750,7 +1800,7 @@ def signup_modal_step_1(ack, body, view, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "To help me optimize your lists, tell me a bit about yourself",
+                        "text": "To help me optimize your Nooks experience, tell me a bit about yourself!",
                     },
                 }
             ]
@@ -1901,6 +1951,53 @@ def handle_update_timezone(ack, body, client, view, logger):
             }
         },
     )
+    update_home_tab_all(token=get_token(team_id), installed_team=body["team"])
+
+
+@slack_app.view("update_locations")
+def handle_update_timezone(ack, body, client, view, logger):
+    input_data = view["state"]["values"]
+    user_id = body["user"]["id"]
+    team_id = body["team"]["id"]
+    if "past_locations" in input_data:
+        past_locations = [
+            options["text"]["text"]
+            for options in input_data["past_locations"]["location_checkboxes"][
+                "selected_options"
+            ]
+        ]
+    else:
+        past_locations = []
+    if "new_location" in input_data:
+        if input_data["new_location"]["plain_text_input-action"]["value"]:
+            new_locations = input_data["new_location"]["plain_text_input-action"][
+                "value"
+            ].split(",")
+        else:
+            new_locations = []
+    else:
+        new_locations = []
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Location options updated! ",
+        title="Edit Location Options",
+    )
+    # TODO create a new name if taken?
+
+    db.tokens_2.update(
+        {
+            "team_id": team_id,
+        },
+        {
+            "$set": {
+                "locations": past_locations + new_locations,
+            }
+        },
+    )
+    update_home_tab_all(token=get_token(team_id), installed_team=body["team"])
 
 
 @slack_app.action("set_timezone")
@@ -1928,16 +2025,127 @@ def set_timezone_modal(ack, body, logger):
             "blocks": [
                 {
                     "block_id": "timezone_id",
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Select a timezone for the workspace*",
+                    "type": "input",
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Select a timezone for the workspace",
                     },
-                    "accessory": {
+                    "element": {
                         "type": "static_select",
                         "action_id": "select_input-action",
                         "options": timezone_options,
                     },
+                },
+            ],
+        },
+    )
+
+
+@slack_app.action("edit_location")
+def set_locations_modal(ack, body, logger):
+    ack()
+    common_timezones = set([])
+    team_row = db.tokens_2.find_one({"team_id": body["team"]["id"]})
+    current_time_zone = team_row["time_zone"]
+    if "locations" not in team_row:
+        current_location_options = []
+
+    else:
+        current_location_options = [
+            {
+                "value": str(i),
+                "text": {"type": "plain_text", "text": location},
+            }
+            for i, location in enumerate(team_row["locations"])
+        ]
+    if current_location_options:
+        current_location_block = [
+            {
+                "type": "input",
+                "block_id": "past_locations",
+                "label": {
+                    "type": "plain_text",
+                    "text": "Unselect any location you want to delete",
+                },
+                "optional": True,
+                "element": {
+                    "type": "checkboxes",
+                    "action_id": "location_checkboxes",
+                    "initial_options": current_location_options,
+                    "options": current_location_options,
+                },
+            }
+        ]
+    else:
+        current_location_block = []
+
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "update_locations",
+            "title": {"type": "plain_text", "text": "Edit Location Options"},
+            "submit": {"type": "plain_text", "text": "Submit Changes"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": current_location_block
+            + [
+                {
+                    "block_id": "new_location",
+                    "type": "input",
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Add location options for the workspace(to add in multiple locations separate them by commas)",
+                    },
+                    "optional": True,
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                    },
+                },
+            ],
+        },
+    )
+
+
+@slack_app.action("team_settings")
+def edit_team_settings(ack, body, logger):
+    ack()
+
+    slack_app.client.views_open(
+        token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "update_timezone",
+            "title": {"type": "plain_text", "text": "Edit Team Settings"},
+            "submit": {"type": "plain_text", "text": "Set Time-Zone"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": [
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": "set_timezone",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Change Team Timezone",
+                                "emoji": True,
+                            },
+                            "style": "primary",
+                        },
+                        {
+                            "type": "button",
+                            "action_id": "location_choices",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Add a Location Choices",
+                                "emoji": True,
+                            },
+                            "style": "primary",
+                        },
+                    ],
                 },
             ],
         },

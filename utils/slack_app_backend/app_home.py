@@ -2,6 +2,7 @@ from audioop import reverse
 import collections
 import logging
 from multiprocessing import context
+import time
 import numpy as np
 import random
 from utils.constants import *
@@ -12,12 +13,12 @@ class NooksHome:
         self.db = db
 
         self.suggested_nooks = collections.defaultdict(list)
-        
-        suggested_nooks = list(db.nooks.find({"status": "show"}).sort( "created_on" ))
+
+        suggested_nooks = list(db.nooks.find({"status": "show"}).sort("created_on"))
         for suggested_nook in suggested_nooks:
             self.suggested_nooks[suggested_nook["team_id"]].append(suggested_nook)
         print(self.suggested_nooks)
-            
+
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
 
@@ -30,76 +31,145 @@ class NooksHome:
 
     def update(self, suggested_nooks, team_id):
         self.suggested_nooks[team_id] += suggested_nooks
-    
+
     def add_nook(self, nook, team_id):
         print("ADDED")
         self.suggested_nooks[team_id].append(nook)
 
     def get_context_block(self, user_id, team_id):
-        user_id_installer = self.db.tokens_2.find_one({"team_id": team_id})["user_id"]
+        team_row = self.db.tokens_2.find_one({"team_id": team_id})
+        user_id_installer = team_row["user_id"]
+        current_time_zone = team_row["time_zone"]
+        if "locations" not in team_row:
+            current_locations = []
+        else:
+            current_locations = team_row["locations"]
         set_timezone_block = []
-        if user_id_installer == user_id:
-            set_timezone_block = [
-                {
-                    "type": "button",
-                    "action_id": "set_timezone",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Set Time-Zone",
-                        "emoji": True,
-                    },
-                    "value": "set_timezone",
-                },
-            ]
-        return [
-            {
+        timezone_block = {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "> The workspace's current time-zone is set as: "
+                + current_time_zone,
+            },
+        }
+        if current_locations:
+            location_block = {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": ":gear: |   *SETTINGS*  | :gear: ",
+                    "text": "> The workspace's current locations are: \n"
+                    + "".join(
+                        ["> - " + location + "\n" for location in current_locations]
+                    ),
                 },
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "action_id": "initiate_onboarding_modal",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Onboard Members",
-                            "emoji": True,
-                        },
-                        "style": "primary",
-                        "value": "onboard",
-                    }
-                ]
-                + set_timezone_block
-                + [
-                    {
-                        "type": "button",
-                        "action_id": "send_feedback",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Send Feedback",
-                            "emoji": True,
-                        },
-                        "value": "feedback",
+                "accessory": {
+                    "type": "button",
+                    "action_id": "initiate_onboarding_modal",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Onboard Members",
+                        "emoji": True,
                     },
-                    {
-                        "type": "button",
-                        "action_id": "go_to_website",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Visit Website",
-                            "emoji": True,
-                        },
-                        "value": "website",
-                        "url": "https://nooks.vercel.app/",
+                    "style": "primary",
+                    "value": "onboard",
+                },
+            }
+
+        else:
+            location_block = {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "> Your workspace doesn't have any locations set yet",
+                },
+            }
+
+        if user_id_installer == user_id:
+            timezone_block["accessory"] = {
+                "type": "button",
+                "action_id": "set_timezone",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Change Time-Zone",
+                    "emoji": True,
+                },
+            }
+            location_block["accessory"] = {
+                "type": "button",
+                "action_id": "edit_location",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Edit Locations",
+                    "emoji": True,
+                },
+            }
+            reach_out_block = []
+
+        else:
+            reach_out_block = [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Notice something wrong? Reach out to <@"
+                        + user_id_installer
+                        + "> to change workspace-wide settings!",
                     },
-                ],
-            },
-        ]
+                }
+            ]
+        return (
+            [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": ":gear: |   *NOOKS WORKSPACE*  | :gear: ",
+                    },
+                }
+            ]
+            + reach_out_block
+            + [timezone_block, location_block]
+            + [
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": "initiate_onboarding_modal",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Onboard Members",
+                                "emoji": True,
+                            },
+                            "style": "primary",
+                            "value": "onboard",
+                        },
+                        {
+                            "type": "button",
+                            "action_id": "send_feedback",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Send Feedback",
+                                "emoji": True,
+                            },
+                            "value": "feedback",
+                        },
+                        {
+                            "type": "button",
+                            "action_id": "go_to_website",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Visit Website",
+                                "emoji": True,
+                            },
+                            "value": "website",
+                            "url": "https://nooks.vercel.app/",
+                        },
+                    ],
+                },
+            ]
+        )
 
     def get_interaction_blocks(self, client, user_id, team_id, token):
         all_connections = self.db.all_interacted.find(
@@ -385,6 +455,11 @@ class NooksHome:
         )
 
     def initial_message(self, client, event, token):
+        context_block_items = self.get_context_block(
+            user_id=event["user"], team_id=event["view"]["team_id"]
+        )
+
+
         client.views_publish(
             token=token,
             # Use the user ID associated with the event
@@ -435,7 +510,14 @@ class NooksHome:
                             },
                         ],
                     },
-                ],
+                    {
+                        "type": "divider",
+                    },
+                    {
+                        "type": "divider",
+                    },
+                ]
+                + context_block_items,
             },
         )
 
