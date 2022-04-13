@@ -835,7 +835,10 @@ def get_onboard_members_blocks(token):
     ]
     return blocks
 
-
+@slack_app.action("go_to_website")
+def handle_go_to_website(ack, body, logger):
+    ack()
+    
 @slack_app.action("initiate_onboarding_modal")
 def handle_onboard_request(ack, body, logger):
     ack()
