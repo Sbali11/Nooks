@@ -31,7 +31,7 @@ class NooksAllocation:
             
             if homophily_factor == "Location":
                 if ("Location" not in member_info) or member_info[homophily_factor] not in self.locations[member_info["team_id"]]:
-                    member_vector[i] = self.locations[member_info["team_id"]]["Other"]
+                    member_vector[i] = len(self.locations[member_info["team_id"]])-1
                 else:
                     
                     member_vector[i] = self.locations[member_info["team_id"]][member_info[homophily_factor]]
