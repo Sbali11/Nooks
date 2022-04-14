@@ -1346,7 +1346,7 @@ def handle_signup(ack, body, client, view, logger):
             logging.error(traceback.format_exc())
 
     new_member_info["user_id"] = user
-    new_member_info["member_vector"] = get_member_vector(new_member_info)
+    #new_member_info["member_vector"] = get_member_vector(new_member_info)
     new_member_info["team_id"] = body["team"]["id"]
     new_member_info["created_on"] = datetime.utcnow()
     db.member_vectors.insert_one(new_member_info)
