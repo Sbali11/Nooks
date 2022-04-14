@@ -1788,7 +1788,6 @@ def signup_modal_step_1(ack, body, view, logger):
         }
         question_blocks.append(current_location_block)
     question_blocks.append(top_interacted_block)
-    print(question_blocks)
 
     # TODO check if member is already in database?
     ack(
