@@ -24,16 +24,34 @@ class NooksAllocation:
                 self.member_dict[member_2]
             ] = interaction_row["count"]
         return interaction_np
-
+    
+    def get_member_vector(self, member_info):
+        member_vector = [0] * (len(HOMOPHILY_FACTORS) + 1)
+        for i, homophily_factor in enumerate(self.homophily_factors):
+            
+            if homophily_factor == "Location":
+                if ("Location" not in member_info) or member_info[homophily_factor] not in self.locations[member_info["team_id"]]:
+                    member_vector[i] = self.locations[member_info["team_id"]]["Other"]
+                else:
+                    
+                    member_vector[i] = self.locations[member_info["team_id"]][member_info[homophily_factor]]
+            else:
+                member_vector[i] = HOMOPHILY_FACTORS[homophily_factor][
+                    member_info[homophily_factor]
+                ]
+        return member_vector
+    
     def __init__(self, db, alpha=2):
         self.db = db
         
         self.num_iters = 20
         self.alpha = alpha
-        self.homophily_factors = sorted(HOMOPHILY_FACTORS)
+        sorted_homophily_factors =  sorted(list(HOMOPHILY_FACTORS.keys()) + ["Location"])
+        self.homophily_factors = HOMOPHILY_FACTORS
+        self.homophily_factors["Location"] = None # this depends on different teams
         self.homophily_factors_index = {
-            self.homophily_factors[i]: i
-            for i in range(len(self.homophily_factors))
+            sorted_homophily_factors[i]: i
+            for i in range(len(sorted_homophily_factors))
         }
         self.member_vectors = {}
         self.member_dict = {}
@@ -43,14 +61,25 @@ class NooksAllocation:
         self.member_heterophily_priority = {}
         self.temporal_interacted = {}
         self.all_interacted = {}
+        self.locations = collections.defaultdict(dict)
         for team_row in list(self.db.tokens_2.find()):
+            if "locations" in team_row:
+                team_locations = team_row["locations"]
+            else:
+                team_locations = []
+            team_locations.append("Other")
+            
+            for i, location in enumerate(team_locations):
+                self.locations[team_row["team_id"]][location] = i
+            
             self._create_members(team_row["team_id"])
+        print(self.member_vectors)
 
     def _set_homophily_priority(self, team_id, member):
         top_int_members = member["top_members"]
         weight_factor = np.zeros(len(self.homophily_factors))
         homophily_factors = sorted(self.homophily_factors)
-        member_vector = member["member_vector"]
+        member_vector = self.get_member_vector(member)
         for interacted_member in top_int_members:
             if interacted_member not in self.member_dict:
                 continue
@@ -68,7 +97,7 @@ class NooksAllocation:
     
         self.member_vectors[team_id] = np.array(
             [
-                np.array(member["member_vector"]) for member in all_members]
+                np.array(self.get_member_vector(member)) for member in all_members]
             )
 
         self.members_not_together[team_id] = np.zeros((len(all_members), len(all_members)))
@@ -177,16 +206,9 @@ class NooksAllocation:
             swipes = nook_swipes[team_id][member]
             selected_nook = -1
             for _, nook in right_swiped_nums:
-                logging.info("NEW")
-                logging.info(member)
-                logging.info(nook)
                 if not swipes[nook] or (self.members_not_together[team_id][nooks_allocs[team_id][nook]==1]).sum(axis=0)[member]:
                     continue
-                
                 selected_nook = nook
-                logging.info(member)
-                logging.info(selected_nook)
-                
                 break
             
             if selected_nook==-1:
@@ -195,8 +217,6 @@ class NooksAllocation:
             member_allocs[team_id][member] = selected_nook
             nooks_mem_cnt[team_id][selected_nook] += 1
             nooks_mem_int_cnt[team_id] += self.temporal_interacted[team_id][member] >= 1
-        logging.info(member_allocs[team_id])
-        logging.info( right_swiped_nums)
         for i in range(self.num_iters):
             all_members_permute = np.random.permutation(self.total_members[team_id])
             for member in all_members_permute:
@@ -217,9 +237,7 @@ class NooksAllocation:
                         heterophily_nook.append(0)  # this value will be ignored
                         continue
                     same_nook_members = self.member_vectors[team_id][nooks_allocs[team_id][nook] == 1]
-                    member_diff = np.linalg.norm(
-                        self.member_vectors[team_id][member] - same_nook_members
-                    )
+                    member_diff = (np.abs(self.member_vectors[team_id][member] - same_nook_members) > 0)
                     priority = self.member_heterophily_priority[team_id][nooks_allocs[team_id][nook] == 1] + (self.member_heterophily_priority[team_id][member].reshape(1, -1))
                     heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
                     interacted_nook.append(((nooks_allocs[team_id][nook]) * (self.temporal_interacted[team_id][member] > 0)).sum())

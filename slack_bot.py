@@ -113,6 +113,7 @@ slack_app = App(
 
 def get_member_vector(member_info):
     member_vector = [0] * (len(HOMOPHILY_FACTORS))
+
     for i, homophily_factor in enumerate(sorted(HOMOPHILY_FACTORS)):
         member_vector[i] = HOMOPHILY_FACTORS[homophily_factor][
             member_info[homophily_factor]
@@ -1767,7 +1768,7 @@ def signup_modal_step_1(ack, body, view, logger):
     if current_locations:
         current_location_block = {
             "type": "input",
-            "block_id": "location_block",
+            "block_id": "Location",
             "label": {
                 "type": "plain_text",
                 "text": "Select your location(if you can't see your location, ask the user who installed the Nooks Bot to add it in!: this should be mentioned on your home page)",
