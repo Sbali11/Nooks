@@ -26,11 +26,11 @@ class NooksAllocation:
         return interaction_np
     
     def get_member_vector(self, member_info):
-        member_vector = [0] * (len(HOMOPHILY_FACTORS) + 1)
+        member_vector = [0] * (len(self.homophily_factors))
         for i, homophily_factor in enumerate(self.homophily_factors):
             
             if homophily_factor == "Location":
-                if ("Location" not in member_info) or member_info[homophily_factor] not in self.locations[member_info["team_id"]]:
+                if ("Location" not in member_info) or (member_info[homophily_factor] not in self.locations[member_info["team_id"]]):
                     member_vector[i] = len(self.locations[member_info["team_id"]])-1
                 else:
                     
@@ -39,6 +39,7 @@ class NooksAllocation:
                 member_vector[i] = HOMOPHILY_FACTORS[homophily_factor][
                     member_info[homophily_factor]
                 ]
+
         return member_vector
     
     def __init__(self, db, alpha=2):
@@ -47,12 +48,13 @@ class NooksAllocation:
         self.num_iters = 20
         self.alpha = alpha
         sorted_homophily_factors =  sorted(list(HOMOPHILY_FACTORS.keys()) + ["Location"])
-        self.homophily_factors = HOMOPHILY_FACTORS
+        self.homophily_factors = HOMOPHILY_FACTORS.copy()
         self.homophily_factors["Location"] = None # this depends on different teams
         self.homophily_factors_index = {
             sorted_homophily_factors[i]: i
             for i in range(len(sorted_homophily_factors))
         }
+        print(self.homophily_factors_index)
         self.member_vectors = {}
         self.member_dict = {}
         self.member_ids = {}
@@ -73,7 +75,7 @@ class NooksAllocation:
                 self.locations[team_row["team_id"]][location] = i
             
             self._create_members(team_row["team_id"])
-
+        #print(self.locations)
     def _set_homophily_priority(self, team_id, member):
         top_int_members = member["top_members"]
         weight_factor = np.zeros(len(self.homophily_factors))
@@ -85,8 +87,8 @@ class NooksAllocation:
             interacted_member_vector = self.member_vectors[self.member_dict[team_id][interacted_member]]
             for i, homophily_factor in enumerate(homophily_factors):
                 weight_factor[i] += (member_vector[i] == interacted_member_vector[i])
-        self.member_heterophily_priority[team_id][self.member_dict[team_id][member["user_id"]]] = (weight_factor+EPSILON)/(np.sum(weight_factor)+EPSILON)
-
+        self.member_heterophily_priority[team_id][self.member_dict[team_id][member["user_id"]]] = (weight_factor+EPSILON)/(np.sum(weight_factor+EPSILON))
+        #print(self.member_heterophily_priority)
     # TODO change to team specific?
     def _create_members(self, team_id):
 
@@ -128,7 +130,6 @@ class NooksAllocation:
         self.member_heterophily_priority[team_id] = np.zeros((self.total_members[team_id], len(self.homophily_factors)))
         for member_row in all_members:
             self._set_homophily_priority(team_id, member_row)
-
         
         self.temporal_interacted[team_id]= self._create_interactions_np(team_id, 
             self.db.temporal_interacted.find({"team_id": team_id})

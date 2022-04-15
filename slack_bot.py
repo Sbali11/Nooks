@@ -531,7 +531,7 @@ def handle_word_guessed(ack, body, client, view, logger):
     allocated_row = db.allocated_roles_words.find_one(
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
     )
-    print("HERE")
+    #print("HERE")
     if ps.stem(word) == ps.stem(allocated_row["word"]):
         slack_app.client.chat_postMessage(
             token=token,
