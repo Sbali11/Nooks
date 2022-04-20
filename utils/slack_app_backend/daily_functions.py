@@ -163,6 +163,24 @@ def create_new_channels(
                     }
                 },
             )
+            slack_app.client.chat_postMessage(
+                    token=token,
+                    link_names=True,
+                    channel=new_nook["creator"],
+                    blocks=[
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Hey there! Unfortunately, I wasn't able to create your channel titled \""
+                                + title + "\" today because of not finding enough members for the nook. (This could happen because of not enough people clicking on interested or another nook resulting in a split of total membership)"
+                                
+                            },
+                        }
+                    ],
+                )
+
+
             continue
 
         try:
