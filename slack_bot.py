@@ -477,6 +477,30 @@ def handle_new_nook(ack, body, client, view, logger):
     db.nooks.insert_one(new_nook_info)
 
 
+def create_default_nook(title, desc, channel_name, bot_id, team_id):
+    new_nook_info = {
+        "team_id": team_id,
+        "title": title,
+        "creator": bot_id,
+        "channel_name": channel_name,
+        "description": desc+"\n\n(P.S. This nook has been created by the nook admins and is inspired by nooks created in other workspaces)",
+        "allow_two_members": True,
+        "banned": [],
+        "created_on": datetime.utcnow(),
+        "swiped_right": [],
+    }
+    db.nooks.insert_one(new_nook_info)
+    new_nook_info["status"] = "show"
+    token = get_token(team_id)
+    nooks_home.add_nook(nook=new_nook_info, team_id=team_id)
+    for member in nooks_alloc.member_dict[team_id]:
+        nooks_home.update_home_tab(
+            client=slack_app.client,
+            event={"user": member, "view": {"team_id": team_id}},
+            token=token,
+        )
+
+
 @slack_app.action("create_nook")
 def create_nook_modal(ack, body, logger):
     ack()
@@ -531,7 +555,7 @@ def handle_word_guessed(ack, body, client, view, logger):
     allocated_row = db.allocated_roles_words.find_one(
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
     )
-    #print("HERE")
+    # print("HERE")
     if ps.stem(word) == ps.stem(allocated_row["word"]):
         slack_app.client.chat_postMessage(
             token=token,
@@ -836,10 +860,12 @@ def get_onboard_members_blocks(token):
     ]
     return blocks
 
+
 @slack_app.action("go_to_website")
 def handle_go_to_website(ack, body, logger):
     ack()
-    
+
+
 @slack_app.action("initiate_onboarding_modal")
 def handle_onboard_request(ack, body, logger):
     ack()
@@ -1346,7 +1372,7 @@ def handle_signup(ack, body, client, view, logger):
             logging.error(traceback.format_exc())
 
     new_member_info["user_id"] = user
-    #new_member_info["member_vector"] = get_member_vector(new_member_info)
+    # new_member_info["member_vector"] = get_member_vector(new_member_info)
     new_member_info["team_id"] = body["team"]["id"]
     new_member_info["created_on"] = datetime.utcnow()
     db.member_vectors.insert_one(new_member_info)
@@ -2262,8 +2288,11 @@ def post_stories_periodic(all_team_ids):
 
     for team_id in all_team_ids:
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
+        suggested_nooks = list(
+            db.nooks.find({"status": "show_suggested", "team_id": team_id})
+        )
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
-            nooks=current_nooks, team_id=team_id
+            nooks=current_nooks, suggested_nooks=suggested_nooks, team_id=team_id
         )
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
@@ -2280,8 +2309,28 @@ def post_stories_periodic(all_team_ids):
             )
 
 
-def update_stories_periodic(all_team_ids):
+def update_stories_periodic(all_team_ids, end_time=False):
     for team_id in all_team_ids:
+        if end_time:
+            default_nook = db.nooks_default.find_one(
+                {"team_id": team_id, "status": "show"}
+            )
+
+            bot_id = db.tokens_2.find_one({"team_id": team_id})["installation"][
+                "bot_user_id"
+            ]
+            if default_nook:
+                create_default_nook(
+                    default_nook["title"],
+                    default_nook["description"],
+                    default_nook["channel_name"],
+                    bot_id=bot_id,
+                    team_id=team_id,
+                )
+                default_nook["status"] = "used"
+                db.nooks_default.update(
+                    {"_id": default_nook["_id"], "team_id": team_id}, default_nook
+                )
         suggested_nooks = update_nook_suggestions(slack_app, db, team_id)
         nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
         token = get_token(team_id)
@@ -2360,17 +2409,17 @@ def post_reminder_message_45():
 
 @cron.task("cron", minute="0")
 def update_stories_0():
-    update_stories_periodic(get_team_rows_timezone("16:00"))
+    update_stories_periodic(get_team_rows_timezone("16:00"), end_time=True)
 
 
 @cron.task("cron", minute="30")
 def update_stories_30():
-    update_stories_periodic(get_team_rows_timezone("16:00"))
+    update_stories_periodic(get_team_rows_timezone("16:00"), end_time=True)
 
 
 @cron.task("cron", minute="45")
 def update_stories_45():
-    update_stories_periodic(get_team_rows_timezone("16:00"))
+    update_stories_periodic(get_team_rows_timezone("16:00"), end_time=True)
 
 
 @cron.task("cron", day_of_week="6")
