@@ -2288,11 +2288,8 @@ def post_stories_periodic(all_team_ids):
 
     for team_id in all_team_ids:
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
-        suggested_nooks = list(
-            db.nooks.find({"status": "show_suggested", "team_id": team_id})
-        )
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
-            nooks=current_nooks, suggested_nooks=suggested_nooks, team_id=team_id
+            nooks=current_nooks, team_id=team_id
         )
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
