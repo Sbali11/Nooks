@@ -2345,17 +2345,17 @@ def post_stories_45():
 
 @cron.task("cron", minute="0")
 def post_reminder_message_0():
-    post_reminder_periodic(get_team_rows_timezone("10:00"))
+    post_reminder_periodic(get_team_rows_timezone("10:00", skip_weekends=False))
 
 
 @cron.task("cron", minute="30")
 def post_reminder_message_30():
-    post_reminder_periodic(get_team_rows_timezone("10:00"))
+    post_reminder_periodic(get_team_rows_timezone("10:00", skip_weekends=False))
 
 
 @cron.task("cron", minute="45")
 def post_reminder_message_45():
-    post_reminder_periodic(get_team_rows_timezone("10:00"))
+    post_reminder_periodic(get_team_rows_timezone("10:00", skip_weekends=False))
 
 
 @cron.task("cron", minute="0")

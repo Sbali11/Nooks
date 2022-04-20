@@ -139,7 +139,6 @@ def post_reminders(slack_app, db, team_id):
         except Exception as e:
             logging.error(traceback.format_exc())
 
-
 def create_new_channels(
     slack_app, db, new_nooks, allocations, suggested_allocs, team_id
 ):
@@ -154,6 +153,7 @@ def create_new_channels(
         title = new_nook["title"]
         channel_name = new_nook["channel_name"]
         desc = new_nook["description"]
+
         if new_nook["_id"] not in allocations or not allocations[new_nook["_id"]]:
             db.nooks.update(
                 {"_id": new_nook["_id"]},

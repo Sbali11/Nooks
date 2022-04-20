@@ -308,7 +308,8 @@ class NooksAllocation:
                     heterophily_nook.append(0)  # this value will be ignored
                     continue
                 same_nook_members = self.member_vectors[team_id][nooks_allocs[nook] == 1]
-                member_diff = (np.abs(self.member_vectors[team_id][member] - same_nook_members) > 0)
+                
+                member_diff = (np.abs(self.member_vectors[team_id][self.member_dict[team_id][member]] - same_nook_members) > 0)
                 priority = self.member_heterophily_priority[team_id][nooks_allocs[nook] == 1] + (self.member_heterophily_priority[team_id][member_pos].reshape(1, -1))
                 heterophily_nook.append(EPSILON + (priority * member_diff ).sum())
                 interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[team_id][member_pos] > 0)).sum())
