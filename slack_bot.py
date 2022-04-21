@@ -489,8 +489,9 @@ def create_default_nook(title, desc, channel_name, bot_id, team_id):
         "created_on": datetime.utcnow(),
         "swiped_right": [],
     }
-    db.nooks.insert_one(new_nook_info)
     new_nook_info["status"] = "show"
+    db.nooks.insert_one(new_nook_info)
+    
     token = get_token(team_id)
     nooks_home.add_nook(nook=new_nook_info, team_id=team_id)
     for member in nooks_alloc.member_dict[team_id]:
