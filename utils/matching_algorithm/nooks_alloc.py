@@ -185,6 +185,8 @@ class NooksAllocation:
         nook_swipes[team_id] = np.zeros((self.total_members[team_id], num_nooks))
         # allocates the creator to their respective nooks
         for i, nook in enumerate(team_wise_nooks[team_id]):
+            if nook["creator"] not in self.member_dict[team_id]:
+                continue
             creator_key = self.member_dict[team_id][nook["creator"]]
             nooks_allocs[team_id][i][creator_key] = 1
             member_allocs[team_id][creator_key] = i
@@ -244,7 +246,7 @@ class NooksAllocation:
                 interacted_by = np.array(interacted_nook)          
                 heterophily = np.array(heterophily_nook)     
                 interacted_by = nooks_mem_int_cnt[team_id][:, member]
-                wts = ((EPSILON + interacted_by) / nooks_mem_cnt[team_id]) * (
+                wts = ((EPSILON + interacted_by) /(EPSILON + nooks_mem_cnt[team_id])) * (
                     1 + (self.alpha * heterophily)
                 )
 
@@ -315,7 +317,7 @@ class NooksAllocation:
                 interacted_nook.append(((nooks_allocs[nook]) * (self.temporal_interacted[team_id][member_pos] > 0)).sum())
             interacted_by = np.array(interacted_nook)          
             heterophily = np.array(heterophily_nook)           
-            wts = ((EPSILON + interacted_by) / nooks_mem_cnt) * (
+            wts = ((EPSILON + interacted_by) / (EPSILON + nooks_mem_cnt)) * (
                 1 + (self.alpha * heterophily)
             )
             for nook in range(num_nooks):
