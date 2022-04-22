@@ -2384,7 +2384,7 @@ def post_stories_30():
 @cron.task("cron", minute="45")
 def post_stories_45():
 
-    #remove_stories_periodic(get_team_rows_timezone("12:04", skip_weekends=False))
+    remove_stories_periodic(get_team_rows_timezone("12:04", skip_weekends=False))
     all_team_rows_no_weekend = get_team_rows_timezone("12:00")
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
