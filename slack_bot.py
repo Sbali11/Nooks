@@ -1411,12 +1411,13 @@ def handle_signup(ack, body, client, view, logger):
                 },
                 upsert=True,
             )
-
+    #nooks_alloc._create_members(team_id= body["team"]["id"])
     nooks_home.update_home_tab(
         slack_app.client,
         {"user": user, "view": {"team_id": body["team"]["id"]}},
         token=get_token(body["team"]["id"]),
     )
+    
 
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),
@@ -2213,6 +2214,10 @@ def slack_install():
 def update_home_tab_all(token, installed_team):
     for member in slack_app.client.users_list(token=token)["members"]:
         try:
+            nooks_alloc._create_members(team_id= installed_team.get("id"))
+        except Exception as e:
+            logging.error(e)
+        try:
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={
@@ -2221,8 +2226,10 @@ def update_home_tab_all(token, installed_team):
                 },
                 token=get_token(installed_team.get("id")),
             )
+            
         except Exception as e:
             logging.error(e)
+
 
 
 @app.route("/slack/oauth_redirect", methods=["POST", "GET"])
@@ -2276,6 +2283,7 @@ def slack_oauth():
         kwargs={"token": get_token(team_id), "installed_team": installed_team},
     )
     thread.start()
+    
 
     return "Successfully installed"
 

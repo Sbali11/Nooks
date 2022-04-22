@@ -92,8 +92,6 @@ class NooksAllocation:
         #print(self.member_heterophily_priority)
     # TODO change to team specific?
     def _create_members(self, team_id):
-
-
         #np.zeros((len(all_members), len(all_members)))
         all_members = list(self.db.member_vectors.find({"team_id": team_id}))
     
