@@ -465,14 +465,14 @@ def handle_new_nook(ack, body, client, view, logger):
         )
 
         nooks_home.add_nook(nook=new_nook_info, team_id=body["team"]["id"])
-
+        new_nook_info["status"] = "show"
         for member in nooks_alloc.member_dict[body["team"]["id"]]:
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
                 token=token,
             )
-        new_nook_info["status"] = "show"
+        
 
     db.nooks.insert_one(new_nook_info)
 
@@ -740,6 +740,14 @@ def handle_onboard_members(ack, body, client, view, logger):
     )
     for member in all_members:
         try:
+            nooks_home.update_home_tab(
+                client=slack_app.client,
+                event={
+                    "user": member,
+                    "view": {"team_id": body["team"]["id"]},
+                },
+                token=get_token(body["team"]["id"]),
+            )
             slack_app.client.chat_postMessage(
                 token=token,
                 link_names=True,
@@ -1411,7 +1419,7 @@ def handle_signup(ack, body, client, view, logger):
                 },
                 upsert=True,
             )
-    #nooks_alloc._create_members(team_id= body["team"]["id"])
+    nooks_alloc._create_members(team_id= body["team"]["id"])
     nooks_home.update_home_tab(
         slack_app.client,
         {"user": user, "view": {"team_id": body["team"]["id"]}},
