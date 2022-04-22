@@ -146,15 +146,17 @@ def create_new_channels(
     db.user_swipes.remove({"team_id": team_id})
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
+    
 
     for i, new_nook in enumerate(new_nooks):
         now = datetime.now()  # current date and time
+        token = get_token(new_nook["team_id"])
         date = now.strftime("%m-%d-%Y-%H-%M-%S")
         title = new_nook["title"]
         channel_name = new_nook["channel_name"]
         desc = new_nook["description"]
 
-        if new_nook["_id"] not in allocations or not allocations[new_nook["_id"]]:
+        if (new_nook["_id"] not in allocations or not allocations[new_nook["_id"]]) and not(new_nook["members"]):
             db.nooks.update(
                 {"_id": new_nook["_id"]},
                 {
@@ -182,7 +184,11 @@ def create_new_channels(
 
 
             continue
-
+        if allocations[new_nook["_id"]]:
+            members = allocations[new_nook["_id"]]
+        else:
+            
+            members = new_nook["members"]
         try:
             channel_name = "nook-" + channel_name.lower() + "-" + date + "-" + str(i)
             token = get_token(new_nook["team_id"])
@@ -216,7 +222,7 @@ def create_new_channels(
             slack_app.client.conversations_invite(
                 token=token,
                 channel=ep_channel,
-                users=allocations[new_nook["_id"]],
+                users=members,
             )
 
             db.nooks.update(

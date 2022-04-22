@@ -4,6 +4,7 @@ import collections
 from gc import collect
 import logging
 from multiprocessing import context
+from re import L
 import numpy as np
 import random
 from utils.constants import *
@@ -185,18 +186,21 @@ class NooksAllocation:
         nook_swipes[team_id] = np.zeros((self.total_members[team_id], num_nooks))
         # allocates the creator to their respective nooks
         for i, nook in enumerate(team_wise_nooks[team_id]):
-            if nook["creator"] not in self.member_dict[team_id]:
+            if nook["creator"]  in self.member_dict[team_id]:
+                creator_key = self.member_dict[team_id][nook["creator"]]
+                nooks_allocs[team_id][i][creator_key] = 1
+                member_allocs[team_id][creator_key] = i
+                nooks_creators[team_id][i] = creator_key
+                creators[team_id].add(creator_key)
+                nook_swipes[team_id][creator_key][i] = 1
                 continue
-            creator_key = self.member_dict[team_id][nook["creator"]]
-            nooks_allocs[team_id][i][creator_key] = 1
-            member_allocs[team_id][creator_key] = i
-            nooks_creators[team_id][i] = creator_key
+
             if "swiped_right" not in nook:
                 continue
             for member in nook["swiped_right"]:
                 nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
-            creators[team_id].add(creator_key)
-            nook_swipes[team_id][creator_key][i] = 1
+            
+            
         nook_swipe_nums = nook_swipes[team_id].sum(axis=0)
         right_swiped_nums = [(nook_swipe_nums[i], i) for i in range(len(nook_swipe_nums))]
         right_swiped_nums.sort(reverse=True)
@@ -274,10 +278,15 @@ class NooksAllocation:
 
         for nook_id in range(len(nooks_allocs[team_id])):
             allocated_mems = nooks_allocs[team_id][nook_id].nonzero()[0].tolist()
+            members =  [self.member_ids[team_id][member] for member in allocated_mems]
+            if nook_id in nooks_creators[team_id] and nooks_creators[team_id][nook_id] in self.member_ids[team_id]:
+                members = members + [self.member_ids[team_id][nooks_creators[team_id][nook_id]]]
+           
+
             allocated_mems = list(
                 set(
-                [self.member_ids[team_id][member] for member in allocated_mems]
-                + [self.member_ids[team_id][nooks_creators[team_id][nook_id]]]
+               
+                members
                 )
             )        
             if len(allocated_mems) < 3 and not nooks[nook_id]["allow_two_members"]:
