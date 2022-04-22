@@ -10,6 +10,7 @@ import traceback
 
 from datetime import datetime, timezone, date
 import pytz
+import time
 
 import threading
 
@@ -472,7 +473,6 @@ def handle_new_nook(ack, body, client, view, logger):
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
                 token=token,
             )
-        
 
     db.nooks.insert_one(new_nook_info)
 
@@ -483,7 +483,8 @@ def create_default_nook(title, desc, channel_name, bot_id, team_id):
         "title": title,
         "creator": bot_id,
         "channel_name": channel_name,
-        "description": desc+"\n\n(P.S. This nook has been created by the nook admins and is inspired by nooks created in other workspaces)",
+        "description": desc
+        + "\n\n(P.S. This nook has been created by the nook admins and is inspired by nooks created in other workspaces)",
         "allow_two_members": True,
         "banned": [],
         "created_on": datetime.utcnow(),
@@ -491,7 +492,7 @@ def create_default_nook(title, desc, channel_name, bot_id, team_id):
     }
     new_nook_info["status"] = "show"
     db.nooks.insert_one(new_nook_info)
-    
+
     token = get_token(team_id)
     nooks_home.add_nook(nook=new_nook_info, team_id=team_id)
     for member in nooks_alloc.member_dict[team_id]:
@@ -738,48 +739,53 @@ def handle_onboard_members(ack, body, client, view, logger):
         channel=body["user"]["id"],
         text=message_text + ",".join(conversations_names) + dont_include_text,
     )
+    print(len(all_members))
+    l = len(all_members)
+ 
     for member in all_members:
+
         try:
             nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={
-                    "user": member,
-                    "view": {"team_id": body["team"]["id"]},
-                },
-                token=get_token(body["team"]["id"]),
-            )
+                    client=slack_app.client,
+                    event={
+                        "user": member,
+                        "view": {"team_id": body["team"]["id"]},
+                    },
+                    token=get_token(body["team"]["id"]),
+                )
+            time.sleep(1)
             slack_app.client.chat_postMessage(
-                token=token,
-                link_names=True,
-                channel=member,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@"
-                            + body["user"]["id"]
-                            + "> wants you to sign-up!",
+                    token=token,
+                    link_names=True,
+                    channel=member,
+                    blocks=[
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@"
+                                + body["user"]["id"]
+                                + "> wants you to sign-up!",
+                            },
                         },
-                    },
-                    {
-                        "type": "actions",
-                        "elements": [
-                            {
-                                "type": "button",
-                                "action_id": "onboard_info",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Tell me more!",
-                                    "emoji": True,
-                                },
-                                "style": "primary",
-                                "value": "join",
-                            }
-                        ],
-                    },
-                ],
-            )
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "onboard_info",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Tell me more!",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                    "value": "join",
+                                }
+                            ],
+                        },
+                    ],
+                )
         except Exception as e:
             logging.info(e)
 
@@ -1419,13 +1425,12 @@ def handle_signup(ack, body, client, view, logger):
                 },
                 upsert=True,
             )
-    nooks_alloc._create_members(team_id= body["team"]["id"])
+    nooks_alloc._create_members(team_id=body["team"]["id"])
     nooks_home.update_home_tab(
         slack_app.client,
         {"user": user, "view": {"team_id": body["team"]["id"]}},
         token=get_token(body["team"]["id"]),
     )
-    
 
     slack_app.client.chat_postMessage(
         token=get_token(body["team"]["id"]),
@@ -2218,26 +2223,57 @@ def slack_install():
         + "'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
+def update_home_tab_channel(token, installed_team, channel_id):
+    nooks_alloc._create_members(team_id=installed_team.get("id"))
 
-def update_home_tab_all(token, installed_team):
-    for member in slack_app.client.users_list(token=token)["members"]:
-        try:
-            nooks_alloc._create_members(team_id= installed_team.get("id"))
-        except Exception as e:
-            logging.error(e)
-        try:
-            nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={
+    all_members = slack_app.client.conversations_members(
+                token=token, channel=channel_id
+            )["members"]
+    print(len(all_members))
+    for i in range(len(all_members) // 50):
+        
+        for j in range(i*50, (i+1)* 50):
+            member = all_members[j]
+            try:
+                nooks_home.update_home_tab(
+                    client=slack_app.client,
+                    event={
                     "user": member["id"],
                     "view": {"team_id": installed_team.get("id")},
-                },
-                token=get_token(installed_team.get("id")),
-            )
+                    },
+                    token=get_token(installed_team.get("id")),
+                )
             
-        except Exception as e:
-            logging.error(e)
 
+            except Exception as e:
+                logging.error(e)
+            #time.sleep(60)
+        print("DONe")
+
+
+
+def update_home_tab_all(token, installed_team):
+    nooks_alloc._create_members(team_id=installed_team.get("id"))
+    all_members = slack_app.client.users_list(token=token)["members"]
+    print(len(all_members))
+    for i in range(len(all_members) // 50):
+        
+        for j in range(i*50, (i+1)* 50):
+            member = all_members[j]
+            try:
+                nooks_home.update_home_tab(
+                    client=slack_app.client,
+                    event={
+                    "user": member["id"],
+                    "view": {"team_id": installed_team.get("id")},
+                    },
+                    token=get_token(installed_team.get("id")),
+                )
+            
+
+            except Exception as e:
+                logging.error(e)
+            time.sleep(60)
 
 
 @app.route("/slack/oauth_redirect", methods=["POST", "GET"])
@@ -2291,7 +2327,6 @@ def slack_oauth():
         kwargs={"token": get_token(team_id), "installed_team": installed_team},
     )
     thread.start()
-    
 
     return "Successfully installed"
 
@@ -2451,7 +2486,7 @@ def main(nooks_home_arg, nooks_alloc_arg):
     global nooks_alloc
     nooks_home = nooks_home_arg
     nooks_alloc = nooks_alloc_arg
-
+    # update_home_tab_channel(token=get_token("T02AC3B25"), installed_team={"id": "T02AC3B25"}, channel_id="C02AC3B2D")
     # db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
