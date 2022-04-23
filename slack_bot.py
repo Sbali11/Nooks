@@ -1844,7 +1844,7 @@ def signup_modal_step_1(ack, body, view, logger):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "To help me optimize your Nooks experience, tell me a bit about yourself!",
+                        "text": "To help me optimize your Nooks experience, tell me a bit about yourself! P.S Your answers won't be shown to your teammates and are only used to match you to an optimal nook. ",
                     },
                 }
             ]
@@ -2486,7 +2486,5 @@ def main(nooks_home_arg, nooks_alloc_arg):
     global nooks_alloc
     nooks_home = nooks_home_arg
     nooks_alloc = nooks_alloc_arg
-    # update_home_tab_channel(token=get_token("T02AC3B25"), installed_team={"id": "T02AC3B25"}, channel_id="C02AC3B2D")
-    # db.user_swipes.remove()
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
