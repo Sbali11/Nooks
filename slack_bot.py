@@ -323,7 +323,7 @@ def get_create_nook_blocks(initial_title, initial_desc=""):
                     {
                         "text": {
                             "type": "plain_text",
-                            "text": "Allow nook to be created with only one additional additional member.",
+                            "text": "Allow nook to be created with only one additional member.",
                             "emoji": True,
                         },
                         "value": "allow_two_member",
