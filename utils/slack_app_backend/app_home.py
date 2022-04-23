@@ -431,7 +431,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 12PM and get a final list of updated cards at 4PM! ",
+                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 12PM the next weekday and get a final list of updated cards at 4PM ! ",
                             },
                         },
                         {"type": "divider"},
