@@ -10,7 +10,7 @@ HOMOPHILY_FACTORS = {
         "Master's Student": 2,
         "Undergrad Student": 3,
     },
-    "Gender": {"Male": 0, "Female": 1, "Non-Binary": 2, "Prefer Not to Disclose": 3},
+    "Gender": {"Male": 0, "Female": 1, "Non-Binary": 2, "Prefer Not to Disclose": 3, "Prefer To Self Describe": 4},
     "Number of years in the organization": {
         "0-1 yrs": 0,
         "1-5 yrs": 1,

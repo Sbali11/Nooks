@@ -1764,8 +1764,9 @@ def signup_modal_step_1(ack, body, view, logger):
         current_locations = []
     else:
         current_locations = team_row["locations"]
-    question_blocks = [
-        {
+    question_blocks =[]
+    for question in all_questions:
+        question_blocks.append({
             "type": "input",
             "block_id": question,
             "label": {
@@ -1781,9 +1782,23 @@ def signup_modal_step_1(ack, body, view, logger):
                     for value in all_questions[question]
                 ],
             },
-        }
-        for question in all_questions
-    ]
+        })
+        if question == "Gender":
+            question_blocks.append(        {
+            "block_id": "gender_self_describe",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+            },
+            "optional": True,
+            "label": {
+                "type": "plain_text",
+                "text": "If you prefer to self-describe, please elaborate here.",
+                "emoji": True,
+            },
+        },)
+
     # TODO change to only channel members
     top_interacted_block = {
         "block_id": "top_members",
