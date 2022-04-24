@@ -558,6 +558,7 @@ def handle_word_guessed(ack, body, client, view, logger):
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
     )
     # print("HERE")
+    
     if ps.stem(word) == ps.stem(allocated_row["word"]):
         slack_app.client.chat_postMessage(
             token=token,
@@ -602,6 +603,13 @@ def handle_word_guessed(ack, body, client, view, logger):
                 },
             ],
         )
+    db.guesses.insert_one({
+        "channel_id": channel_id,
+        "user_id": body["user"]["id"],
+        "for_id": member_id,
+        "word": word,
+        "team_id": team_id
+    })
 
 
 @slack_app.action("word_said")
