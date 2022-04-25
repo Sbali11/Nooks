@@ -156,7 +156,7 @@ def create_new_channels(
         channel_name = new_nook["channel_name"]
         desc = new_nook["description"]
 
-        if (new_nook["_id"] not in allocations or not allocations[new_nook["_id"]]) and not(new_nook["members"]):
+        if (new_nook["_id"] not in allocations or not allocations[new_nook["_id"]]):
             db.nooks.update(
                 {"_id": new_nook["_id"]},
                 {
@@ -187,7 +187,6 @@ def create_new_channels(
         if allocations[new_nook["_id"]]:
             members = allocations[new_nook["_id"]]
         else:
-            
             members = new_nook["members"]
         try:
             channel_name = "nook-" + channel_name.lower() + "-" + date + "-" + str(i)
