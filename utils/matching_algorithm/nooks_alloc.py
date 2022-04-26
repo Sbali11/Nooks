@@ -266,7 +266,7 @@ class NooksAllocation:
                 nooks_allocs[team_id][og_nook][member] = 0
                 if not nooks_creators[team_id][selected_nook] == member:
                     nooks_mem_cnt[team_id][selected_nook] += 1
-                if not nooks_creators[team_id][og_nook] == member:
+                if og_nook in nooks_creators[team_id] and not nooks_creators[team_id][og_nook] == member:
                     nooks_mem_cnt[team_id][og_nook] -= 1
                 member_allocs[team_id][member] = selected_nook
                 nooks_mem_int_cnt[team_id][selected_nook] += (
