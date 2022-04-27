@@ -191,13 +191,16 @@ class NooksAllocation:
                 nooks_creators[team_id][i] = creator_key
                 creators[team_id].add(creator_key)
                 nook_swipes[team_id][creator_key][i] = 1
+                if "swiped_right" not in nook:
+                    continue
+                for member in nook["swiped_right"]:
+                    nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
                 continue
 
             if "swiped_right" not in nook:
                 continue
             for member in nook["swiped_right"]:
                 nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
-            
             
         nook_swipe_nums = nook_swipes[team_id].sum(axis=0)
         right_swiped_nums = [(nook_swipe_nums[i], i) for i in range(len(nook_swipe_nums))]
@@ -296,9 +299,13 @@ class NooksAllocation:
                 {"$set": {"members": allocated_mems}},
             )
             # self._update_interacted(member_allocs, nooks_allocs)
+        try: 
             suggested_allocs.update(self._create_alloc_suggestions(
             team_id, team_wise_nooks[team_id], members_no_swipes[team_id], nooks_allocs[team_id], nooks_mem_cnt[team_id]
             ))
+        except Exception as e:
+            logging.info(e)
+
         return allocations, suggested_allocs
 
     def _create_alloc_suggestions(
