@@ -2362,14 +2362,15 @@ def remove_stories_periodic(all_team_ids):
 def post_stories_periodic(all_team_ids):
 
     for team_id in all_team_ids:
-        current_nooks = list(db.nooks.find({"status": "hello", "team_id": team_id}))
+        current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
         #print("FEWMJKEWNF")
         #print(current_nooks)
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
             nooks=current_nooks, team_id=team_id
         )
-        #print(allocations, suggested_allocs)
+        print(allocations, suggested_allocs)
         #return
+        suggested_allocs = collections.defaultdict(list)
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
         )
@@ -2445,8 +2446,8 @@ def get_team_rows_timezone(time, skip_weekends=True):
 
 @cron.task("cron", minute="0")
 def post_stories_0():
-    remove_stories_periodic(get_team_rows_timezone("12:03", skip_weekends=False))
-    all_team_rows_no_weekend = get_team_rows_timezone("12:10")
+    remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
+    all_team_rows_no_weekend = get_team_rows_timezone("12:00")
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 
