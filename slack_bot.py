@@ -2297,9 +2297,11 @@ def update_home_tab_all(token, installed_team):
     nooks_alloc._create_members(team_id=installed_team.get("id"))
     all_members = slack_app.client.users_list(token=token)["members"]
     
-    for i in range(len(all_members) // 50):
+    for i in range(len(all_members) // 50 + 1):
         
         for j in range(i*50, (i+1)* 50):
+            if j > len(all_members):
+                continue
             member = all_members[j]
             print(member)
             try:
