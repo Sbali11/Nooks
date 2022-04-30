@@ -2266,6 +2266,8 @@ def update_home_tab_channel(token, installed_team, channel_id):
     for i in range(len(all_members) // 50 + 1):
         
         for j in range(i*50, (i+1)* 50):
+            if j >= len(all_members):
+                continue
             member = all_members[j]
             try:
                 nooks_home.update_home_tab(
@@ -2313,7 +2315,7 @@ def update_home_tab_all(token, installed_team):
     for i in range(len(all_members) // 50 + 1):
         
         for j in range(i*50, (i+1)* 50):
-            if j > len(all_members):
+            if j >= len(all_members):
                 continue
             member = all_members[j]
             print(member)
@@ -2330,7 +2332,7 @@ def update_home_tab_all(token, installed_team):
 
             except Exception as e:
                 logging.error(e)
-            time.sleep(60)
+        time.sleep(60)
 
 
 @app.route("/slack/oauth_redirect", methods=["POST", "GET"])
