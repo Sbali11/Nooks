@@ -2254,7 +2254,7 @@ def update_home_tab_channel(token, installed_team, channel_id):
                 token=token, channel=channel_id
             )["members"]
     print(len(all_members))
-    for i in range(len(all_members) // 50):
+    for i in range(len(all_members) // 50 + 1):
         
         for j in range(i*50, (i+1)* 50):
             member = all_members[j]
@@ -2262,7 +2262,7 @@ def update_home_tab_channel(token, installed_team, channel_id):
                 nooks_home.update_home_tab(
                     client=slack_app.client,
                     event={
-                    "user": member["id"],
+                    "user": member,
                     "view": {"team_id": installed_team.get("id")},
                     },
                     token=get_token(installed_team.get("id")),
@@ -2275,18 +2275,17 @@ def update_home_tab_channel(token, installed_team, channel_id):
         print("DONe")
 
 
-def update_channel_first(installed_team, token):
+def update_channel_first(token, installed_team):
     channel_id = (db.tokens_2.find_one({"team_id": installed_team.get("id")})["installation"])[
                 "incoming_webhook_channel_id"
             ]
-    
     for member in slack_app.client.conversations_members(
                 token=token, channel=channel_id)["members"]:
         
         nooks_home.update_home_tab(
                     client=slack_app.client,
                     event={
-                    "user": member["id"],
+                    "user": member,
                     "view": {"team_id": installed_team.get("id")},
                     },
                     token=get_token(installed_team.get("id")),
@@ -2295,6 +2294,11 @@ def update_home_tab_all(token, installed_team):
 
 
     nooks_alloc._create_members(team_id=installed_team.get("id"))
+    try: 
+        update_channel_first(token, installed_team)
+    except Exception as e:
+        logging.error(e)
+
     all_members = slack_app.client.users_list(token=token)["members"]
     
     for i in range(len(all_members) // 50 + 1):
