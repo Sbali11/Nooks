@@ -153,6 +153,15 @@ def command(ack, body, respond):
         },
         token=token,
     )
+    try:
+        slack_app.chat_postMessage(
+            token=get_token(team_id),
+            link_names=True,
+            channel=user_id,
+            text="I've updated your app home page, head over to the home page too see it!" 
+        )
+    except Exception as e:
+        logging.error(e)
 
 
 @slack_app.command("/get_role")
