@@ -2318,7 +2318,7 @@ def update_home_tab_all(token, installed_team):
             if j >= len(all_members):
                 continue
             member = all_members[j]
-            print(member)
+            #print(member)
             try:
                 nooks_home.update_home_tab(
                     client=slack_app.client,
