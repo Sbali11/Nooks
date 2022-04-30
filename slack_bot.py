@@ -2276,7 +2276,7 @@ def update_home_tab_channel(token, installed_team, channel_id):
 
 
 def update_channel_first(installed_team, token):
-    channel_id = db.tokens_2.find_one({"team_id": installed_team.get("id")})["installation"][
+    channel_id = (db.tokens_2.find_one({"team_id": installed_team.get("id")})["installation"])[
                 "incoming_webhook_channel_id"
             ]
     
@@ -2292,11 +2292,8 @@ def update_channel_first(installed_team, token):
                     token=get_token(installed_team.get("id")),
         )
 def update_home_tab_all(token, installed_team):
-    try:
-        update_channel_first(installed_team, token)
-    except Exception as e:
-        logging.error(e)
-        
+
+
     nooks_alloc._create_members(team_id=installed_team.get("id"))
     all_members = slack_app.client.users_list(token=token)["members"]
     
@@ -2304,6 +2301,7 @@ def update_home_tab_all(token, installed_team):
         
         for j in range(i*50, (i+1)* 50):
             member = all_members[j]
+            print(member)
             try:
                 nooks_home.update_home_tab(
                     client=slack_app.client,
