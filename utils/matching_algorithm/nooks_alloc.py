@@ -191,11 +191,6 @@ class NooksAllocation:
                 nooks_creators[team_id][i] = creator_key
                 creators[team_id].add(creator_key)
                 nook_swipes[team_id][creator_key][i] = 1
-                if "swiped_right" not in nook:
-                    continue
-                for member in nook["swiped_right"]:
-                    nook_swipes[team_id][self.member_dict[team_id][member]][i] = 1
-                continue
 
             if "swiped_right" not in nook:
                 continue

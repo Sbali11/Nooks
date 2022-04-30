@@ -2064,6 +2064,7 @@ def handle_update_timezone(ack, body, client, view, logger):
             }
         },
     )
+
     update_home_tab_all(token=get_token(team_id), installed_team=body["team"])
 
 
@@ -2274,11 +2275,31 @@ def update_home_tab_channel(token, installed_team, channel_id):
         print("DONe")
 
 
-
+def update_channel_first(installed_team, token):
+    channel_id = db.tokens_2.find_one({"team_id": installed_team.get("id")})["installation"][
+                "incoming_webhook_channel_id"
+            ]
+    
+    for member in slack_app.client.conversations_members(
+                token=token, channel=channel_id)["members"]:
+        
+        nooks_home.update_home_tab(
+                    client=slack_app.client,
+                    event={
+                    "user": member["id"],
+                    "view": {"team_id": installed_team.get("id")},
+                    },
+                    token=get_token(installed_team.get("id")),
+        )
 def update_home_tab_all(token, installed_team):
+    try:
+        update_channel_first(installed_team, token)
+    except Exception as e:
+        logging.error(e)
+        
     nooks_alloc._create_members(team_id=installed_team.get("id"))
     all_members = slack_app.client.users_list(token=token)["members"]
-    print(len(all_members))
+    
     for i in range(len(all_members) // 50):
         
         for j in range(i*50, (i+1)* 50):
@@ -2351,6 +2372,7 @@ def slack_oauth():
     )
     thread.start()
 
+
     return "Successfully installed"
 
 
@@ -2369,8 +2391,6 @@ def post_stories_periodic(all_team_ids):
             nooks=current_nooks, team_id=team_id
         )
         print(allocations, suggested_allocs)
-        #return
-        suggested_allocs = collections.defaultdict(list)
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
         )
