@@ -49,13 +49,6 @@ ALL_REACTIONS = [
     "cherry_blossom",
     "tulip",
     "candy",
-
-
-
-
-
-
-
 ]
 ALL_TIMEZONES = {
     "LMT": "W-SU",

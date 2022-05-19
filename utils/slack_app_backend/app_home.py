@@ -62,7 +62,7 @@ class NooksHome:
                     + "".join(
                         ["> - " + location + "\n" for location in current_locations]
                     ),
-                }
+                },
             }
 
         else:
@@ -431,6 +431,13 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
+                                "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum cards you're interested in.",
+                            },
+                        },
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
                                 "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 12PM the next weekday and get a final list of updated cards at 4PM ! ",
                             },
                         },
@@ -448,7 +455,6 @@ class NooksHome:
             user_id=event["user"], team_id=event["view"]["team_id"]
         )
 
-
         client.views_publish(
             token=token,
             # Use the user ID associated with the event
@@ -465,7 +471,7 @@ class NooksHome:
                             "text": "Hey there"
                             + "<@"
                             + event["user"]
-                            + "> :wave: I'm *NooksBot*.\n_Remember the good old days where you could bump into people and start conversations?_\n Nooks allow you to do exactly that but over slack! Your workplace admin invited me here and I'm ready to help you interact with your coworkers in a exciting new ways:partying_face:\n",
+                            + "> :wave: I'm *NooksBot*.",
                         },
                     },
                     {
@@ -488,16 +494,48 @@ class NooksHome:
                                 },
                                 "style": "primary",
                             },
-                            {
-                                "type": "button",
-                                "action_id": "learn_more",
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Learn More",
-                                    "emoji": True,
-                                },
-                            },
                         ],
+                    },
+                    {
+                        "type": "divider",
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid workplace connectedness, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Some more details!*\nFor detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
+                        },
                     },
                     {
                         "type": "divider",
@@ -607,6 +645,13 @@ class NooksHome:
                         "text": {
                             "type": "mrkdwn",
                             "text": ":calendar: |   *TODAY'S NOOK CARDS*  | :calendar: ",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum cards you're interested in.",
                         },
                     },
                     {"type": "divider"},

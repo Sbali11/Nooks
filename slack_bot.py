@@ -154,11 +154,11 @@ def command(ack, body, respond):
         token=token,
     )
     try:
-        slack_app.chat_postMessage(
+        slack_app.client.chat_postMessage(
             token=get_token(team_id),
             link_names=True,
             channel=user_id,
-            text="I've updated your app home page, head over to the home page too see it!" 
+            text="I've updated your app home page, head over to the home page to see it!",
         )
     except Exception as e:
         logging.error(e)
@@ -567,7 +567,7 @@ def handle_word_guessed(ack, body, client, view, logger):
         {"team_id": team_id, "channel_id": channel_id, "user_id": member_id}
     )
     # print("HERE")
-    
+
     if ps.stem(word) == ps.stem(allocated_row["word"]):
         slack_app.client.chat_postMessage(
             token=token,
@@ -612,13 +612,15 @@ def handle_word_guessed(ack, body, client, view, logger):
                 },
             ],
         )
-    db.guesses.insert_one({
-        "channel_id": channel_id,
-        "user_id": body["user"]["id"],
-        "for_id": member_id,
-        "word": word,
-        "team_id": team_id
-    })
+    db.guesses.insert_one(
+        {
+            "channel_id": channel_id,
+            "user_id": body["user"]["id"],
+            "for_id": member_id,
+            "word": word,
+            "team_id": team_id,
+        }
+    )
 
 
 @slack_app.action("word_said")
@@ -758,51 +760,88 @@ def handle_onboard_members(ack, body, client, view, logger):
     )
     print(len(all_members))
     l = len(all_members)
- 
+
     for member in all_members:
 
         try:
             nooks_home.update_home_tab(
-                    client=slack_app.client,
-                    event={
-                        "user": member,
-                        "view": {"team_id": body["team"]["id"]},
-                    },
-                    token=get_token(body["team"]["id"]),
-                )
-            time.sleep(1)
+                client=slack_app.client,
+                event={
+                    "user": member,
+                    "view": {"team_id": body["team"]["id"]},
+                },
+                token=get_token(body["team"]["id"]),
+            )
+            #time.sleep(1)
             slack_app.client.chat_postMessage(
-                    token=token,
-                    link_names=True,
-                    channel=member,
-                    blocks=[
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@"
-                                + body["user"]["id"]
-                                + "> wants you to sign-up!",
-                            },
+                token=token,
+                link_names=True,
+                channel=member,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Hey there:wave: I'm *NooksBot*.\n I've been invited here to help you interact with your co-workers in exciting new ways:partying_face:, and <@"
+                            + body["user"]["id"]
+                            + "> wants you to sign-up!",
                         },
-                        {
-                            "type": "actions",
-                            "elements": [
-                                {
-                                    "type": "button",
-                                    "action_id": "onboard_info",
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Tell me more!",
-                                        "emoji": True,
-                                    },
-                                    "style": "primary",
-                                    "value": "join",
-                                }
-                            ],
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*What are nooks?*\nNooks are _anonymously created short-lived conversations_ (last for only a day) around specific topics.\n ",
                         },
-                    ],
-                )
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid workplace connectedness, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Would love some more details!*\nFor detailed onboarding instructions, you can visit https://nooks.vercel.app/member-onboarding!",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
+                        },
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "action_id": "signup",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Sign me up!",
+                                    "emoji": True,
+                                },
+                                "style": "primary",
+                            }
+                        ],
+                    },
+                ],
+            )
         except Exception as e:
             logging.info(e)
 
@@ -1781,40 +1820,44 @@ def signup_modal_step_1(ack, body, view, logger):
         current_locations = []
     else:
         current_locations = team_row["locations"]
-    question_blocks =[]
+    question_blocks = []
     for question in all_questions:
-        question_blocks.append({
-            "type": "input",
-            "block_id": question,
-            "label": {
-                "type": "plain_text",
-                "text": question,
-            },
-            "optional": False,
-            "element": {
-                "type": "static_select",
-                "action_id": "select_input-action",
-                "options": [
-                    {"value": value, "text": {"type": "plain_text", "text": value}}
-                    for value in all_questions[question]
-                ],
-            },
-        })
+        question_blocks.append(
+            {
+                "type": "input",
+                "block_id": question,
+                "label": {
+                    "type": "plain_text",
+                    "text": question,
+                },
+                "optional": False,
+                "element": {
+                    "type": "static_select",
+                    "action_id": "select_input-action",
+                    "options": [
+                        {"value": value, "text": {"type": "plain_text", "text": value}}
+                        for value in all_questions[question]
+                    ],
+                },
+            }
+        )
         if question == "Gender":
-            question_blocks.append(        {
-            "block_id": "gender_self_describe",
-            "type": "input",
-            "element": {
-                "type": "plain_text_input",
-                "action_id": "plain_text_input-action",
-            },
-            "optional": True,
-            "label": {
-                "type": "plain_text",
-                "text": "If you prefer to self-describe, please elaborate here.",
-                "emoji": True,
-            },
-        },)
+            question_blocks.append(
+                {
+                    "block_id": "gender_self_describe",
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "plain_text_input-action",
+                    },
+                    "optional": True,
+                    "label": {
+                        "type": "plain_text",
+                        "text": "If you prefer to self-describe, please elaborate here.",
+                        "emoji": True,
+                    },
+                },
+            )
 
     # TODO change to only channel members
     top_interacted_block = {
@@ -2256,16 +2299,17 @@ def slack_install():
         + "'><img alt='Add to Slack' height='40' width='139' src='https://platform.slack-edge.com/img/add_to_slack.png'  /></a>"
     )
 
+
 def update_home_tab_channel(token, installed_team, channel_id):
     nooks_alloc._create_members(team_id=installed_team.get("id"))
 
     all_members = slack_app.client.conversations_members(
-                token=token, channel=channel_id
-            )["members"]
+        token=token, channel=channel_id
+    )["members"]
     print(len(all_members))
     for i in range(len(all_members) // 50 + 1):
-        
-        for j in range(i*50, (i+1)* 50):
+
+        for j in range(i * 50, (i + 1) * 50):
             if j >= len(all_members):
                 continue
             member = all_members[j]
@@ -2273,62 +2317,61 @@ def update_home_tab_channel(token, installed_team, channel_id):
                 nooks_home.update_home_tab(
                     client=slack_app.client,
                     event={
-                    "user": member,
-                    "view": {"team_id": installed_team.get("id")},
+                        "user": member,
+                        "view": {"team_id": installed_team.get("id")},
                     },
                     token=get_token(installed_team.get("id")),
                 )
-            
 
             except Exception as e:
                 logging.error(e)
-            #time.sleep(60)
+            # time.sleep(60)
         print("DONe")
 
 
 def update_channel_first(token, installed_team):
-    channel_id = (db.tokens_2.find_one({"team_id": installed_team.get("id")})["installation"])[
-                "incoming_webhook_channel_id"
-            ]
+    channel_id = (
+        db.tokens_2.find_one({"team_id": installed_team.get("id")})["installation"]
+    )["incoming_webhook_channel_id"]
     for member in slack_app.client.conversations_members(
-                token=token, channel=channel_id)["members"]:
-        
+        token=token, channel=channel_id
+    )["members"]:
+
         nooks_home.update_home_tab(
-                    client=slack_app.client,
-                    event={
-                    "user": member,
-                    "view": {"team_id": installed_team.get("id")},
-                    },
-                    token=get_token(installed_team.get("id")),
+            client=slack_app.client,
+            event={
+                "user": member,
+                "view": {"team_id": installed_team.get("id")},
+            },
+            token=get_token(installed_team.get("id")),
         )
+
+
 def update_home_tab_all(token, installed_team):
 
-
     nooks_alloc._create_members(team_id=installed_team.get("id"))
-    try: 
+    try:
         update_channel_first(token, installed_team)
     except Exception as e:
         logging.error(e)
 
     all_members = slack_app.client.users_list(token=token)["members"]
-    
+
     for i in range(len(all_members) // 50 + 1):
-        
-        for j in range(i*50, (i+1)* 50):
+
+        for j in range(i * 50, (i + 1) * 50):
             if j >= len(all_members):
                 continue
             member = all_members[j]
-            #print(member)
             try:
                 nooks_home.update_home_tab(
                     client=slack_app.client,
                     event={
-                    "user": member["id"],
-                    "view": {"team_id": installed_team.get("id")},
+                        "user": member["id"],
+                        "view": {"team_id": installed_team.get("id")},
                     },
                     token=get_token(installed_team.get("id")),
                 )
-            
 
             except Exception as e:
                 logging.error(e)
@@ -2387,7 +2430,6 @@ def slack_oauth():
     )
     thread.start()
 
-
     return "Successfully installed"
 
 
@@ -2400,8 +2442,8 @@ def post_stories_periodic(all_team_ids):
 
     for team_id in all_team_ids:
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
-        #print("FEWMJKEWNF")
-        #print(current_nooks)
+        # print("FEWMJKEWNF")
+        # print(current_nooks)
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
             nooks=current_nooks, team_id=team_id
         )
@@ -2549,6 +2591,6 @@ def main(nooks_home_arg, nooks_alloc_arg):
     global nooks_alloc
     nooks_home = nooks_home_arg
     nooks_alloc = nooks_alloc_arg
-    
+
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
