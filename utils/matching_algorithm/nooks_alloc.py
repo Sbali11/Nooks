@@ -176,7 +176,7 @@ class NooksAllocation:
         nooks_allocs = {}
         for nook in nooks:
             team_wise_nooks[nook["team_id"]].append(nook)
-        if len(self.member_dict[team_id] < 20):
+        if len(self.member_dict[team_id]) < 20:
             for nook in nooks:
                 allocated_mems = list(set(nook["swiped_right"]))
                 if len(allocated_mems) < 3 and not nook["allow_two_members"]:

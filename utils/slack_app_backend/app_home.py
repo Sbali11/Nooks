@@ -431,7 +431,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum cards you're interested in.",
+                                "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum number of cards you're interested in.",
                             },
                         },
                         {
@@ -651,7 +651,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum cards you're interested in.",
+                            "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum number of cards you're interested in.",
                         },
                     },
                     {"type": "divider"},
