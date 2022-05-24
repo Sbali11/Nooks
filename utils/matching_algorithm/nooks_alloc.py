@@ -183,7 +183,7 @@ class NooksAllocation:
                     allocations[nook["_id"]] = ""
                     continue
                 allocations[nook["_id"]] = ",".join(allocated_mems)
-                self.allocate_all(nooks, allocations)
+                #self.allocate_all(nooks, allocations)
                 self.db.nooks.update_one(
                         {"_id": team_wise_nooks[team_id][nook_id]["_id"]},
                         {"$set": {"members": allocated_mems}},
