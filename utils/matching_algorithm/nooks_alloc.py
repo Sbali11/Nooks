@@ -149,7 +149,16 @@ class NooksAllocation:
             right_swiped = list(right_swiped_set)
             if nook["creator"] in self.all_members_ids:
                 right_swiped.append(nook["creator"])
-                nooks_allocs[nook["_id"]] = ",".join(list(set(right_swiped)))
+                right_swiped_set = set(right_swiped)
+                
+                if len(right_swiped_set) < 2 :
+                    mems = []
+                elif len(right_swiped_set) < 3 and not(nook["allow_two_members"]):
+                    mems = []
+                else :
+                    mems = right_swiped_set
+                
+                nooks_allocs[nook["_id"]] = ",".join(list(set(mems)))
 
             else:
                 nook_part_id = {}
