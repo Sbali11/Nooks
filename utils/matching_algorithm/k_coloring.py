@@ -3,7 +3,7 @@ class Graph:
     def __init__(self, edges, nodes, n):
         self.adjList = [[] for _ in range(n)]
         self.nodes = nodes
-        self.nodes_idx = {nodes[i]: i for i in range(self.nodes)}
+        self.nodes_idx = {nodes[i]: i for i in range(len(self.nodes))}
         for (src, dest) in edges:
             self.adjList[src].append(dest)
             self.adjList[dest].append(src)
