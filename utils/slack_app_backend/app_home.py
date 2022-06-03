@@ -431,14 +431,14 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum number of cards you're interested in.",
+                                "text": "Here are the nooks that we plan to have at 12 PM the next weekday!",
                             },
                         },
                         {
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": ">You've exhausted your list for the day. You'll be matched to one of your interested nooks at 12PM the next weekday and get a final list of updated cards at 4PM ! ",
+                                "text": ">You've exhausted your list for the day. You'll be matched to your interested nooks at 12PM the next weekday and get a final list of updated cards at 4PM ! ",
                             },
                         },
                         {"type": "divider"},

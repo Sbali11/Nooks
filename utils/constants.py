@@ -1,5 +1,5 @@
 EPSILON = 0.001
-
+MIN_NUM_MEMS = 3
 SAME_HOMOPHILY_FACTORS = {"Gender"}
 RANGE_HOMOPHILY_FACTORS = {"Age", "Role", "Number of years in the organization"}
 HOMOPHILY_FACTORS = {
@@ -9,6 +9,7 @@ HOMOPHILY_FACTORS = {
         "PhD Student": 1,
         "Master's Student": 2,
         "Undergrad Student": 3,
+        "Summer Research Assistant": 4
     },
     "Gender": {"Male": 0, "Female": 1, "Non-Binary": 2, "Prefer Not to Disclose": 3, "Prefer To Self Describe": 4},
     "Number of years in the organization": {

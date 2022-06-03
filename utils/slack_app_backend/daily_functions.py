@@ -82,7 +82,7 @@ def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
 
         except Exception as e:
             logging.error(traceback.format_exc())
-        nooks_alloc.update_interactions()
+        #nooks_alloc.update_interactions()
 
 
 def post_reminders(slack_app, db, team_id):
@@ -148,7 +148,8 @@ def create_new_channels(
         db.create_collection("user_swipes")
     
 
-    for i, new_nook in enumerate(new_nooks):
+    for i, new_nook_id in enumerate(allocations):
+        new_nook = db.nooks.find_one({"_id": new_nook_id})
         now = datetime.now()  # current date and time
         token = get_token(new_nook["team_id"])
         date = now.strftime("%m-%d-%Y-%H-%M-%S")
@@ -175,7 +176,7 @@ def create_new_channels(
                             "text": {
                                 "type": "mrkdwn",
                                 "text": "Hey there! Unfortunately, I wasn't able to create your channel titled \""
-                                + title + "\" today because of not finding enough members for the nook. (This could happen because of not enough people clicking on interested or another nook resulting in a split of total membership)"
+                                + title + "\" today because of not finding enough members for the nook."
                                 
                             },
                         }

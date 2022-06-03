@@ -2451,11 +2451,11 @@ def post_stories_periodic(all_team_ids):
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
         )
-        nooks_home.reset(team_id=team_id)
+        #nooks_home.reset(team_id=team_id)
 
         token = get_token(team_id)
 
-        for i, member in enumerate(nooks_alloc.member_dict[team_id]):
+        for i, member in enumerate(nooks_alloc.all_members_ids):
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": team_id}},
@@ -2488,7 +2488,7 @@ def update_stories_periodic(all_team_ids, end_time=False):
         suggested_nooks = update_nook_suggestions(slack_app, db, team_id)
         nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
         token = get_token(team_id)
-        for member in nooks_alloc.member_dict[team_id]:
+        for member in nooks_alloc.all_members_ids[team_id]:
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": team_id}},
@@ -2520,6 +2520,13 @@ def get_team_rows_timezone(time, skip_weekends=True):
 
     return team_ids
 
+
+@cron.task("cron", second="0")
+def trial():
+    remove_stories_periodic(["T03CY3C0LRF"])
+    all_team_rows_no_weekend = ["T03CY3C0LRF"]
+    post_stories_periodic(all_team_rows_no_weekend)
+    update_stories_periodic(all_team_rows_no_weekend)
 
 @cron.task("cron", minute="0")
 def post_stories_0():
@@ -2574,11 +2581,6 @@ def update_stories_30():
 @cron.task("cron", minute="45")
 def update_stories_45():
     update_stories_periodic(get_team_rows_timezone("16:00"), end_time=True)
-
-
-@cron.task("cron", day_of_week="6")
-def reset_interactions():
-    nooks_alloc.reset()
 
 
 @slack_app.event("member_joined_channel")
