@@ -18,6 +18,7 @@ class NooksAllocation:
         self.apha = alpha
         self.member_vectors = collections.defaultdict(dict)
         self.partitions = collections.defaultdict(dict)
+        self.all_members_ids = collections.defaultdict(set)
         for team_row in list(self.db.tokens_2.find()):
             self._create_members(team_row["team_id"])
             
@@ -42,7 +43,7 @@ class NooksAllocation:
         for member in all_members:
             if "blacklisted_from" in member:
                 for b_from in member["blacklisted_from"]:
-                    if b_from not in self.member_dict[team_id]:
+                    if b_from not in self.all_members_ids[team_id]:
                         continue
                     blacklist_edges.append((member["user_id"], b_from))
                     blacklist_nodes.add(member["user_id"])
@@ -50,7 +51,7 @@ class NooksAllocation:
 
             if "black_list" in member:
                 for b in member["black_list"]:
-                    if b not in self.member_dict[team_id]:
+                    if b not in self.all_members_ids[team_id]:
                         continue
                     blacklist_edges.append((member["user_id"], b))
                     blacklist_nodes.add(member["user_id"])
@@ -128,9 +129,9 @@ class NooksAllocation:
         all_members = list(self.db.member_vectors.find({"team_id": team_id}))
         self.member_vectors[team_id]["newcomers"] = []
         self.member_vectors[team_id]["oldmembers"] = []
-        self.all_members_ids = set([])
+        self.all_members_ids[team_id] = set([])
         for member in all_members:
-            self.all_members_ids.add(member["user_id"])
+            self.all_members_ids[team_id].add(member["user_id"])
             if member["Role"] == "REU":
                 self.member_vectors[team_id]["newcomers"].append(member)
             else:
@@ -147,7 +148,7 @@ class NooksAllocation:
             right_swiped_set = set(nook["swiped_right"])
             all_mems_right_swipes = all_mems_right_swipes.union(right_swiped_set)
             right_swiped = list(right_swiped_set)
-            if nook["creator"] in self.all_members_ids:
+            if nook["creator"] in self.all_members_ids[team_id]:
                 right_swiped.append(nook["creator"])
                 right_swiped_set = set(right_swiped)
                 
@@ -231,7 +232,7 @@ class NooksAllocation:
                     merged,
                     partitions,
                     partitions_alloc,
-                    self.all_members_ids.difference(all_mems_right_swipes),
+                    self.all_members_ids[team_id].difference(all_mems_right_swipes),
                     nook_part_id,
                 )
         return nooks_allocs, suggestions 

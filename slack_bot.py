@@ -2455,7 +2455,7 @@ def post_stories_periodic(all_team_ids):
 
         token = get_token(team_id)
 
-        for i, member in enumerate(nooks_alloc.all_members_ids):
+        for i, member in enumerate(nooks_alloc.all_members_ids[team_id]):
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": team_id}},
