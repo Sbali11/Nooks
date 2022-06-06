@@ -493,7 +493,7 @@ def create_default_nook(title, desc, channel_name, bot_id, team_id):
         "creator": bot_id,
         "channel_name": channel_name,
         "description": desc
-        + "\n\n(P.S. This nook has been created by the nook admins and is inspired by nooks created in other workspaces)",
+        + "\n\n(P.S. This is a default nook created by the nook bot)",
         "allow_two_members": True,
         "banned": [],
         "created_on": datetime.utcnow(),
