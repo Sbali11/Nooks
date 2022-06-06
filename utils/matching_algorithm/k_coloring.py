@@ -5,14 +5,14 @@ class Graph:
         self.nodes = nodes
         self.nodes_idx = {nodes[i]: i for i in range(len(self.nodes))}
         for (src, dest) in edges:
-            self.adjList[src].append(dest)
-            self.adjList[dest].append(src)
+            self.adjList[self.nodes_idx[src]].append(self.nodes_idx[dest])
+            self.adjList[self.nodes_idx[dest]].append(self.nodes_idx[src])
  
  
 # Function to check if it is safe to assign color `c` to vertex `v`
 def isSafe(graph, color, v, c):
     # check the color of every adjacent vertex of `v`
-    for u in graph.adjList[graph.nodes[v]]:
+    for u in graph.adjList[graph.nodes[graph.nodes_idx[v]]]:
         if color[graph.nodes_idx[u]] == c:
             return False
     return True
