@@ -511,7 +511,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers, just click interested whenever you would want to join in on the conversation. Using some secret optimizations:test_tube: that aim to aid workplace connectedness, I'll allocate one nook to you the next day. \nPro Tip: Click interested on more nooks for more optimal results!",
+                            "text": "*Sounds fun! How can I join a nook?*\nI will be back everyday with a list of nooks suggested by your coworkers for the next workday, just click interested whenever you would want to join in on the conversation. ",
                         },
                     },
                     {"type": "divider"},
@@ -534,7 +534,7 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Note: I'm created as a part of a research project and I would be collecting data, however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). For more details regarding what data is collected, click here   ",
+                            "text": "Note: I'm created as a part of a research project and I would be collecting some data as a part of the study(including your responses to the questionnaire), however at no point would your details be disclosed. Participating and completing the signup counts as consent for this data collection(no data is collected otherwise). No conversation data is collected ",
                         },
                     },
                     {
