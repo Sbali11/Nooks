@@ -12,8 +12,8 @@ class Graph:
 # Function to check if it is safe to assign color `c` to vertex `v`
 def isSafe(graph, color, v, c):
     # check the color of every adjacent vertex of `v`
-    for u in graph.adjList[graph.nodes_idx[v]]:
-        if color[graph.nodes_idx[u]] == c:
+    for u in graph.adjList[v]:
+        if color[u] == c:
             return False
     return True
  
