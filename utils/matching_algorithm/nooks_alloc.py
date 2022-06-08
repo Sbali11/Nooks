@@ -66,6 +66,7 @@ class NooksAllocation:
         if bnodes:
             g = Graph(blacklist_edges, bnodes, len(bnodes))
             while not kcoloring_res:
+                
                 kcoloring_res = kColoring(
                     g, [0] * len(bnodes), num_partitions, 0, len(bnodes)
                 )
@@ -126,6 +127,7 @@ class NooksAllocation:
     # TODO change to team specific?
     def _create_members(self, team_id):
         # np.zeros((len(all_members), len(all_members)))
+        
         all_members = list(self.db.member_vectors.find({"team_id": team_id}))
         self.member_vectors[team_id]["newcomers"] = []
         self.member_vectors[team_id]["oldmembers"] = []
@@ -235,6 +237,7 @@ class NooksAllocation:
                     self.all_members_ids[team_id].difference(all_mems_right_swipes),
                     nook_part_id,
                 )
+        print(nooks_allocs, suggestions)
         return nooks_allocs, suggestions 
 
     def _create_alloc_suggestions(
