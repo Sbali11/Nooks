@@ -518,7 +518,7 @@ class NooksHome:
                     {
                         "type": "section",
                         "text": {
-                            "type": "mrkdwn",
+                      "type": "mrkdwn",
                             "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
                         },
                     },
@@ -669,7 +669,10 @@ class NooksHome:
                             "image_url": "https://api.slack.com/img/blocks/bkb_template_images/approvalsNewDevice.png",
                             "alt_text": "computer thumbnail",
                         },
-                        "actions": [
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
                             {
                                 "type": "button",
                                 "text": {
@@ -691,7 +694,6 @@ class NooksHome:
                                 "value": str(cur_pos),
                             },
                         ],
-                    
                     },
 
                     {"type": "divider"},
