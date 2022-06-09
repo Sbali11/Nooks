@@ -651,29 +651,25 @@ class NooksHome:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Here are the nooks that we plan to have at 12 PM the next weekday! You will be matched to one of the nooks you are interested in. To improve your chances of getting a good match, click interested on maximum number of cards you're interested in.",
+                            "text": "Here are the nooks that we plan to have at 12 PM the next weekday! ",
                         },
                     },
-                    {"type": "divider"},
                     {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "*"
+                            "text": "> *"
                             + cur_display_card["title"]
                             + "*"
                             + "\n"
-                            + cur_display_card["description"],
+                            + "> " + cur_display_card["description"],
                         },
                         "accessory": {
                             "type": "image",
                             "image_url": "https://api.slack.com/img/blocks/bkb_template_images/approvalsNewDevice.png",
                             "alt_text": "computer thumbnail",
                         },
-                    },
-                    {
-                        "type": "actions",
-                        "elements": [
+                        "actions": [
                             {
                                 "type": "button",
                                 "text": {
@@ -695,7 +691,9 @@ class NooksHome:
                                 "value": str(cur_pos),
                             },
                         ],
+                    
                     },
+
                     {"type": "divider"},
                     {"type": "divider"},
                 ]

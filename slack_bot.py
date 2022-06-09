@@ -476,7 +476,7 @@ def handle_new_nook(ack, body, client, view, logger):
 
         nooks_home.add_nook(nook=new_nook_info, team_id=body["team"]["id"])
         new_nook_info["status"] = "show"
-        for member in nooks_alloc.member_dict[body["team"]["id"]]:
+        for member in nooks_alloc.all_members_ids[body["team"]["id"]]:
             nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": body["team"]["id"]}},
@@ -504,7 +504,7 @@ def create_default_nook(title, desc, channel_name, bot_id, team_id):
 
     token = get_token(team_id)
     nooks_home.add_nook(nook=new_nook_info, team_id=team_id)
-    for member in nooks_alloc.member_dict[team_id]:
+    for member in nooks_alloc.all_members_ids[team_id]:
         nooks_home.update_home_tab(
             client=slack_app.client,
             event={"user": member, "view": {"team_id": team_id}},
