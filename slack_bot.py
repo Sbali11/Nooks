@@ -2504,7 +2504,7 @@ def post_reminder_periodic(all_team_ids):
         post_reminders(slack_app, db, team_id)
 
 
-def get_team_rows_timezone(time, skip_weekends=True):
+def get_team_rows_timezone(time, skip_weekends=False):
     all_team_rows = []
     all_time_zones = set([])
     for time_zone in ALL_TIMEZONES:
