@@ -2504,7 +2504,7 @@ def post_reminder_periodic(all_team_ids):
         post_reminders(slack_app, db, team_id)
 
 
-def get_team_rows_timezone(time, skip_weekends=False):
+def get_team_rows_timezone(time, skip_weekends=True):
     all_team_rows = []
     all_time_zones = set([])
     for time_zone in ALL_TIMEZONES:
@@ -2531,11 +2531,11 @@ def trial():
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 '''
-@cron.task("cron", minute="0")
+@cron.task("cron", minute="7")
 def post_stories_0():
-    remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
-    all_team_rows_no_weekend = get_team_rows_timezone("12:00")
-    post_stories_periodic(all_team_rows_no_weekend)
+    #remove_stories_periodic(get_team_rows_timezone("12:05", skip_weekends=False))
+    all_team_rows_no_weekend = get_team_rows_timezone("12:07")
+    #post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 
 

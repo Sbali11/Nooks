@@ -280,6 +280,7 @@ def create_new_channels(
 def update_nook_suggestions(slack_app, db, team_id):
     # all stories
     suggested_nooks = list(db.nooks.find({"status": "suggested", "team_id": team_id}))
+    print(suggested_nooks)
     token = get_token(team_id)
     for suggested_nook in suggested_nooks:
         try:
