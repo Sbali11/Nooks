@@ -226,6 +226,8 @@ class NooksAllocation:
                         nooks_allocs[nook_part_i.inserted_id] = nook_info["members"]
                         nook_part_id[merged_part_idx] = nook_part_i.inserted_id
 
+                nooks_allocs[nook["_id"]] = ""
+
                 self.db.nooks.update_one(
                     {"_id": nook["_id"]}, {"$set": {"status": "duplicated"}}
                 )
