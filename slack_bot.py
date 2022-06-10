@@ -2531,11 +2531,11 @@ def trial():
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 '''
-@cron.task("cron", minute="7")
+@cron.task("cron", minute="0")
 def post_stories_0():
-    #remove_stories_periodic(get_team_rows_timezone("12:05", skip_weekends=False))
-    all_team_rows_no_weekend = get_team_rows_timezone("12:07")
-    #post_stories_periodic(all_team_rows_no_weekend)
+    remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
+    all_team_rows_no_weekend = get_team_rows_timezone("12:00")
+    post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 
 
