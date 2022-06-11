@@ -64,6 +64,7 @@ class NooksAllocation:
         kcoloring_res = []
         partitions_alloc = {}
         if bnodes:
+            print(team_id, bnodes)
             g = Graph(blacklist_edges, bnodes, len(bnodes))
             while not kcoloring_res:
                 
@@ -75,8 +76,8 @@ class NooksAllocation:
                 num_partitions += 1
         partitions = [set([]) for i in range(num_partitions)]
         for member_idx in range(len(kcoloring_res)):
-            partitions[kcoloring_res[member_idx]].add(bnodes[member_idx]["user_id"])
-            partitions_alloc[bnodes[member_idx]["user_id"]] = kcoloring_res[member_idx]
+            partitions[kcoloring_res[member_idx]-1].add(bnodes[member_idx]["user_id"])
+            partitions_alloc[bnodes[member_idx]["user_id"]] = kcoloring_res[member_idx]-1
 
         current_part = 0
         for member in oldmembers_list:
@@ -103,7 +104,6 @@ class NooksAllocation:
         res = self.db.temporal_partitions.find_one(
             {"team_id": team_id, "week_num": week_num, "year": year}
         )
-        print(res)
         if res:
             partitions, partitions_alloc = (
                 res["partitions"],
@@ -134,7 +134,8 @@ class NooksAllocation:
         self.all_members_ids[team_id] = set([])
         for member in all_members:
             self.all_members_ids[team_id].add(member["user_id"])
-            if member["Role"] == "REU":
+            if member["Role"] not in  ["Old Company Employee(More than 6 months)", "Professor","PhD Student"]:
+                print(member["Role"])
                 self.member_vectors[team_id]["newcomers"].append(member)
             else:
                 self.member_vectors[team_id]["oldmembers"].append(member)
@@ -172,8 +173,10 @@ class NooksAllocation:
                         if member in right_swiped_set:
                             partitioned_nooks_members[p].add(member)
                 partitioned_nooks_members.sort(key=len)
-                last_merge_index = -1
+                
                 start_merge_index = 0
+                last_merge_index = len(partitioned_nooks_members)-1
+                print(partitioned_nooks_members)
 
                 for i in range(len(partitioned_nooks_members)):
                     if len(partitioned_nooks_members[i]) == 0:
@@ -181,39 +184,21 @@ class NooksAllocation:
                     if len(partitioned_nooks_members[i]) >= MIN_NUM_MEMS:
                         last_merge_index = i - 1
                 i = start_merge_index
-                j = last_merge_index
+                j = len(partitioned_nooks_members) - 1
                 merged = {i: i for i in range(len(partitions))}
                 merge_idx = len(partitions)
-                while i < j:
-                    ci = i
-                    cj = j
-                    total_num = 0
-                    while ci < cj:
-                        total_num += len(partitioned_nooks_members[ci]) + len(
-                            partitioned_nooks_members[cj]
-                        )
-                        if total_num >= MIN_NUM_MEMS:
-                            for ii in range(i, ci + 1):
-                                merged[ii] = merge_idx
-                            for jj in range(cj, cj + 1):
-                                merged[jj] = merge_idx
-                        merge_idx += 1
-                        ci += 1
-                        cj -= 1
-                    i = ci
-                    j = cj
-
-                if i == j and total_num < MIN_NUM_MEMS and i < len(partitions) - 1:
-                    merged[i] = merge_idx
-                    merged[i + 1] = merge_idx
+                while i <= last_merge_index:
+                    total_num = partitioned_nooks_members[i]
+                    i += 1
+                    while total_num < MIN_NUM_MEMS and i < len(partitioned_nooks_members):
+                        total_num += partitioned_nooks_members[i]
+                        merged[i] = merge_idx
+                        i += 1
                     merge_idx += 1
-
+                    
                 nook_mems = [set([]) for _ in range(merge_idx)]
-
-                for part_idx in merged:
-                    nook_mems[merged[part_idx]] = nook_mems[merged[part_idx]].union(
-                        partitioned_nooks_members[part_idx]
-                    )
+                for i in range(len(partitions)):
+                    nook_mems[merged[i]] = nook_mems[merged[i]].union(partitioned_nooks_members[i])
 
                 for merged_part_idx in range(len(nook_mems)):
 
