@@ -67,6 +67,7 @@ class NooksAllocation:
             print(team_id, bnodes)
             g = Graph(blacklist_edges, bnodes, len(bnodes))
             while not kcoloring_res:
+                print(num_partitions)
                 
                 kcoloring_res = kColoring(
                     g, [0] * len(bnodes), num_partitions, 0, len(bnodes)

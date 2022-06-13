@@ -2444,7 +2444,9 @@ def remove_stories_periodic(all_team_ids):
 def post_stories_periodic(all_team_ids):
 
     for team_id in all_team_ids:
+        
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
+        print(current_nooks)
         # print("FEWMJKEWNF")
         # print(current_nooks)
         allocations, suggested_allocs = nooks_alloc.create_nook_allocs(
@@ -2535,16 +2537,17 @@ def trial():
 def post_stories_0():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     all_team_rows_no_weekend = get_team_rows_timezone("12:00")
-    post_stories_periodic(all_team_rows_no_weekend)
-    update_stories_periodic(all_team_rows_no_weekend)
+    print(all_team_rows_no_weekend)
+    post_stories_periodic(['T0220V2A22G'])
+    update_stories_periodic(['T0220V2A22G'])
 
 
 @cron.task("cron", minute="30")
 def post_stories_30():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     all_team_rows_no_weekend = get_team_rows_timezone("12:00")
-    post_stories_periodic(all_team_rows_no_weekend)
-    update_stories_periodic(all_team_rows_no_weekend)
+    post_stories_periodic(['T0220V2A22G'])
+    #update_stories_periodic(['T0220V2A22G')
 
 
 @cron.task("cron", minute="45")
