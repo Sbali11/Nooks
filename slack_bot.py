@@ -2537,7 +2537,6 @@ def trial():
 def post_stories_0():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
     all_team_rows_no_weekend = get_team_rows_timezone("12:00")
-    print(all_team_rows_no_weekend)
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
 

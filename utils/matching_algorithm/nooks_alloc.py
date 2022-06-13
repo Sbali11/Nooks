@@ -67,7 +67,7 @@ class NooksAllocation:
             print(team_id, bnodes)
             g = Graph(blacklist_edges, bnodes, len(bnodes))
             while not kcoloring_res:
-                print(num_partitions)
+                print(num_partitions, kcoloring_res)
                 
                 kcoloring_res = kColoring(
                     g, [0] * len(bnodes), num_partitions, 0, len(bnodes)
@@ -75,10 +75,11 @@ class NooksAllocation:
                 if kcoloring_res:
                     break
                 num_partitions += 1
+        print(kcoloring_res)
         partitions = [set([]) for i in range(num_partitions)]
         for member_idx in range(len(kcoloring_res)):
-            partitions[kcoloring_res[member_idx]-1].add(bnodes[member_idx]["user_id"])
-            partitions_alloc[bnodes[member_idx]["user_id"]] = kcoloring_res[member_idx]-1
+            partitions[kcoloring_res[member_idx]-1].add(bnodes[member_idx])
+            partitions_alloc[bnodes[member_idx]] = kcoloring_res[member_idx]-1
 
         current_part = 0
         for member in oldmembers_list:

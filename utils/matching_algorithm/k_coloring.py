@@ -22,14 +22,19 @@ def kColoring(g, color, k, v, n):
  
     # if all colors are assigned, return the solution
     if v == n:
+        for c in color:
+            if c == 0:
+                return []
         return [c for c in color]
  
     # try all possible combinations of available colors
     for c in range(1, k + 1):
         if isSafe(g, color, v, c):
             color[v] = c 
-            kColoring(g, color, k, v + 1, n) 
+            res = kColoring(g, color, k, v + 1, n) 
+            if res:
+                return res
             color[v] = 0
     return []
-    
+
  
