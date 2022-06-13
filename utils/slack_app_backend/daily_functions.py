@@ -147,9 +147,10 @@ def create_new_channels(
     if "user_swipes" not in db.list_collection_names():
         db.create_collection("user_swipes")
     
-
-    for i, new_nook_id in enumerate(allocations):
-        new_nook = db.nooks.find_one({"_id": new_nook_id})
+    nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
+    print(nooks, allocations)
+    for i, new_nook in enumerate(nooks):
+        #new_nook = db.nooks.find_one({"_id": new_nook_id})
         now = datetime.now()  # current date and time
         token = get_token(new_nook["team_id"])
         date = now.strftime("%m-%d-%Y-%H-%M-%S")
@@ -166,6 +167,7 @@ def create_new_channels(
                     }
                 },
             )
+            '''
             slack_app.client.chat_postMessage(
                     token=token,
                     link_names=True,
@@ -182,6 +184,9 @@ def create_new_channels(
                         }
                     ],
                 )
+                
+            '''
+            print("not_selected", new_nook)
 
 
             continue

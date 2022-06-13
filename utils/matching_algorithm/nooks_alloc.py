@@ -195,7 +195,7 @@ class NooksAllocation:
                         merged[i] = merge_idx
                         i += 1
                     merge_idx += 1
-                    
+
                 nook_mems = [set([]) for _ in range(merge_idx)]
                 for i in range(len(partitions)):
                     nook_mems[merged[i]] = nook_mems[merged[i]].union(partitioned_nooks_members[i])
@@ -217,15 +217,8 @@ class NooksAllocation:
                     {"_id": nook["_id"]}, {"$set": {"status": "duplicated"}}
                 )
 
-                suggestions = self._create_alloc_suggestions(
-                    merged,
-                    partitions,
-                    partitions_alloc,
-                    self.all_members_ids[team_id].difference(all_mems_right_swipes),
-                    nook_part_id,
-                )
-        print(nooks_allocs, suggestions)
-        return nooks_allocs, suggestions 
+
+        return nooks_allocs, {} 
 
     def _create_alloc_suggestions(
         self,

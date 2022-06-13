@@ -2454,7 +2454,7 @@ def post_stories_periodic(all_team_ids):
         create_new_channels(
             slack_app, db, current_nooks, allocations, suggested_allocs, team_id=team_id
         )
-        #nooks_home.reset(team_id=team_id)
+        nooks_home.reset(team_id=team_id)
 
         token = get_token(team_id)
 
