@@ -167,7 +167,7 @@ def create_new_channels(
                     }
                 },
             )
-            '''
+            
             slack_app.client.chat_postMessage(
                     token=token,
                     link_names=True,
@@ -185,7 +185,6 @@ def create_new_channels(
                     ],
                 )
                 
-            '''
             print("not_selected", new_nook)
 
 
