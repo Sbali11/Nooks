@@ -5,7 +5,6 @@ from gc import collect
 import logging
 from multiprocessing import context
 from re import L
-from turtle import right
 import numpy as np
 import random
 from utils.constants import *
