@@ -1,6 +1,6 @@
 # HumanisticManagement: Nooks
 
-The Nooks bot allows members in the Slack workspace to 'bump' into each other by sparking and joining conversations they are interested in. For more information about the bot, visit https://nooks.vercel.app/.
+The Nooks bot allows members in the Slack workspace to 'bump' into each other by sparking and joining conversations they are interested in. For more information about the bot, visit https://nooks.vercel.app/. 
 
 ## Tech Stack
 The bot was developed Flask(with slack bolt API), and MongoDB for the Database. The github repo is setup to work with Digital Ocean. 
