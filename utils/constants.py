@@ -10,7 +10,7 @@ HOMOPHILY_FACTORS = {
         "Master's Student": 2,
         "Undergrad Student": 3,
         "Summer Research Assistant": 4,
-        "Old Company Employee": 5,
+        "Old Company Employee(More than 6 months)": 5,
         "New Employee(Less than 6 months)": 6
     },
     "Gender": {"Male": 0, "Female": 1, "Non-Binary": 2, "Prefer Not to Disclose": 3, "Prefer To Self Describe": 4},

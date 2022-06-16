@@ -180,7 +180,7 @@ class NooksAllocation:
                     for member in set(right_swiped_set):
                         if member not in partitions_alloc:
                             partitions_has_changed = True
-                            partitions[i].add(member)
+                            partitions[i].append(member)
                             partitions_alloc[member] = i
                             i = (i + 1) % len(partitions)
                     if partitions_has_changed:
@@ -188,13 +188,13 @@ class NooksAllocation:
                         year, week_num, day_of_week = my_date.isocalendar()
                         self.db.temporal_partitions.update_one(
                         {"team_id": team_id, "week_num": week_num, "year": year},
-                        {
+                        {"$set": {
                             "team_id": team_id,
                             "week_num": week_num,
                             "year": year,
                             "partitions_alloc": partitions_alloc,
                             "partitions": [list(p) for p in partitions],
-                        },
+                            }}
                         )
 
                     for p in range(len(partitions)):
