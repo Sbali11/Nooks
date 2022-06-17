@@ -217,7 +217,7 @@ def create_new_channels(
                 + ">"
                 + desc
                 + "\n"
-                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: \n P.S type in */get_role* for your task of the day!",
+                + "Remember this chat will be automatically archived at 12PM tomorrow :clock1: \n P.S use command */get_role*(by sending a message that says /get_role from within this channel) for your task of the day!",
             )
             slack_app.client.pins_add(
                 token=token, channel=ep_channel, timestamp=initial_thoughts_thread["ts"]
