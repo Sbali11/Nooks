@@ -21,6 +21,7 @@ class NooksHome:
 
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
+        
 
     def update_sample_nooks(self):
         self.sample_nooks = self.db.sample_nooks.distinct("title")
@@ -167,26 +168,30 @@ class NooksHome:
 
         interacted_with = []
         interaction_block_items = []
-
+        users = {member["user_id"] for member in self.db.member_vectors.find({"team_id": team_id})}
         if all_connections:
             for interaction_row in all_connections:
                 interaction_counts = interaction_row["count"]
                 if interaction_row["count"] > 0 and not (
                     interaction_row["user2_id"] == user_id
                 ):
-                    member = client.users_info(
-                        token=token, user=interaction_row["user2_id"]
-                    )["user"]
-                    if member["is_bot"]:
-                        continue
+                    try:
 
-                    interacted_with.append(
+                        if interaction_row["user2_id"] not in users:
+                            continue
+                        interacted_with.append(
                         (
                             interaction_row["count"],
-                            member["name"],
+                            interaction_row["user2_id"],
                             interaction_row["user2_id"],
                         )
                     )
+                    
+                    except Exception as e:
+                        print(e)
+
+
+
             interacted_with.sort(reverse=True)
             interacted_with = interacted_with[:MAX_NUM_CONNECTIONS]
             if interacted_with:
@@ -212,7 +217,7 @@ class NooksHome:
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": "> @" + member,
+                                "text": "> <@" + member + ">",
                             },
                             "accessory": {
                                 "type": "button",
@@ -518,7 +523,7 @@ class NooksHome:
                     {
                         "type": "section",
                         "text": {
-                      "type": "mrkdwn",
+                            "type": "mrkdwn",
                             "text": "*How can I create a nook?*\nAfter we've completed your onboarding, just head over to the NooksBot Home page to get started.",
                         },
                     },
