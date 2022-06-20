@@ -83,7 +83,7 @@ class NooksAllocation:
         current_part = 0
         for member in oldmembers_list:
             if member["user_id"] in partitions_alloc:
-                pass
+                continue
             partitions_alloc[member["user_id"]] = current_part
             partitions[current_part].add(member["user_id"])
             current_part += 1
@@ -91,7 +91,7 @@ class NooksAllocation:
         current_part = 0
         for member in newmembers_list:
             if member["user_id"] in partitions_alloc:
-                pass
+                continue
             partitions_alloc[member["user_id"]] = current_part
             partitions[current_part].add(member["user_id"])
             current_part += 1
@@ -218,10 +218,10 @@ class NooksAllocation:
                     merge_idx = len(partitions)
                     while i <= last_merge_index:
                         total_num = len(partitioned_nooks_members[i])
+                        merged[i] = merge_idx
                         i += 1
                         while total_num < MIN_NUM_MEMS and i < len(
-                        partitioned_nooks_members
-                        ):
+                        partitioned_nooks_members):
                             total_num += len(partitioned_nooks_members[i])
                             merged[i] = merge_idx
                             i += 1
