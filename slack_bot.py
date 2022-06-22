@@ -1187,7 +1187,8 @@ def nook_not_int(ack, body, logger):
         token=get_token(body["team"]["id"]),
         )
     except Exception as e:
-        print(e)
+        logging.info(e)
+
 
 
 @slack_app.action("new_sample_nook")
@@ -2327,7 +2328,7 @@ def update_home_tab_channel(token, installed_team, channel_id):
                 )
 
             except Exception as e:
-                logging.error(e)
+                logging.info(e)
             # time.sleep(60)
         print("DONe")
 
@@ -2461,11 +2462,15 @@ def post_stories_periodic(all_team_ids):
         token = get_token(team_id)
 
         for i, member in enumerate(nooks_alloc.all_members_ids[team_id]):
-            nooks_home.update_home_tab(
+            try: 
+                nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": team_id}},
                 token=token,
-            )
+                )
+            except Exception as e:
+                print(e)
+
 
 
 def update_stories_periodic(all_team_ids, end_time=False):
@@ -2494,11 +2499,14 @@ def update_stories_periodic(all_team_ids, end_time=False):
         nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
         token = get_token(team_id)
         for member in nooks_alloc.all_members_ids[team_id]:
-            nooks_home.update_home_tab(
+            try: 
+                nooks_home.update_home_tab(
                 client=slack_app.client,
                 event={"user": member, "view": {"team_id": team_id}},
                 token=token,
-            )
+                )
+            except Exception as e:
+                logging.info(e)
 
 
 def post_reminder_periodic(all_team_ids):
