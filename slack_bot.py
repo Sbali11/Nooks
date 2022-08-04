@@ -2743,7 +2743,7 @@ def get_team_rows_timezone(time, skip_weekends=True):
 def is_survey_time(time_zone, skip_weekends=True):
     tz = pytz.timezone(ALL_TIMEZONES[time_zone])
     timezone_time = datetime.now(tz).strftime("%m:%d:%Y:%H:%M")
-    if timezone_time == "08:05:2022:10:00":
+    if timezone_time == "08:04:2022:14:30":
         return True
     return False
 
