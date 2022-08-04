@@ -139,19 +139,19 @@ def handle_some_action(ack, body, logger):
 
 
 def send_survey():
-    for team_id in ["T03CHKNFX37"]:
+    #for team_id in ["T03CHKNFX37"]:
     for team_id in ["TLP16U9EW", "T0220V2A22G"]:
         if not is_survey_time("EST"):
             return 
 
         token = get_token(team_id)
         all_users = list(db.member_vectors.find({"team_id": team_id}))
-        for user in set(all_users):
+        for user in set([user["user_id"] for user in all_users]):
             try:
                 slack_app.client.chat_postMessage(
                     token=token,
                     link_names=True,
-                    channel=user["user_id"],
+                    channel=user,
                     blocks=[
                         {
                             "type": "section",
@@ -2743,7 +2743,7 @@ def get_team_rows_timezone(time, skip_weekends=True):
 def is_survey_time(time_zone, skip_weekends=True):
     tz = pytz.timezone(ALL_TIMEZONES[time_zone])
     timezone_time = datetime.now(tz).strftime("%m:%d:%Y:%H:%M")
-    if timezone_time == "08:04:2022:14:30":
+    if timezone_time == "08:04:2022:13:37":
         return True
     return False
 
