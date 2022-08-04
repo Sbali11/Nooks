@@ -138,6 +138,50 @@ def handle_some_action(ack, body, logger):
     ack()
 
 
+def send_survey():
+    for team_id in ["T03CHKNFX37"]:
+    for team_id in ["TLP16U9EW", "T0220V2A22G"]:
+        if not is_survey_time("EST"):
+            return 
+
+        token = get_token(team_id)
+        all_users = list(db.member_vectors.find({"team_id": team_id}))
+        for user in set(all_users):
+            try:
+                slack_app.client.chat_postMessage(
+                    token=token,
+                    link_names=True,
+                    channel=user["user_id"],
+                    blocks=[
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Thanks for signing up for Nooks! Let us know what you about your experience here :)",
+                            },
+                        },
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "action_id": "open_survey",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Post Deployment Survey",
+                                        "emoji": True,
+                                    },
+                                    "style": "primary",
+                                }
+                            ],
+                        },
+                    ],
+                )
+
+            except Exception as e:
+                logging.error(traceback.format_exc())
+
+
 @slack_app.command("/reload_home")
 def command(ack, body, respond):
     ack()
@@ -772,7 +816,7 @@ def handle_onboard_members(ack, body, client, view, logger):
                 },
                 token=get_token(body["team"]["id"]),
             )
-            #time.sleep(1)
+            # time.sleep(1)
             slack_app.client.chat_postMessage(
                 token=token,
                 link_names=True,
@@ -1174,21 +1218,20 @@ def nook_not_int(ack, body, logger):
     try:
         user_nook = nooks_home.suggested_nooks[body["team"]["id"]][cur_pos]
         db.user_swipes.update_one(
-        {"user_id": user_id, "team_id": body["team"]["id"]},
-        {"$set": {"cur_pos": cur_pos + 1}},
+            {"user_id": user_id, "team_id": body["team"]["id"]},
+            {"$set": {"cur_pos": cur_pos + 1}},
         )
         db.nooks.update(
-        {"_id": user_nook["_id"], "team_id": body["team"]["id"]},
-        {"$push": {"swiped_left": user_id}},
+            {"_id": user_nook["_id"], "team_id": body["team"]["id"]},
+            {"$push": {"swiped_left": user_id}},
         )
         nooks_home.update_home_tab(
-        slack_app.client,
-        {"user": user_id, "view": {"team_id": body["team"]["id"]}},
-        token=get_token(body["team"]["id"]),
+            slack_app.client,
+            {"user": user_id, "view": {"team_id": body["team"]["id"]}},
+            token=get_token(body["team"]["id"]),
         )
     except Exception as e:
         logging.info(e)
-
 
 
 @slack_app.action("new_sample_nook")
@@ -1967,6 +2010,171 @@ def signup_modal(ack, body, logger):
     )
 
 
+@slack_app.view("submit_survey")
+def handle_submit_survey(ack, body, client, view, logger):
+    success_modal_ack(
+        ack,
+        body,
+        view,
+        logger,
+        message="Survey Submitted",
+        title="Post-Deployment Survey",
+    )
+    # TODO create a new name if taken?
+    input_data = view["state"]["values"]
+    #input_data.update(ast.literal_eval(body["view"]["private_metadata"]))
+    user = body["user"]["id"]
+    new_member_info = {}
+    for key in input_data:
+        try:
+            if "plain_text_input-action" in input_data[key]:
+                new_member_info[key] = input_data[key]["plain_text_input-action"][
+                    "value"
+                ]
+            elif "select_input-action" in input_data[key]:
+                new_member_info[key] = input_data[key]["select_input-action"][
+                    "selected_option"
+                ]["value"]
+            elif "user_select" in input_data[key]:
+                new_member_info[key] = input_data[key]["user_select"][
+                    "selected_conversations"
+                ]
+            else:
+                new_member_info[key] = input_data[key]
+        except Exception as e:
+            new_member_info[key] = []
+            logging.error(traceback.format_exc())
+
+    new_member_info["created_on"] = datetime.utcnow()
+    db.member_vectors.update_one(
+        {"user_id": user, "team_id": body["team"]["id"]},
+        {"$set": {"post_completion": new_member_info}},
+    )
+
+    slack_app.client.chat_postMessage(
+        token=get_token(body["team"]["id"]),
+        link_names=True,
+        channel=user,
+        text="Hey there! Thank you for submitting the survey! ",
+    )
+
+
+@slack_app.action("open_survey")
+def post_completion(ack, body, view, logger):
+    print("HERE")
+    all_questions = SIGNUP_QUESTIONS["Step 2"]
+
+    question_blocks = [
+        {
+            "block_id": question,
+            "type": "input",
+            "label": {
+                "type": "plain_text",
+                "text": question,
+                "emoji": True,
+            },
+            "optional": False,
+            "element": {
+                "type": "static_select",
+                "action_id": "select_input-action",
+                "options": [
+                    {
+                        "value": "1",
+                        "text": {"type": "plain_text", "text": "1: Strongly Disagree"},
+                    },
+                    {"value": "2", "text": {"type": "plain_text", "text": "2"}},
+                    {"value": "3", "text": {"type": "plain_text", "text": "3"}},
+                    {"value": "4", "text": {"type": "plain_text", "text": "4"}},
+                    {
+                        "value": "5",
+                        "text": {"type": "plain_text", "text": "5: Strongly Agree"},
+                    },
+                ],
+            },
+        }
+        for question in all_questions
+    ]
+
+    free_response = [
+        {
+            "block_id": "compare",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+                "multiline": True,
+            },
+            "optional": True, 
+            "label": {
+                "type": "plain_text",
+                "text": "How would you compare the experience of having conversation in Nooks vs. outside?",
+                "emoji": True,
+            },
+        },
+        {
+            "block_id": "means",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+                "multiline": True,
+            },
+            "optional": True, 
+            "label": {
+                "type": "plain_text",
+                "text": "How does Nooks compare with the other means you have to have conversations with the REUs?",
+                "emoji": True,
+            },
+        },
+        {
+            "block_id": "outside",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+                "multiline": True,
+            },
+            "optional": True, 
+            "label": {
+                "type": "plain_text",
+                "text": "Did Nooks lead to conversations outside nooks?",
+                "emoji": True,
+            },
+        },
+        {
+            "block_id": "help",
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "plain_text_input-action",
+                "multiline": True,
+            },
+            "optional": True, 
+            "label": {
+                "type": "plain_text",
+                "text": "Did nooks help you and in what way?",
+                "emoji": True,
+            },
+        },
+    ]
+    question_blocks += free_response
+    ack()
+    slack_app.client.views_open(
+                token=get_token(body["team"]["id"]),
+        trigger_id=body["trigger_id"],
+        view={
+
+            "type": "modal",
+            "callback_id": "submit_survey",
+            "title": {"type": "plain_text", "text": "Post-Deployment Survey"},
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "close": {"type": "plain_text", "text": "Close"},
+            "blocks": 
+             question_blocks,
+        }
+    )
+
+
 @slack_app.action("join_without_interest")
 def join_without_interest(ack, body, logger):
     ack()
@@ -2445,7 +2653,7 @@ def remove_stories_periodic(all_team_ids):
 def post_stories_periodic(all_team_ids):
 
     for team_id in all_team_ids:
-        
+
         current_nooks = list(db.nooks.find({"status": "show", "team_id": team_id}))
         print(current_nooks)
         # print("FEWMJKEWNF")
@@ -2462,15 +2670,14 @@ def post_stories_periodic(all_team_ids):
         token = get_token(team_id)
 
         for i, member in enumerate(nooks_alloc.all_members_ids[team_id]):
-            try: 
+            try:
                 nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={"user": member, "view": {"team_id": team_id}},
-                token=token,
+                    client=slack_app.client,
+                    event={"user": member, "view": {"team_id": team_id}},
+                    token=token,
                 )
             except Exception as e:
                 print(e)
-
 
 
 def update_stories_periodic(all_team_ids, end_time=False):
@@ -2499,11 +2706,11 @@ def update_stories_periodic(all_team_ids, end_time=False):
         nooks_home.update(suggested_nooks=suggested_nooks, team_id=team_id)
         token = get_token(team_id)
         for member in nooks_alloc.all_members_ids[team_id]:
-            try: 
+            try:
                 nooks_home.update_home_tab(
-                client=slack_app.client,
-                event={"user": member, "view": {"team_id": team_id}},
-                token=token,
+                    client=slack_app.client,
+                    event={"user": member, "view": {"team_id": team_id}},
+                    token=token,
                 )
             except Exception as e:
                 logging.info(e)
@@ -2533,14 +2740,29 @@ def get_team_rows_timezone(time, skip_weekends=True):
 
     return team_ids
 
-'''
+def is_survey_time(time_zone, skip_weekends=True):
+    tz = pytz.timezone(ALL_TIMEZONES[time_zone])
+    timezone_time = datetime.now(tz).strftime("%m:%d:%Y:%H:%M")
+    if timezone_time == "08:04:2022:14:30":
+        return True
+    return False
+
+
+"""
 @cron.task("cron", second="0")
 def trial():
     remove_stories_periodic(["T03CY3C0LRF"])
     all_team_rows_no_weekend = ["T03CY3C0LRF"]
     post_stories_periodic(all_team_rows_no_weekend)
     update_stories_periodic(all_team_rows_no_weekend)
-'''
+"""
+
+
+@cron.task("cron", second="0")
+def survey():
+    send_survey()
+
+
 @cron.task("cron", minute="0")
 def post_stories_0():
     remove_stories_periodic(get_team_rows_timezone("12:00", skip_weekends=False))
