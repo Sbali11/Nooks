@@ -74,7 +74,7 @@ Follow the steps listed here https://www.mongodb.com/basics/create-database
 
 #### Install required packages
 ```
-git clone https://github.com/Sbali11/HumanisticManagement.git
+git clone https://github.com/Sbali11/Nooks.git
 conda env create -f environment.yml
 [Or]
 pip install -r requirements.txt
@@ -83,7 +83,7 @@ pip install -r requirements.txt
 
 
 #### Set Environment Variables
-Next, create a .env file in the HumanisticManagement folder, and add the following variables here (For more information, refer to: https://github.com/slackapi/bolt-python/tree/main/examples/flask)
+Next, create a .env file in the Nooks folder, and add the following variables here (For more information, refer to: https://github.com/slackapi/bolt-python/tree/main/examples/flask)
 
 ```
 // from the slack app workspace
