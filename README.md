@@ -11,8 +11,6 @@ The bot was developed Flask(with slack bolt API), and MongoDB for the Database. 
 The repository is set up to run using Digital Ocean. 
 ```
 .
-├── experiments                 
-│   ├── PrioritySimulation.ipynb    # initial experiments to visualize the matching function
 ├── utils                           # utility functions for the bot 
 │   ├── matching_algorithm          # code related to the matching process
 │   |   ├── nooks_alloc.py          # contains the the class for matching members to nooks
