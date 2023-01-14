@@ -2747,17 +2747,6 @@ def is_survey_time(time_zone, skip_weekends=True):
         return True
     return False
 
-
-"""
-@cron.task("cron", second="0")
-def trial():
-    remove_stories_periodic(["T03CY3C0LRF"])
-    all_team_rows_no_weekend = ["T03CY3C0LRF"]
-    post_stories_periodic(all_team_rows_no_weekend)
-    update_stories_periodic(all_team_rows_no_weekend)
-"""
-
-
 @cron.task("cron", second="0")
 def survey():
     send_survey()
