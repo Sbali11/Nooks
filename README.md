@@ -91,7 +91,7 @@ The current app is setup in order to be publicly distributed. In case you want t
 After installing the bot to the workspace, run the following command:
 ```
 conda activate slackbot
-python wsgi.py
+python src/wsgi.py
 ```
 
 -----
