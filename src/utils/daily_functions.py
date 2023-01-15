@@ -4,7 +4,7 @@ import atexit
 import random
 import collections
 import traceback
-from utils.slack_app_backend.installation import get_token
+from installation import get_token
 
 
 def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
@@ -82,7 +82,6 @@ def remove_past_nooks(slack_app, db, nooks_alloc, team_id):
 
         except Exception as e:
             logging.error(traceback.format_exc())
-        #nooks_alloc.update_interactions()
 
 
 def post_reminders(slack_app, db, team_id):

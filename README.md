@@ -6,30 +6,7 @@ The Nooks bot allows members in the Slack workspace to 'bump' into each other by
 The bot was developed Flask(with slack bolt API), and MongoDB for the Database. The github repo is setup to work with Digital Ocean. 
 
 
-## Repository Structure
-
-The repository is set up to run using Digital Ocean. 
-```
-.
-├── experiments                 
-│   ├── PrioritySimulation.ipynb    # initial experiments to visualize the matching function
-├── utils                           # utility functions for the bot 
-│   ├── matching_algorithm          # code related to the matching process
-│   |   ├── nooks_alloc.py          # contains the the class for matching members to nooks
-│   ├── app_ui                      # helper functions for the bot ui 
-│   |   ├── app_home.py             # the code to update the app home page
-│   ├── constants.py                # all the constants used across the workspace
-├── slack_bot.py                    # workflow and code for the slack bot backend and flask app backend
-├── wsgi.py                         # file to run the app formatted to run on Digital ocean
-├── environment.yml                 # conda environment
-├── requirements.txt                # pip environment 
-└── README.md
-```
-
-
 ## App Set Up
-
-
 
 ### Set up Slack Workspace
 

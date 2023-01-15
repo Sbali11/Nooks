@@ -7,7 +7,6 @@ import numpy as np
 import random
 from utils.constants import *
 
-
 class NooksHome:
     def __init__(self, db):
         self.db = db
@@ -17,7 +16,6 @@ class NooksHome:
         suggested_nooks = list(db.nooks.find({"status": "show"}).sort("created_on"))
         for suggested_nook in suggested_nooks:
             self.suggested_nooks[suggested_nook["team_id"]].append(suggested_nook)
-        print(self.suggested_nooks)
 
         self.sample_nooks = db.sample_nooks.distinct("title")
         self.all_members = list(self.db.member_vectors.find())
@@ -34,7 +32,6 @@ class NooksHome:
         self.suggested_nooks[team_id] += suggested_nooks
 
     def add_nook(self, nook, team_id):
-        print("ADDED")
         self.suggested_nooks[team_id].append(nook)
 
     def get_context_block(self, user_id, team_id):
@@ -45,7 +42,6 @@ class NooksHome:
             current_locations = []
         else:
             current_locations = team_row["locations"]
-        set_timezone_block = []
         timezone_block = {
             "type": "section",
             "text": {
@@ -171,7 +167,6 @@ class NooksHome:
         users = {member["user_id"] for member in self.db.member_vectors.find({"team_id": team_id})}
         if all_connections:
             for interaction_row in all_connections:
-                interaction_counts = interaction_row["count"]
                 if interaction_row["count"] > 0 and not (
                     interaction_row["user2_id"] == user_id
                 ):

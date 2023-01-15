@@ -6,6 +6,7 @@ import os
 from functools import lru_cache
 from dotenv import load_dotenv
 import logging
+
 load_dotenv()
 
 MONGODB_LINK = os.environ["MONGODB_LINK"]
@@ -19,7 +20,6 @@ def get_token(team_id):
         logging.error("Installation not found for " + team_id)
         return 0
     return installation["installation"]["bot_token"]
-
 
 class InstallationDB:
     def save(self, installation):
